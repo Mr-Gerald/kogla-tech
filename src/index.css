@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --color-gold-500: #d4af37;
+  --color-gold-600: #c5a028;
+  --color-black-950: #050505;
+}
+
+@layer base {
+  body {
+    @apply bg-black-950 text-gray-100 font-sans antialiased;
+  }
+}

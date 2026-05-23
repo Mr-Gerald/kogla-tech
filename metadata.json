@@ -1,0 +1,6 @@
+{
+  "name": "Kogla Tech",
+  "description": "Premium futuristic technology ecosystem.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
