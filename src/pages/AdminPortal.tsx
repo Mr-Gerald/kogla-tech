@@ -23,7 +23,8 @@ import {
   Eye, 
   Briefcase, 
   Sparkles, 
-  ArrowUpRight 
+  ArrowUpRight,
+  Upload
 } from 'lucide-react';
 
 export default function AdminPortal() {
@@ -532,9 +533,18 @@ export default function AdminPortal() {
                     ))}
                   </div>
 
-                  <div className="mt-4 border-t border-gray-900 pt-3">
-                    <label className="block text-[10px] text-gray-500 uppercase mb-1">Upload custom computer file:</label>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'hero')} className="text-xs text-gray-400" />
+                  <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
+                    <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
+                    <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
+                      <Upload size={14} />
+                      Choose or Capture Image
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => handleFileUpload(e, 'hero')} 
+                        className="hidden" 
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -587,9 +597,18 @@ export default function AdminPortal() {
                     ))}
                   </div>
 
-                  <div className="mt-4 border-t border-gray-900 pt-3">
-                    <label className="block text-[10px] text-gray-500 uppercase mb-1">Upload custom computer file:</label>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'academy')} className="text-xs text-gray-400" />
+                  <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
+                    <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
+                    <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
+                      <Upload size={14} />
+                      Choose or Capture Image
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => handleFileUpload(e, 'academy')} 
+                        className="hidden" 
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -642,9 +661,18 @@ export default function AdminPortal() {
                     ))}
                   </div>
 
-                  <div className="mt-4 border-t border-gray-900 pt-3">
-                    <label className="block text-[10px] text-gray-500 uppercase mb-1">Upload custom computer file:</label>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'services')} className="text-xs text-gray-400" />
+                  <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
+                    <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
+                    <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
+                      <Upload size={14} />
+                      Choose or Capture Image
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => handleFileUpload(e, 'services')} 
+                        className="hidden" 
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -697,9 +725,18 @@ export default function AdminPortal() {
                     ))}
                   </div>
 
-                  <div className="mt-4 border-t border-gray-900 pt-3">
-                    <label className="block text-[10px] text-gray-500 uppercase mb-1">Upload custom computer file:</label>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'projects')} className="text-xs text-gray-400" />
+                  <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
+                    <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
+                    <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
+                      <Upload size={14} />
+                      Choose or Capture Image
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => handleFileUpload(e, 'projects')} 
+                        className="hidden" 
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -752,9 +789,18 @@ export default function AdminPortal() {
                     ))}
                   </div>
 
-                  <div className="mt-4 border-t border-gray-900 pt-3">
-                    <label className="block text-[10px] text-gray-500 uppercase mb-1">Upload custom computer file:</label>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'labs')} className="text-xs text-gray-400" />
+                  <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
+                    <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
+                    <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
+                      <Upload size={14} />
+                      Choose or Capture Image
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => handleFileUpload(e, 'labs')} 
+                        className="hidden" 
+                      />
+                    </label>
                   </div>
                 </div>
               </div>

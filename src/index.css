@@ -11,6 +11,6 @@
 
 @layer base {
   body {
-    @apply bg-black-950 text-gray-100 font-sans antialiased;
+    @apply bg-black-950 text-gray-100 font-sans antialiased text-[15.5px] leading-relaxed;
   }
 }
