@@ -6,7 +6,8 @@ import {
   updateInquiryStatus, 
   deleteInquiry, 
   Inquiry, 
-  ImageConfig 
+  ImageConfig,
+  DEFAULT_IMAGES
 } from '../utils/storage';
 import { 
   Settings, 
@@ -120,27 +121,27 @@ export default function AdminPortal() {
   // Preset premium high-quality stock technology background options
   const presets: Record<keyof ImageConfig, Array<{ label: string; url: string }>> = {
     hero: [
-      { label: 'Original Cinematic Workspace', url: '/src/assets/images/hero_coder_image_1779562735408.png' },
+      { label: 'Original Cinematic Workspace', url: DEFAULT_IMAGES.hero },
       { label: 'Cyberpunk Command Center', url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200' },
       { label: 'Luxury Minimalist Office', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200' }
     ],
     academy: [
-      { label: 'Original Tech Students', url: '/src/assets/images/academy_image_1779563651039.png' },
+      { label: 'Original Tech Students', url: DEFAULT_IMAGES.academy },
       { label: 'Minimal Laboratory', url: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1000' },
       { label: 'Corporate Tech Brainstorm', url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1000' }
     ],
     services: [
-      { label: 'Original High-End Dashboard', url: '/src/assets/images/services_image_1779563668755.png' },
+      { label: 'Original High-End Dashboard', url: DEFAULT_IMAGES.services },
       { label: 'Server Matrix Blades', url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1000' },
       { label: 'Clean Enterprise Graphs', url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1000' }
     ],
     projects: [
-      { label: 'Original Product Showcase', url: '/src/assets/images/projects_image_1779563685288.png' },
+      { label: 'Original Product Showcase', url: DEFAULT_IMAGES.projects },
       { label: 'Sleek Smart Device UI', url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1000' },
       { label: 'Mobile Mockup Studio', url: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1000' }
     ],
     labs: [
-      { label: 'Original Innovation Lab', url: '/src/assets/images/labs_image_1779563699805.png' },
+      { label: 'Original Innovation Lab', url: DEFAULT_IMAGES.labs },
       { label: 'Quantum Supercomputer Spark', url: 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=1000' },
       { label: 'Futuristic AI Array', url: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1000' }
     ]

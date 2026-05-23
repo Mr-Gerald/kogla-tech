@@ -1,5 +1,11 @@
 // Kogla Tech State Persistence Engine
 
+import heroImage from '../assets/images/hero_coder_image_1779562735408.png';
+import academyImage from '../assets/images/academy_image_1779563651039.png';
+import servicesImage from '../assets/images/services_image_1779563668755.png';
+import projectsImage from '../assets/images/projects_image_1779563685288.png';
+import labsImage from '../assets/images/labs_image_1779563699805.png';
+
 export interface Inquiry {
   id: string;
   type: 'enrollment' | 'solution_inquiry' | 'contact';
@@ -19,12 +25,12 @@ export interface ImageConfig {
   labs: string;
 }
 
-const DEFAULT_IMAGES: ImageConfig = {
-  hero: '/src/assets/images/hero_coder_image_1779562735408.png',
-  academy: '/src/assets/images/academy_image_1779563651039.png',
-  services: '/src/assets/images/services_image_1779563668755.png',
-  projects: '/src/assets/images/projects_image_1779563685288.png',
-  labs: '/src/assets/images/labs_image_1779563699805.png'
+export const DEFAULT_IMAGES: ImageConfig = {
+  hero: heroImage,
+  academy: academyImage,
+  services: servicesImage,
+  projects: projectsImage,
+  labs: labsImage
 };
 
 const DEFAULT_INQUIRIES: Inquiry[] = [

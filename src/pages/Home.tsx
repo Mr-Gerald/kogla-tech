@@ -2,13 +2,13 @@ import { motion } from 'motion/react';
 import { ArrowRight, Cpu, Shield, Zap, BookOpen, BarChart3, Globe, ChevronRight, Mail, Users, Building, Code, Smartphone, Layers, Cloud, Briefcase, Award, MessageSquare, Terminal, Eye, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
-import { getImageConfig, ImageConfig, addInquiry } from '../utils/storage';
+import { getImageConfig, ImageConfig, addInquiry, DEFAULT_IMAGES } from '../utils/storage';
 
 const stats = [
-    { label: 'Global Students', value: '15,000+' },
-    { label: 'Projects Completed', value: '4,200+' },
-    { label: 'Expert Mentors', value: '250+' },
-    { label: 'Global Divisions', value: '14' },
+    { label: 'Global Students', value: '250+' },
+    { label: 'Projects Completed', value: '142' },
+    { label: 'Tutors', value: '22' },
+    { label: 'Global Divisions', value: '4' },
 ];
 
 const ecosystem = ['Academy', 'Solutions', 'AI', 'Cybersecurity', 'Labs', 'Digital', 'Innovations', 'Incubator'];
@@ -16,13 +16,7 @@ const courses = ['Web Development', 'Cybersecurity', 'AI & Automation', 'UI/UX D
 const services = ['AI Automation', 'Cyber Defense Infrastructure', 'Web Development', 'Mobile App Development', 'Business Tech Consulting', 'Digital Branding & Design', 'Product Strategy', 'Cloud Solution Hosting', 'Workflow Optimization', 'Technical Mentorship'];
 
 export default function Home() {
-  const [images, setImages] = useState<ImageConfig>({
-    hero: '/src/assets/images/hero_coder_image_1779562735408.png',
-    academy: '/src/assets/images/academy_image_1779563651039.png',
-    services: '/src/assets/images/services_image_1779563668755.png',
-    projects: '/src/assets/images/projects_image_1779563685288.png',
-    labs: '/src/assets/images/labs_image_1779563699805.png'
-  });
+  const [images, setImages] = useState<ImageConfig>(DEFAULT_IMAGES);
 
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
