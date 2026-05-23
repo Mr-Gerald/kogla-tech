@@ -17,6 +17,7 @@ import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import CourseDetails from './pages/CourseDetails';
 import ServiceWorkflow from './pages/ServiceWorkflow';
+import AdminPortal from './pages/AdminPortal';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
             <Route path="/academy/:slug" element={<CourseDetails />} />
             <Route path="/services/:slug" element={<ServiceWorkflow />} />
+            <Route path="/admin" element={<AdminPortal />} />
           </Routes>
         </main>
         <Footer />

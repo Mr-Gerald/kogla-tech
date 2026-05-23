@@ -36,13 +36,13 @@ export default function Navbar() {
       </Link>
       
       {/* Desktop Menu */}
-      <div className="hidden md:flex gap-6 text-sm font-medium">
+      <div className="hidden md:flex gap-6 items-center text-sm font-medium">
         {navItems.map(item => (
           <a key={item.name} href={item.path} onClick={() => handleNavClick(item.path)} className="hover:text-gold-500 transition-colors">
             {item.name}
           </a>
         ))}
-        <Link to="/auth/login" className="ml-4 px-4 py-1.5 border border-gold-500 text-gold-500 text-xs hover:bg-gold-500 hover:text-black">Login</Link>
+        <Link to="/auth/login" className="ml-4 px-3 py-1.5 border border-gold-500 text-gold-500 text-xs hover:bg-gold-500 hover:text-black transition-all">Login</Link>
       </div>
 
       {/* Mobile Hamburger */}
@@ -57,13 +57,16 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="absolute top-full left-0 w-full bg-black-950 border-b border-gray-800 flex flex-col p-4 gap-4 md:hidden"
+            className="absolute top-full left-0 w-full bg-black border-b border-gray-800 flex flex-col p-4 gap-4 md:hidden z-50"
           >
             {navItems.map(item => (
               <a key={item.name} href={item.path} onClick={() => handleNavClick(item.path)} className="text-sm font-medium hover:text-gold-500 transition-colors">
                 {item.name}
               </a>
             ))}
+            <div className="flex flex-col gap-2 pt-2 border-t border-gray-900">
+              <Link to="/auth/login" onClick={() => setIsOpen(false)} className="px-4 py-2 text-center border border-gold-500 text-gold-500 text-xs rounded-sm">Login</Link>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
