@@ -6,6 +6,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import ScrollToTop from './components/layout/ScrollToTop';
 import Home from './pages/Home';
 import About from './pages/About';
 import Services from './pages/Services';
@@ -17,11 +18,13 @@ import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import CourseDetails from './pages/CourseDetails';
 import ServiceWorkflow from './pages/ServiceWorkflow';
+import ProjectDetails from './pages/ProjectDetails';
 import AdminPortal from './pages/AdminPortal';
 
 export default function App() {
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen bg-black-950 text-white selection:bg-gold-500 selection:text-black">
         <Navbar />
         <main>
@@ -37,6 +40,7 @@ export default function App() {
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
             <Route path="/academy/:slug" element={<CourseDetails />} />
             <Route path="/services/:slug" element={<ServiceWorkflow />} />
+            <Route path="/projects/:slug" element={<ProjectDetails />} />
             <Route path="/admin" element={<AdminPortal />} />
           </Routes>
         </main>

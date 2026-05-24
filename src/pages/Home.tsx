@@ -6,7 +6,7 @@ import { getImageConfig, ImageConfig, addInquiry, DEFAULT_IMAGES } from '../util
 
 const stats = [
     { label: 'Global Students', value: '250+' },
-    { label: 'Projects Completed', value: '142' },
+    { label: 'Projects Completed', value: '1,000+' },
     { label: 'Tutors', value: '22' },
     { label: 'Global Divisions', value: '4' },
 ];
@@ -142,7 +142,7 @@ export default function Home() {
           <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Academy & Learning Paths</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
             {courses.map(title => (
-                <Link key={title} to={`/academy/${title.toLowerCase().replace(/ /g, '-')}`} className="p-4 border border-gray-800 bg-gray-950 hover:border-gold-500 transition-all flex flex-col items-center text-center">
+                <Link key={title} to={`/academy/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="p-4 border border-gray-800 bg-gray-950 hover:border-gold-500 transition-all flex flex-col items-center text-center">
                     <BookOpen className="text-gold-500 mb-3" size={20} />
                     <h3 className="text-xs font-semibold font-display">{title}</h3>
                 </Link>
@@ -155,7 +155,7 @@ export default function Home() {
           <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Premium Solution Ecosystem</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
             {services.map(title => (
-                <Link key={title} to={`/services/${title.toLowerCase().replace(/ /g, '-')}`} className="p-6 border border-gray-800 bg-gray-900 hover:border-gold-500 transition-all flex items-center gap-3">
+                <Link key={title} to={`/services/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="p-6 border border-gray-800 bg-gray-900 hover:border-gold-500 transition-all flex items-center gap-3">
                     <Zap className="text-gold-500" size={20} />
                     <h3 className="text-xs font-semibold font-display">{title}</h3>
                 </Link>
@@ -168,10 +168,21 @@ export default function Home() {
           <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Featured Case Studies</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
             {[['AI Infrastructure', 'Enterprise AI/ML'], ['Cyber Immunity', 'Zero-Trust Defense'], ['Digital Transformation', 'Retail Enterprise'], ['Web Ecosystem', 'Global SaaS']].map(([title, desc]) => (
-                <div key={title} className="h-40 p-6 border border-gray-800 bg-gray-900 flex flex-col justify-end">
-                    <h3 className="text-lg font-display font-bold">{title}</h3>
-                    <p className="text-[10px] text-gray-500">{desc}</p>
-                </div>
+                <Link 
+                  key={title} 
+                  to={`/projects/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} 
+                  className="h-40 p-6 border border-gray-800 bg-gray-900 hover:border-gold-500 hover:shadow-[0_0_15px_rgba(212,175,55,0.05)] transition-all flex flex-col justify-end group cursor-pointer"
+                >
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <h3 className="text-lg font-display font-bold text-white group-hover:text-gold-500 transition-colors">{title}</h3>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{desc}</p>
+                      </div>
+                      <div className="text-gray-600 group-hover:text-gold-500 group-hover:translate-x-1 transition-all">
+                        <ArrowRight size={18} />
+                      </div>
+                    </div>
+                </Link>
             ))}
           </div>
       </section>

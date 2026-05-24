@@ -6,7 +6,7 @@ import { addInquiry } from '../utils/storage';
 export default function CourseDetails() {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const formattedTitle = slug ? slug.replace(/-/g, ' ').toUpperCase() : 'ELITE PROGRAM';
+    const formattedTitle = slug ? slug.replace(/-/g, ' ').toUpperCase().replace('UI UX', 'UI/UX') : 'ELITE PROGRAM';
 
     const [formSubmitted, setFormSubmitted] = useState(false);
     const [name, setName] = useState('');
@@ -41,7 +41,7 @@ export default function CourseDetails() {
                     </div>
 
                     <h1 className="text-3xl md:text-5xl font-display font-bold bg-gradient-to-r from-white via-gold-500 to-white bg-clip-text text-transparent capitalize">
-                        {slug?.replace(/-/g, ' ')}
+                        {slug?.replace(/-/g, ' ').replace('ui ux', 'UI/UX')}
                     </h1>
 
                     <p className="text-gray-400 text-sm leading-relaxed">
