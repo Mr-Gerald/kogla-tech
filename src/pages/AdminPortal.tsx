@@ -122,16 +122,22 @@ export default function AdminPortal() {
   const presets: Record<keyof ImageConfig, Array<{ label: string; url: string }>> = {
     hero: [
       { label: 'Original Cinematic Workspace', url: DEFAULT_IMAGES.hero },
+      { label: 'Nigerian Tech Developer Workspace', url: 'https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?auto=format&fit=crop&w=1200' },
+      { label: 'Lagos Tech Hub Innovation Founder', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1200' },
       { label: 'Cyberpunk Command Center', url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200' },
       { label: 'Luxury Minimalist Office', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200' }
     ],
     academy: [
       { label: 'Original Tech Students', url: DEFAULT_IMAGES.academy },
+      { label: 'Nigerian Tech Students Cohort', url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1000' },
+      { label: 'Lagos Peer Programming Workshop', url: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1000' },
+      { label: 'African Cloud Engineers Seminar', url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1000' },
       { label: 'Minimal Laboratory', url: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1000' },
       { label: 'Corporate Tech Brainstorm', url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1000' }
     ],
     services: [
       { label: 'Original High-End Dashboard', url: DEFAULT_IMAGES.services },
+      { label: 'African SaaS Solutions Briefing', url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=1000' },
       { label: 'Server Matrix Blades', url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1000' },
       { label: 'Clean Enterprise Graphs', url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1000' }
     ],
