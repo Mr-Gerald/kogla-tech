@@ -192,10 +192,15 @@ export default function Home() {
         <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Innovation Labs & AI Research</h2>
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {['LLM Optimization', 'Cyber Security Labs', 'Automation OS'].map(title => (
-                <div key={title} className="p-8 border border-gray-800 bg-gray-900 text-center">
-                    <Cpu size={32} className="text-gold-500 mx-auto mb-4"/>
-                    <h3 className="text-sm font-bold font-display">{title}</h3>
-                </div>
+                <Link 
+                  key={title} 
+                  to={`/labs/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} 
+                  className="p-8 border border-gray-800 bg-gray-900 text-center hover:border-gold-500 hover:shadow-[0_0_15px_rgba(212,175,55,0.05)] transition-all cursor-pointer block group rounded-sm"
+                >
+                    <Cpu size={32} className="text-gold-500 mx-auto mb-4 group-hover:scale-110 transition-transform"/>
+                    <h3 className="text-sm font-bold font-display text-white group-hover:text-gold-500 transition-colors uppercase tracking-wider">{title}</h3>
+                    <p className="text-[10px] text-gray-500 font-mono tracking-widest mt-2">RESEARCH LEVEL-4 &bull; ENTERPRISE</p>
+                </Link>
             ))}
         </div>
       </section>

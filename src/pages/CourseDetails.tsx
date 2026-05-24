@@ -6,7 +6,14 @@ import { addInquiry } from '../utils/storage';
 export default function CourseDetails() {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const formattedTitle = slug ? slug.replace(/-/g, ' ').toUpperCase().replace('UI UX', 'UI/UX') : 'ELITE PROGRAM';
+    
+    const rawTitle = slug ? slug.replace(/-/g, ' ') : 'ELITE PROGRAM';
+    const displayTitle = rawTitle.split(' ').map(w => {
+        if (w.toLowerCase() === 'ui' || w.toLowerCase() === 'ux') return w.toUpperCase();
+        return w.charAt(0).toUpperCase() + w.slice(1);
+    }).join(' ').replace('Ui Ux', 'UI/UX').replace('Ui/ux', 'UI/UX');
+
+    const formattedTitle = displayTitle.toUpperCase();
 
     const [formSubmitted, setFormSubmitted] = useState(false);
     const [name, setName] = useState('');
@@ -40,12 +47,12 @@ export default function CourseDetails() {
                         <BookOpenCheck size={12} /> Live Interactive Cohort
                     </div>
 
-                    <h1 className="text-3xl md:text-5xl font-display font-bold bg-gradient-to-r from-white via-gold-500 to-white bg-clip-text text-transparent capitalize">
-                        {slug?.replace(/-/g, ' ').replace('ui ux', 'UI/UX')}
+                    <h1 className="text-3xl md:text-5xl font-display font-bold bg-gradient-to-r from-white via-gold-500 to-white bg-clip-text text-transparent">
+                        {displayTitle}
                     </h1>
 
                     <p className="text-gray-400 text-sm leading-relaxed">
-                        Master the skills necessary to succeed in {slug?.replace(/-/g, ' ')} with our expert-led, intense curriculums. From fundamental engineering architectures to corporate integration processes, this cohort covers critical, real-world case studies designed solely to turn ambition into enterprise-grade career outcomes.
+                        Master the skills necessary to succeed in {displayTitle} with our expert-led, intense curriculums. From fundamental engineering architectures to corporate integration processes, this cohort covers critical, real-world case studies designed solely to turn ambition into enterprise-grade career outcomes.
                     </p>
 
                     <div className="border-t border-gray-800 pt-6 space-y-4">

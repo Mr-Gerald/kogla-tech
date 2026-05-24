@@ -19,6 +19,7 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import CourseDetails from './pages/CourseDetails';
 import ServiceWorkflow from './pages/ServiceWorkflow';
 import ProjectDetails from './pages/ProjectDetails';
+import LabDetails from './pages/LabDetails';
 import AdminPortal from './pages/AdminPortal';
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/academy/:slug" element={<CourseDetails />} />
             <Route path="/services/:slug" element={<ServiceWorkflow />} />
             <Route path="/projects/:slug" element={<ProjectDetails />} />
+            <Route path="/labs/:slug" element={<LabDetails />} />
             <Route path="/admin" element={<AdminPortal />} />
           </Routes>
         </main>
