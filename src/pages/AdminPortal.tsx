@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  onSnapshot 
+} from 'firebase/firestore';
 import { 
   getImageConfig, 
   saveImageConfig, 
-  getInquiries, 
-  updateInquiryStatus, 
-  deleteInquiry, 
   Inquiry, 
   ImageConfig,
-  DEFAULT_IMAGES
+  DEFAULT_IMAGES 
 } from '../utils/storage';
+import { UserProfile } from '../types';
+import { Link } from 'react-router-dom';
 import { 
   Settings, 
   Layers, 
@@ -25,17 +34,19 @@ import {
   Briefcase, 
   Sparkles, 
   ArrowUpRight,
-  Upload
+  Upload,
+  Users,
+  Bell,
+  Send,
+  Loader2,
+  Calendar,
+  CheckCircle,
+  FileText
 } from 'lucide-react';
 
 export default function AdminPortal() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('kogla_admin_auth') === 'true';
-  });
-  const [localUsername, setLocalUsername] = useState('');
-  const [localPassword, setLocalPassword] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
+  const { user, profile, logout, loading } = useAuth();
+  
   const [images, setImages] = useState<ImageConfig>({
     hero: '',
     academy: '',
@@ -44,67 +55,76 @@ export default function AdminPortal() {
     labs: ''
   });
 
+  // Firestore DB states
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+
+  // Notifications Dispatcher state
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifBody, setNotifBody] = useState('');
+  const [isSendingNotif, setIsSendingNotif] = useState(false);
+
   const [successMsg, setSuccessMsg] = useState('');
-  const [tab, setTab] = useState<'leads' | 'images'>('leads');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [tab, setTab] = useState<'leads' | 'users' | 'images'>('leads');
 
-  // Load state on mount
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Load local state & Firestore Listeners on Auth load
   useEffect(() => {
-    if (isAuthenticated) {
+    if (profile?.role === 'admin') {
       setImages(getImageConfig());
-      setInquiries(getInquiries());
+
+      // 1. Listen to dynamic child inquiries from Firestore
+      const inquiriesRef = collection(db, 'inquiries');
+      const unsubInquiries = onSnapshot(inquiriesRef, (snapshot) => {
+        const loaded: Inquiry[] = [];
+        snapshot.forEach((snap) => {
+          loaded.push(snap.data() as Inquiry);
+        });
+        // Sort stably on client side descending by timestamp
+        loaded.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setInquiries(loaded);
+      }, (err) => {
+        console.error('Firestore inquiries sync failed:', err);
+      });
+
+      // 2. Listen to registered profiles database
+      const usersRef = collection(db, 'users');
+      const unsubUsers = onSnapshot(usersRef, (snapshot) => {
+        const loaded: UserProfile[] = [];
+        snapshot.forEach((snap) => {
+          loaded.push(snap.data() as UserProfile);
+        });
+        // Sort by XP of users
+        loaded.sort((a, b) => (b.xp || 0) - (a.xp || 0));
+        setUsers(loaded);
+      }, (err) => {
+        console.error('Firestore users sync failed:', err);
+      });
+
+      return () => {
+        unsubInquiries();
+        unsubUsers();
+      };
     }
-  }, [isAuthenticated]);
-
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (localUsername.toUpperCase() === 'ADMIN' && localPassword === 'ADMIN77') {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('kogla_admin_auth', 'true');
-      setErrorMsg('');
-    } else {
-      setErrorMsg('Unauthorized administrative credentials. Verification failed.');
-    }
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem('kogla_admin_auth');
-    setLocalUsername('');
-    setLocalPassword('');
-  };
-
-  const handleUpdateImage = (key: keyof ImageConfig, value: string) => {
-    const updated = { ...images, [key]: value };
-    setImages(updated);
-    saveImageConfig(updated);
-    triggerSuccess('Image configuration saved and live!');
-  };
-
-  const handleStatusChange = (id: string, newStatus: Inquiry['status']) => {
-    const updated = updateInquiryStatus(id, newStatus);
-    setInquiries(updated);
-    if (selectedInquiry && selectedInquiry.id === id) {
-      setSelectedInquiry({ ...selectedInquiry, status: newStatus });
-    }
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this lead record?')) {
-      const updated = deleteInquiry(id);
-      setInquiries(updated);
-      setSelectedInquiry(null);
-      triggerSuccess('Lead deleted successfully.');
-    }
-  };
+  }, [profile]);
 
   const triggerSuccess = (msg: string) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
-  // Convert files locally to Base64 in standard way for React
+  const handleUpdateImage = (key: keyof ImageConfig, value: string) => {
+    const updated = { ...images, [key]: value };
+    setImages(updated);
+    saveImageConfig(updated);
+    triggerSuccess(`Landing panel image "${key}" updated live!`);
+  };
+
+  // Convert files locally to Base64
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, key: keyof ImageConfig) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -118,8 +138,91 @@ export default function AdminPortal() {
     }
   };
 
-  // Preset premium high-quality stock technology background options
-  const presets: Record<keyof ImageConfig, Array<{ label: string; url: string }>> = {
+  const handleStatusChange = async (id: string, newStatus: Inquiry['status']) => {
+    setIsUpdatingStatus(true);
+    try {
+      const docRef = doc(db, 'inquiries', id);
+      await updateDoc(docRef, { status: newStatus });
+      
+      // Update local state references instantly too
+      if (selectedInquiry && selectedInquiry.id === id) {
+        setSelectedInquiry({ ...selectedInquiry, status: newStatus });
+      }
+
+      // If updating to contacted or processing, build an automated user notification
+      const targetInq = inquiries.find(i => i.id === id);
+      if (targetInq && targetInq.userId) {
+        const autoNotifId = `auto-inq-${Date.now()}`;
+        const notifRef = doc(db, 'notifications', autoNotifId);
+        await setDoc(notifRef, {
+          id: autoNotifId,
+          userId: targetInq.userId,
+          title: `Project State: ${newStatus}`,
+          body: `Director status updated: Your intake request regarding "${targetInq.title}" is now set to ${newStatus}. An executive engineer will trace contact.`,
+          read: false,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      triggerSuccess(`Intake status updated successfully, and automated notification dispatched!`);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed updating status: ${err.message}`);
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Verify: Permanently purge this database inquiries file?')) {
+      try {
+        const docRef = doc(db, 'inquiries', id);
+        await deleteDoc(docRef);
+        setSelectedInquiry(null);
+        triggerSuccess('Intake record purged securely.');
+      } catch (err: any) {
+        console.error(err);
+        setErrorMsg(`Failed to delete record: ${err.message}`);
+        setTimeout(() => setErrorMsg(''), 5000);
+      }
+    }
+  };
+
+  // Transmit customized system notification
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    if (!notifTitle.trim() || !notifBody.trim()) {
+      alert('Notification Title and Description are required parameters.');
+      return;
+    }
+
+    setIsSendingNotif(true);
+    try {
+      const notifId = `sys-notif-${Date.now()}`;
+      const docRef = doc(db, 'notifications', notifId);
+      await setDoc(docRef, {
+        id: notifId,
+        userId: selectedUser.uid,
+        title: notifTitle.trim(),
+        body: notifBody.trim(),
+        read: false,
+        timestamp: new Date().toISOString()
+      });
+
+      setNotifTitle('');
+      setNotifBody('');
+      triggerSuccess(`Sovereign alert payload dispatched directly into ${selectedUser.name}'s account inbox!`);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Dispatch error: ${err.message}`);
+    } finally {
+      setIsSendingNotif(false);
+    }
+  };
+
+  const presetImagesList: Record<keyof ImageConfig, Array<{ label: string; url: string }>> = {
     hero: [
       { label: 'Original Cinematic Workspace', url: DEFAULT_IMAGES.hero },
       { label: 'Nigerian Tech Developer Workspace', url: 'https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?auto=format&fit=crop&w=1200' },
@@ -132,8 +235,7 @@ export default function AdminPortal() {
       { label: 'Nigerian Tech Students Cohort', url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1000' },
       { label: 'Lagos Peer Programming Workshop', url: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1000' },
       { label: 'African Cloud Engineers Seminar', url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1000' },
-      { label: 'Minimal Laboratory', url: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1000' },
-      { label: 'Corporate Tech Brainstorm', url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1000' }
+      { label: 'Minimal Laboratory', url: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1000' }
     ],
     services: [
       { label: 'Original High-End Dashboard', url: DEFAULT_IMAGES.services },
@@ -153,80 +255,90 @@ export default function AdminPortal() {
     ]
   };
 
-  if (!isAuthenticated) {
+  // 1. Loading screen segment
+  if (loading) {
     return (
-      <div className="pt-32 px-4 pb-32 max-w-md mx-auto text-gray-100 font-sans flex flex-col items-center justify-center min-h-[70vh]">
-        <div className="w-full bg-gray-950 border border-gray-800 p-8 rounded-sm shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gold-500/5 blur-2xl rounded-full"></div>
+      <div className="pt-40 pb-40 text-center font-mono text-xs text-gray-500 flex flex-col items-center justify-center min-h-[50vh]">
+        <Loader2 className="animate-spin text-gold-500 mb-3" size={20} />
+        Synchronizing system roles clearance keys...
+      </div>
+    );
+  }
+
+  // 2. Lockdown check for users without active "admin" status in Firebase database profile
+  if (!user || profile?.role !== 'admin') {
+    return (
+      <div className="pt-32 px-4 pb-32 max-w-lg mx-auto text-gray-100 font-sans flex flex-col items-center justify-center min-h-[75vh]">
+        <div className="w-full bg-gray-950 border border-gray-900 p-8 rounded-sm shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 blur-2xl rounded-full"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
           
           <div className="flex flex-col items-center text-center mb-6">
-            <div className="p-3 bg-gold-500/10 border border-gold-500/20 text-gold-500 rounded-full mb-3">
-              <Lock size={24} />
+            <div className="p-3.5 bg-red-950/40 border border-red-500/30 text-red-500 rounded-full mb-3">
+              <Lock size={28} className="animate-pulse" />
             </div>
             <h2 className="text-xl font-display font-bold uppercase text-white tracking-widest">
-              Administrative Gate
+              Administrative Clearances Required
             </h2>
-            <p className="text-[11px] text-gray-400 mt-1 uppercase tracking-wider">
-              Kogla Tech secure operation credentials
+            <p className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest font-mono p-1 bg-red-950/20 border border-red-950 rounded-xs">
+              Direct Role: {profile?.role ? profile.role.toUpperCase() : 'ANONYMOUS CLIENT'}
             </p>
           </div>
 
-          {errorMsg && (
-            <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-400 text-xs text-center rounded-sm mb-4">
-              {errorMsg}
-            </div>
-          )}
+          <div className="p-4 bg-black border border-gray-900 rounded-sm text-xs text-gray-400 font-mono leading-relaxed mb-6 space-y-3">
+            <p>
+              [SECURITY EXCEPTION]: Authorized Administrative Suite logins are strictly validated via Firebase Authentication database mappings.
+            </p>
+            <p>
+              To study corporate lead streams, adjust landing page panels configurations, and review registered student profiles, complete steps below:
+            </p>
+            <ol className="list-decimal list-inside text-[11px] text-gray-500 space-y-1">
+              <li>Log in using authorized credentials.</li>
+              <li>Sovereign admin profile holds target access matching: <span className="text-gold-500 font-bold">emechebegerald@gmail.com</span></li>
+            </ol>
+          </div>
 
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[10px] text-gray-400 uppercase tracking-widest mb-1">
-                Username / Identifier
-              </label>
-              <input 
-                type="text" 
-                required
-                value={localUsername}
-                onChange={(e) => setLocalUsername(e.target.value)}
-                placeholder="Identifier" 
-                className="w-full p-2.5 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white uppercase" 
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] text-gray-400 uppercase tracking-widest mb-1">
-                Security Password
-              </label>
-              <input 
-                type="password" 
-                required
-                value={localPassword}
-                onChange={(e) => setLocalPassword(e.target.value)}
-                placeholder="Password" 
-                className="w-full p-2.5 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white" 
-              />
-            </div>
-
-            <button 
-              type="submit"
-              className="w-full py-2.5 bg-gold-500 hover:bg-gold-600 active:scale-[0.98] text-black font-semibold text-xs uppercase tracking-wider font-display transition-all"
-            >
-              Verify Credentials
-            </button>
-          </form>
-
-          <p className="text-[10px] text-center text-gray-500 mt-6 leading-relaxed">
-            Authorized administrative access protocol. Unauthorized connections or system tampering are logged under zero-trust defense architectures.
-          </p>
+          <div className="flex flex-col gap-3">
+            {user ? (
+              <>
+                <div className="text-center text-xs text-gray-500 font-mono mb-2">
+                  Authenticated as: <span className="text-white font-bold">{user.email}</span>
+                </div>
+                <button 
+                  onClick={() => logout()}
+                  className="w-full py-3 bg-red-950 hover:bg-red-950 hover:text-white border border-red-500/30 text-red-400 font-semibold text-xs uppercase tracking-wider font-display transition-all"
+                >
+                  Unlink Current Profile Keys
+                </button>
+              </>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <Link 
+                  to="/auth/login" 
+                  className="py-3 bg-gold-500 hover:bg-gold-600 text-black font-semibold text-xs text-center uppercase tracking-wider font-display rounded-sm transition-all"
+                >
+                  Log In
+                </Link>
+                <Link 
+                  to="/auth/signup" 
+                  className="py-3 bg-transparent hover:bg-gray-900 border border-gray-800 text-gray-400 font-semibold text-xs text-center uppercase tracking-wider font-mono rounded-sm transition-all"
+                >
+                  Register Profile
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
+  // 3. Clear Administrative dashboard screen
   return (
     <div className="pt-28 px-4 md:px-8 pb-32 max-w-7xl mx-auto text-gray-100 font-sans">
       
-      {/* Top Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 border border-gray-800 p-8 rounded-sm mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      {/* Top Banner and System stats */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 border border-gray-800 p-8 rounded-sm mb-8 flex flex-col md:flex-row md:items-center md:white justify-between gap-6">
         <div className="absolute top-0 right-0 w-24 h-24 bg-gold-500/5 blur-2xl rounded-full"></div>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2 justify-between">
@@ -235,96 +347,108 @@ export default function AdminPortal() {
               <span className="text-[10px] text-gray-400 font-display tracking-widest uppercase">Kogla Administrator Suite</span>
             </div>
             <button 
-              onClick={handleLogout}
+              onClick={() => logout()}
               className="px-2 py-0.5 border border-red-500/30 hover:border-red-500 text-red-400 hover:text-red-300 text-[9px] uppercase tracking-wider rounded-sm transition-all bg-red-950/20"
             >
               Sign Out
             </button>
           </div>
           <h1 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight flex items-center gap-3">
-            System Operations Panel
+            Operations command console
           </h1>
           <p className="text-xs text-gray-400 mt-1 max-w-xl">
-            Audit live incoming program enrollments, review enterprise customized architectural briefs, and update landing page imagery in real-time.
+            Audit live incoming client requests, dispatch system alerts to student account databases, and calibrate background theme panels dynamically.
           </p>
         </div>
 
         {/* Action Quick Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-black/40 p-3 border border-gray-800/60 rounded-sm">
+        <div className="grid grid-cols-3 gap-3 bg-black/40 p-3 border border-gray-800/60 rounded-sm font-mono text-[11px]">
           <div className="px-3 py-1">
-            <span className="block text-[10px] text-gray-500 uppercase tracking-wider">Total Leads</span>
-            <span className="text-lg font-display font-bold text-white">{inquiries.length}</span>
+            <span className="block text-[9px] text-gray-500 uppercase">Lead Pipeline</span>
+            <span className="text-base font-bold text-white">{inquiries.length}</span>
           </div>
-          <div className="px-3 py-1 border-l border-gray-800">
-            <span className="block text-[10px] text-gray-500 uppercase tracking-wider">Unread</span>
-            <span className="text-lg font-display font-bold text-gold-500">
+          <div className="px-3 py-1 border-l border-gray-800/60">
+            <span className="block text-[9px] text-gray-500 uppercase">Students Core</span>
+            <span className="text-base font-bold text-cyan-400">{users.length}</span>
+          </div>
+          <div className="px-3 py-1 border-l border-gray-800/60">
+            <span className="block text-[9px] text-gray-500 uppercase">Unread Log</span>
+            <span className="text-base font-bold text-red-400">
               {inquiries.filter(i => i.status === 'Unread').length}
             </span>
           </div>
-          <div className="px-3 py-1 border-l border-gray-800">
-            <span className="block text-[10px] text-gray-500 uppercase tracking-wider">Enrollments</span>
-            <span className="text-lg font-display font-bold text-cyan-400">
-              {inquiries.filter(i => i.type === 'enrollment').length}
-            </span>
-          </div>
-          <div className="px-3 py-1 border-l border-gray-800">
-            <span className="block text-[10px] text-gray-500 uppercase tracking-wider">Inquiries</span>
-            <span className="text-lg font-display font-bold text-purple-400">
-              {inquiries.filter(i => i.type === 'solution_inquiry').length}
-            </span>
-          </div>
         </div>
       </div>
 
-      {/* Real-time Status feedback bar */}
+      {/* Real-time feedback lines */}
       {successMsg && (
-        <div className="p-3 bg-gold-500 text-black font-semibold text-xs rounded-sm mb-6 flex items-center gap-2 animate-bounce justify-center">
-          <Check size={14} /> {successMsg}
+        <div className="p-3.5 bg-gold-500 text-black font-semibold text-xs rounded-sm mb-6 flex items-center gap-2 justify-center font-mono">
+          <CheckCircle size={14} /> {successMsg}
         </div>
       )}
 
-      {/* Tabs Layout */}
-      <div className="flex border-b border-gray-800 mb-8 font-display">
+      {errorMsg && (
+        <div className="p-3.5 bg-red-950 text-red-400 border border-red-500/20 text-xs rounded-sm mb-6 flex items-center gap-2 justify-center font-mono">
+          <Lock size={14} /> [ERROR]: {errorMsg}
+        </div>
+      )}
+
+      {/* Tabs list menu */}
+      <div className="flex border-b border-gray-800 mb-8 font-display bg-gray-950 rounded-sm p-1 gap-1">
         <button 
           onClick={() => setTab('leads')}
-          className={`px-6 py-3 text-xs uppercase tracking-widest transition-all ${
+          className={`flex-1 md:flex-none px-5 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
             tab === 'leads' 
-              ? 'border-b-2 border-gold-500 text-gold-500 bg-gray-900/30 font-semibold' 
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-gold-500 text-black font-bold' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
           }`}
         >
-          User Requests & CRM Lead List ({inquiries.length})
+          <Mail size={13} /> Project Requests ({inquiries.length})
+        </button>
+        <button 
+          onClick={() => {
+            setTab('users');
+            setSelectedUser(null);
+          }}
+          className={`flex-1 md:flex-none px-5 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+            tab === 'users' 
+              ? 'bg-gold-500 text-black font-bold' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
+          }`}
+        >
+          <Users size={13} /> Registered Students ({users.length})
         </button>
         <button 
           onClick={() => setTab('images')}
-          className={`px-6 py-3 text-xs uppercase tracking-widest transition-all ${
+          className={`flex-1 md:flex-none px-5 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
             tab === 'images' 
-              ? 'border-b-2 border-gold-500 text-gold-500 bg-gray-900/30 font-semibold' 
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-gold-500 text-black font-bold' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
           }`}
         >
-          Landing Page Image Controls
+          <ImageIcon size={13} /> Landing Page Images
         </button>
       </div>
 
-      {tab === 'leads' ? (
+      {/* Tab 1: Leads Section */}
+      {tab === 'leads' && (
         <div className="grid lg:grid-cols-3 gap-8">
           
-          {/* Incoming Stream list */}
+          {/* Stream pipeline table */}
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-gray-950 border border-gray-800 rounded-sm">
-              <div className="p-4 border-b border-gray-800 bg-black/40 flex items-center justify-between">
-                <span className="text-xs font-display font-bold uppercase text-gold-500 tracking-wider">
-                  Lead stream logs & records
+              <div className="p-4 border-b border-gray-800 bg-black/40 flex items-center justify-between font-mono">
+                <span className="text-xs font-display font-semibold text-gold-500 uppercase tracking-wider">
+                  Leads Stream Log Files
                 </span>
-                <span className="text-[10px] text-gray-400">
-                  Select a record to inspect full briefs
+                <span className="text-[9px] text-gray-500 uppercase">
+                  Select a record to audit payload
                 </span>
               </div>
 
               {inquiries.length === 0 ? (
-                <div className="p-12 text-center text-gray-500 text-xs">
-                  No submissions recorded yet. Try filling an enrollment or service form to see your requests pop up here in real-time!
+                <div className="p-16 text-center text-gray-600 text-xs font-mono">
+                  [EMPTY SUITE]: No admissions requests or custom project intakes received yet.
                 </div>
               ) : (
                 <div className="divide-y divide-gray-900 max-h-[600px] overflow-y-auto">
@@ -338,26 +462,26 @@ export default function AdminPortal() {
                     >
                       <div className="mt-1">
                         {inq.type === 'enrollment' ? (
-                          <div className="p-1.5 rounded-sm bg-cyan-950 text-cyan-400">
-                            <BookOpen size={16} />
+                          <div className="p-2 rounded-sm bg-cyan-950/60 text-cyan-400 border border-cyan-800/30">
+                            <BookOpen size={14} />
                           </div>
                         ) : (
-                          <div className="p-1.5 rounded-sm bg-purple-950 text-purple-400">
-                            <Zap size={16} />
+                          <div className="p-2 rounded-sm bg-purple-950/60 text-purple-400 border border-purple-800/30">
+                            <Zap size={14} />
                           </div>
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <h4 className="text-xs font-bold text-white truncate font-display">
+                          <h4 className="text-xs font-bold text-white truncate font-display uppercase tracking-wide">
                             {inq.senderName}
                           </h4>
                           <span className="text-[9px] text-gray-500 font-mono">
                             {new Date(inq.timestamp).toLocaleDateString()}
                           </span>
                         </div>
-                        <p className="text-xs text-gold-500 font-display font-semibold mb-1 truncate">
+                        <p className="text-xs text-gold-550 font-display font-semibold mb-1 truncate">
                           {inq.title}
                         </p>
                         <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">
@@ -365,14 +489,14 @@ export default function AdminPortal() {
                         </p>
                         
                         <div className="flex items-center gap-2 mt-3">
-                          <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold font-mono border ${
+                          <span className={`text-[8px] px-2 py-0.5 rounded-full uppercase tracking-widest font-bold font-mono border ${
                             inq.status === 'Unread' 
-                              ? 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse' 
+                              ? 'bg-red-500/10 text-red-400 border-red-500/20' 
                               : inq.status === 'In Progress'
-                              ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                              ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                               : inq.status === 'Contacted'
                               ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                              : 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                              : 'bg-gray-500/10 text-gray-400 border-gray-50s/20'
                           }`}>
                             {inq.status}
                           </span>
@@ -385,12 +509,12 @@ export default function AdminPortal() {
             </div>
           </div>
 
-          {/* Full Inspector card */}
+          {/* CRM Lead Inspector */}
           <div className="lg:col-span-1">
             {selectedInquiry ? (
               <div className="bg-gray-950 border border-gray-800 p-6 rounded-sm sticky top-28 space-y-6">
                 <div>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">Inquiry Inspect Tool</span>
+                  <span className="text-[9px] text-gray-500 uppercase tracking-widest font-mono">Inquiry telemetry panel</span>
                   <h3 className="text-base font-display font-bold text-white mt-1 break-words">
                     {selectedInquiry.senderName}
                   </h3>
@@ -399,96 +523,269 @@ export default function AdminPortal() {
                   </p>
                 </div>
 
-                <div className="border-y border-gray-900 py-4 space-y-2">
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-gray-500">Program / Technology:</span>
-                    <span className="text-white font-medium text-right break-words max-w-[140px]">
+                <div className="border-y border-gray-900 py-4 space-y-2 font-mono text-[10px]">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Service Theme:</span>
+                    <span className="text-white font-medium text-right max-w-[140px] truncate">
                       {selectedInquiry.title}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-gray-500">Inquiry Intake ID:</span>
-                    <span className="text-gray-400 font-mono">{selectedInquiry.id}</span>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Intake Index:</span>
+                    <span className="text-gray-300">{selectedInquiry.id}</span>
                   </div>
-                  <div className="flex justify-between text-[11px]">
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Recorded:</span>
                     <span className="text-gray-400">
                       {new Date(selectedInquiry.timestamp).toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[11px]">
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Category:</span>
-                    <span className="text-white font-semibold capitalize font-mono text-xs">
+                    <span className="text-white font-semibold capitalize">
                       {selectedInquiry.type.replace('_', ' ')}
                     </span>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-display text-gold-400 font-semibold mb-2 uppercase tracking-wide">
-                    Client Description Statement & Timeline:
+                  <h4 className="text-xs font-display text-gold-500 font-semibold mb-2 uppercase tracking-wide">
+                    Description brief statement:
                   </h4>
-                  <div className="p-4 bg-black border border-gray-900 rounded-sm text-xs text-gray-300 leading-relaxed max-h-56 overflow-y-auto whitespace-pre-line font-serif">
+                  <div className="p-4 bg-black border border-gray-900 rounded-sm text-xs text-gray-300 leading-relaxed max-h-56 overflow-y-auto whitespace-pre-line font-mono text-[11px]">
                     {selectedInquiry.description}
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <span className="block text-[10px] text-gray-500 uppercase tracking-widest">
-                    Operational Status Actions:
+                <div className="space-y-3 font-mono">
+                  <span className="block text-[9px] text-gray-500 uppercase tracking-widest">
+                    Status assignments workflow:
                   </span>
                   
                   <div className="grid grid-cols-2 gap-2">
                     <button 
+                      disabled={isUpdatingStatus}
                       onClick={() => handleStatusChange(selectedInquiry.id, 'In Progress')}
-                      className={`py-2 text-xs rounded-sm transition-all border ${
+                      className={`py-2 text-[10.5px] rounded-sm transition-all border uppercase tracking-wider ${
                         selectedInquiry.status === 'In Progress'
                           ? 'bg-yellow-500 text-black font-semibold border-yellow-500'
-                          : 'bg-transparent border-gray-800 hover:border-yellow-500/50 text-yellow-500'
+                          : 'bg-transparent border-gray-900 hover:border-yellow-500/50 text-yellow-500'
                       }`}
                     >
-                      Set In Progress
+                      In Progress
                     </button>
                     <button 
+                      disabled={isUpdatingStatus}
                       onClick={() => handleStatusChange(selectedInquiry.id, 'Contacted')}
-                      className={`py-2 text-xs rounded-sm transition-all border ${
+                      className={`py-2 text-[10.5px] rounded-sm transition-all border uppercase tracking-wider ${
                         selectedInquiry.status === 'Contacted'
                           ? 'bg-green-500 text-black font-semibold border-green-500'
-                          : 'bg-transparent border-gray-800 hover:border-green-500/50 text-green-400'
+                          : 'bg-transparent border-gray-900 hover:border-green-500/50 text-green-400'
                       }`}
                     >
-                      Set Contacted
+                      Contacted
                     </button>
                   </div>
 
                   <div className="flex gap-2">
                     <button 
+                      disabled={isUpdatingStatus}
                       onClick={() => handleStatusChange(selectedInquiry.id, 'Unread')}
-                      className="flex-1 py-1.5 bg-gray-900 hover:bg-gray-800 text-[10px] uppercase tracking-wider border border-gray-800 text-gray-400"
+                      className="flex-1 py-1.5 bg-gray-900 hover:bg-gray-800 text-[9px] uppercase tracking-widest border border-gray-800 text-gray-400"
                     >
-                      Reset to Unread
+                      Reset Log status
                     </button>
                     <button 
                       onClick={() => handleDelete(selectedInquiry.id)}
-                      className="px-3 bg-red-950 hover:bg-red-900 text-red-400 border border-red-900 rounded-sm flex items-center justify-center transition-colors"
-                      title="Permanently remove record"
+                      className="px-3 bg-red-950/40 hover:bg-red-950 hover:text-red-300 text-red-400 border border-red-900/40 rounded-sm flex items-center justify-center transition-colors"
+                      title="Purge record file"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
 
               </div>
             ) : (
-              <div className="bg-gray-950 border border-gray-800 p-8 rounded-sm text-center text-gray-500 text-xs">
-                Select an intake file from the left panel to inspect detailed telemetry, system timeline logs, and edit assignment states.
+              <div className="bg-gray-950 border border-gray-800 p-8 rounded-sm text-center text-gray-500 text-xs font-mono">
+                Select an active intake file from the stream list to audit dynamic blueprints and alter tracking states.
               </div>
             )}
           </div>
 
         </div>
-      ) : (
-        <div className="space-y-12">
+      )}
+
+      {/* Tab 2: Users (Registered Students Accounts) Section */}
+      {tab === 'users' && (
+        <div className="grid lg:grid-cols-3 gap-8">
+          
+          {/* Main Users Database roster table */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="bg-gray-950 border border-gray-800 rounded-sm">
+              <div className="p-4 border-b border-gray-800 bg-black/40 flex items-center justify-between font-mono">
+                <span className="text-xs font-display font-semibold text-gold-500 uppercase tracking-wider">
+                  Registered developer accounts roster
+                </span>
+                <span className="text-[9px] text-gray-500 uppercase">
+                  Sort: High-to-low XP metrics
+                </span>
+              </div>
+
+              {users.length === 0 ? (
+                <div className="p-16 text-center text-gray-650 text-xs font-mono">
+                  [EMPTY DATABASE]: No developer registry profiles discovered.
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-900 overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-black/60 text-gray-500 font-mono text-[9px] uppercase tracking-wider border-b border-gray-900">
+                        <th className="p-4">Developer Profile</th>
+                        <th className="p-4">Status &amp; Role</th>
+                        <th className="p-4 text-center">Completed</th>
+                        <th className="p-4 text-right">Metrics (XP)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-900">
+                      {users.map((item) => (
+                        <tr 
+                          key={item.uid}
+                          onClick={() => setSelectedUser(item)}
+                          className={`hover:bg-gray-900/40 transition-all cursor-pointer ${
+                            selectedUser?.uid === item.uid ? 'bg-gold-500/5' : ''
+                          }`}
+                        >
+                          <td className="p-4">
+                            <div className="font-semibold text-white uppercase tracking-wide">{item.name}</div>
+                            <div className="text-gray-500 font-mono text-[10px]">{item.email}</div>
+                          </td>
+                          <td className="p-4 font-mono text-[10px]">
+                            <span className={`px-2 py-0.5 rounded-sm uppercase tracking-wider font-semibold ${
+                              item.role === 'admin' 
+                                ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                                : 'bg-gray-900 text-gray-400 border border-gray-800'
+                            }`}>
+                              {item.role || 'user'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-center font-mono text-cyan-400 font-semibold">
+                            {item.completedRooms?.length || 0} Rooms
+                          </td>
+                          <td className="p-4 text-right font-display font-bold text-gold-500">
+                            {item.xp || 0} XP
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* User inspector & system alerts dispatch terminal */}
+          <div className="lg:col-span-1">
+            {selectedUser ? (
+              <div className="bg-gray-950 border border-gray-800 p-6 rounded-sm sticky top-28 space-y-6">
+                <div>
+                  <span className="text-[9px] text-gray-500 uppercase tracking-widest font-mono">Academic inspector tools</span>
+                  <h3 className="text-base font-display font-bold text-white mt-1 uppercase">
+                    {selectedUser.name}
+                  </h3>
+                  <p className="text-xs text-gold-500 font-mono mt-1">
+                    {selectedUser.email}
+                  </p>
+                </div>
+
+                <div className="border-y border-gray-900 py-3.5 space-y-2.5 font-mono text-[10px] text-gray-400">
+                  <div className="flex justify-between">
+                    <span>Account UID Key:</span>
+                    <span className="text-gray-300 text-[9px]">{selectedUser.uid.substring(0, 16)}...</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Clearance Level:</span>
+                    <span className="text-white uppercase font-bold">{selectedUser.role || 'User'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Rooms Mastered:</span>
+                    <span className="text-cyan-400 font-bold">{selectedUser.completedRooms?.length || 0} Completed</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Registered On:</span>
+                    <span>
+                      {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Direct notifications dispatch form */}
+                <form onSubmit={handleSendNotification} className="space-y-4 pt-2">
+                  <div className="flex items-center gap-1.5 border-b border-gray-900 pb-2">
+                    <Bell size={13} className="text-gold-500" />
+                    <h4 className="text-xs font-display font-bold text-white uppercase tracking-wider">
+                      Transmit Sovereign Notification
+                    </h4>
+                  </div>
+                  <p className="text-[10px] text-gray-500 font-mono leading-relaxed">
+                    Instantly broadcast raw system warnings, badges, or special guidance alerts directly into this student's notification system log.
+                  </p>
+
+                  <div>
+                    <label className="block text-[9px] text-gray-400 uppercase tracking-wider font-mono mb-1">Alert Headline Title</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. Cyber Program Level Verified"
+                      value={notifTitle}
+                      onChange={(e) => setNotifTitle(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-black border border-gray-800 text-white rounded-sm placeholder:text-gray-700 font-mono focus:border-gold-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] text-gray-400 uppercase tracking-wider font-mono mb-1">Payload Content (Instructions)</label>
+                    <textarea 
+                      required
+                      rows={3}
+                      placeholder="e.g. Well done! Your advanced exploit scripts has completed bypass constraints... +200 XP Awarded."
+                      value={notifBody}
+                      onChange={(e) => setNotifBody(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-black border border-gray-800 text-white rounded-sm placeholder:text-gray-700 font-mono focus:border-gold-500 focus:outline-none resize-none"
+                    />
+                  </div>
+
+                  <button 
+                    type="submit"
+                    disabled={isSendingNotif}
+                    className="w-full py-2.5 bg-gold-500 hover:bg-gold-600 disabled:bg-gold-500/20 text-black font-semibold text-xs uppercase tracking-widest font-display rounded-sm transition-all flex items-center justify-center gap-1.5"
+                  >
+                    {isSendingNotif ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" /> Transmitting...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={11} /> Deploy Alert Payload
+                      </>
+                    )}
+                  </button>
+                </form>
+
+              </div>
+            ) : (
+              <div className="bg-gray-950 border border-gray-805 p-8 rounded-sm text-center text-gray-500 text-xs font-mono">
+                Select any user from the account ledger on the left to review metrics details and build custom system notifications alerts.
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* Tab 3: Images Section */}
+      {tab === 'images' && (
+        <div className="space-y-12 animate-fade-in">
           
           {/* Landing page images grid configuration */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -527,7 +824,7 @@ export default function AdminPortal() {
                     <span className="text-[10px] text-gray-500 uppercase">Or select theme presets:</span>
                   </div>
                   <div className="grid grid-cols-1 gap-1.5 mt-2">
-                    {presets.hero.map((opt) => (
+                    {presetImagesList.hero.map((opt) => (
                       <button 
                         key={opt.url} 
                         onClick={() => handleUpdateImage('hero', opt.url)}
@@ -591,7 +888,7 @@ export default function AdminPortal() {
                     <span className="text-[10px] text-gray-500 uppercase">Or select theme presets:</span>
                   </div>
                   <div className="grid grid-cols-1 gap-1.5 mt-2">
-                    {presets.academy.map((opt) => (
+                    {presetImagesList.academy.map((opt) => (
                       <button 
                         key={opt.url} 
                         onClick={() => handleUpdateImage('academy', opt.url)}
@@ -655,7 +952,7 @@ export default function AdminPortal() {
                     <span className="text-[10px] text-gray-500 uppercase">Or select theme presets:</span>
                   </div>
                   <div className="grid grid-cols-1 gap-1.5 mt-2">
-                    {presets.services.map((opt) => (
+                    {presetImagesList.services.map((opt) => (
                       <button 
                         key={opt.url} 
                         onClick={() => handleUpdateImage('services', opt.url)}
@@ -690,7 +987,7 @@ export default function AdminPortal() {
               <div className="p-4 border-b border-gray-800">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-display font-bold uppercase text-gold-500 tracking-wider">
-                    Projects & Case Studies Visual
+                    Projects Showcase Visual
                   </span>
                   <span className="px-2 py-0.5 bg-gold-500/10 text-gold-500 text-[9px] font-mono rounded">
                     Showcase
@@ -719,7 +1016,7 @@ export default function AdminPortal() {
                     <span className="text-[10px] text-gray-500 uppercase">Or select theme presets:</span>
                   </div>
                   <div className="grid grid-cols-1 gap-1.5 mt-2">
-                    {presets.projects.map((opt) => (
+                    {presetImagesList.projects.map((opt) => (
                       <button 
                         key={opt.url} 
                         onClick={() => handleUpdateImage('projects', opt.url)}
@@ -750,7 +1047,7 @@ export default function AdminPortal() {
             </div>
 
             {/* LABS BG */}
-            <div className="bg-gray-950 border border-gray-850 rounded-sm flex flex-col justify-between">
+            <div className="bg-gray-950 border border-gray-855 rounded-sm flex flex-col justify-between">
               <div className="p-4 border-b border-gray-800">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-display font-bold uppercase text-gold-500 tracking-wider">
@@ -770,7 +1067,7 @@ export default function AdminPortal() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-gray-400 uppercase mb-1">Direct Image Web Address (URL)</label>
+                  <label className="block text-[10px] text-gray-405 uppercase mb-1">Direct Image Web Address (URL)</label>
                   <input 
                     type="text" 
                     value={images.labs} 
@@ -783,7 +1080,7 @@ export default function AdminPortal() {
                     <span className="text-[10px] text-gray-500 uppercase">Or select theme presets:</span>
                   </div>
                   <div className="grid grid-cols-1 gap-1.5 mt-2">
-                    {presets.labs.map((opt) => (
+                    {presetImagesList.labs.map((opt) => (
                       <button 
                         key={opt.url} 
                         onClick={() => handleUpdateImage('labs', opt.url)}
@@ -816,9 +1113,9 @@ export default function AdminPortal() {
           </div>
 
           <div className="p-6 bg-black border border-gray-900 rounded-sm">
-            <h4 className="text-xs font-display text-gold-500 font-bold uppercase tracking-wider mb-2">💡 Quick Administrative Tip</h4>
+            <h4 className="text-xs font-display text-gold-500 font-bold uppercase tracking-wider mb-2">💡 Operational Note</h4>
             <p className="text-xs text-gray-400 leading-relaxed">
-              When pasting raw URLs or custom pictures, the system immediately applies them globally inside our shared state layout configurations without rebooting. If any image breaks, you can press any of the preset button selectors above to return instantly to our optimized high-fidelity generated corporate image assets.
+              When configuring image records or applying Base64 file codes, calculations execute inside client state. To support seamless Nigerian imagery options, click on the preset buttons labeled "Nigerian Tech Developer Workspace", "Nigerian Tech Students Cohort", or "African SaaS Solutions" above, which links directly to beautiful alternative photography.
             </p>
           </div>
 

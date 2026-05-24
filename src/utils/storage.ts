@@ -1,5 +1,7 @@
 // Kogla Tech State Persistence Engine
 
+import { db, auth } from '../lib/firebase';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import heroImage from '../assets/images/hero_coder_image_1779562735408.png';
 import academyImage from '../assets/images/academy_image_1779563651039.png';
 import servicesImage from '../assets/images/services_image_1779563668755.png';
@@ -91,16 +93,37 @@ export function getInquiries(): Inquiry[] {
   }
 }
 
-export function addInquiry(inquiry: Omit<Inquiry, 'id' | 'timestamp' | 'status'>): Inquiry {
+export function addInquiry(inquiry: Omit<Inquiry, 'id' | 'timestamp' | 'status'> & { userId?: string }): Inquiry {
   const list = getInquiries();
+  const createdId = `inq-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const currentUser = auth.currentUser;
+  
   const created: Inquiry = {
     ...inquiry,
-    id: `inq-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    id: createdId,
     timestamp: new Date().toISOString(),
     status: 'Unread'
   };
+  
+  // Inject userId if user is currently logged in
+  const firestorePayload = {
+    ...created,
+    userId: currentUser ? currentUser.uid : (inquiry.userId || null)
+  };
+
   const updated = [created, ...list];
   localStorage.setItem('kogla_inquiries', JSON.stringify(updated));
+
+  // Async Firestore dispatch
+  try {
+    const docRef = doc(db, 'inquiries', createdId);
+    setDoc(docRef, firestorePayload).catch((err) => {
+      console.error('[Firestore async addInquiry backup]:', err);
+    });
+  } catch (err) {
+    console.error('Firestore connection was not fully loaded yet:', err);
+  }
+
   return created;
 }
 

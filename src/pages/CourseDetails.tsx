@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { BookOpen, ArrowLeft, Send, CheckCircle2, Award, Shield, Cpu, BookOpenCheck, Clock, Layers, Users, Star } from 'lucide-react';
 import React, { useState } from 'react';
 import { addInquiry } from '../utils/storage';
@@ -275,16 +275,24 @@ export default function CourseDetails() {
       </button>
 
       {/* Hero section */}
-      <div className="border-b border-gray-900 pb-10 mb-12">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-full uppercase tracking-widest font-display mb-4">
-          <BookOpenCheck size={11} className="text-gold-500" /> Live Interactive Cohort
+      <div className="border-b border-gray-900 pb-10 mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-full uppercase tracking-widest font-display mb-4">
+            <BookOpenCheck size={11} className="text-gold-500" /> Live Interactive Cohort
+          </div>
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-display font-bold bg-gradient-to-r from-white via-gold-500 to-white bg-clip-text text-transparent mb-4 leading-tight">
+            {details.title}
+          </h1>
+          <p className="text-gray-400 text-sm md:text-md max-w-3xl leading-relaxed font-mono uppercase tracking-wider">
+            {details.subtitle}
+          </p>
         </div>
-        <h1 className="text-3xl md:text-5xl lg:text-6xl font-display font-bold bg-gradient-to-r from-white via-gold-500 to-white bg-clip-text text-transparent mb-4 leading-tight">
-          {details.title}
-        </h1>
-        <p className="text-gray-400 text-sm md:text-md max-w-3xl leading-relaxed font-mono uppercase tracking-wider">
-          {details.subtitle}
-        </p>
+        <Link 
+          to={`/study/${courseKey}`}
+          className="px-6 py-3 bg-gold-500 hover:bg-gold-600 font-bold text-black text-xs uppercase tracking-widest font-display rounded-sm shrink-0 flex items-center gap-2"
+        >
+          Study Online Core <BookOpen size={14} />
+        </Link>
       </div>
 
       {/* Meta Specs Grid */}

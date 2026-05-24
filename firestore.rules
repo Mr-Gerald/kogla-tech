@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Reusable Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             getUserData(request.auth.uid).role == "admin";
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Validation Helper Blueprints ---
+    function isValidUserShape(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.name is string && data.name.size() <= 128 &&
+             data.email is string && data.email.size() <= 128 &&
+             data.role in ["user", "admin"] &&
+             (!data.keys().hasAll(["completedRooms"]) || (data.completedRooms is list && data.completedRooms.size() <= 200)) &&
+             (!data.keys().hasAll(["xp"]) || (data.xp is int && data.xp >= 0 && data.xp <= 1000000));
+    }
+
+    function isValidInquiryShape(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.type in ["enrollment", "solution_inquiry", "contact"] &&
+             data.title is string && data.title.size() <= 256 &&
+             data.senderName is string && data.senderName.size() <= 128 &&
+             data.senderEmail is string && data.senderEmail.size() <= 128 &&
+             data.description is string && data.description.size() <= 4096 &&
+             data.status in ["Unread", "In Progress", "Contacted", "Archived"] &&
+             (!data.keys().hasAll(["userId"]) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    function isValidNotificationShape(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() <= 256 &&
+             data.body is string && data.body.size() <= 2048 &&
+             data.read is bool;
+    }
+
+    // --- System Resources Mappings ---
+
+    // USERS COLLECTION
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      allow create: if isSignedIn() && 
+                    isOwner(userId) && 
+                    isValidUserShape(incoming()) && 
+                    incoming().role == "user"; // Prevent privilege escalation
+                    
+      allow update: if (isOwner(userId) || isAdmin()) && 
+                    isValidUserShape(incoming()) && (
+                      isAdmin() || (
+                        incoming().role == existing().role && // Prevent normal users changing role
+                        incoming().uid == existing().uid &&
+                        incoming().email == existing().email
+                      )
+                    );
+      allow delete: if isAdmin();
+    }
+
+    // INQUIRIES COLLECTION
+    match /inquiries/{inquiryId} {
+      allow create: if isValidInquiryShape(incoming()) && (
+                      !incoming().keys().hasAll(["userId"]) || (isSignedIn() && incoming().userId == request.auth.uid)
+                    );
+      allow get: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+      allow list: if isAdmin() || isSignedIn(); // Client secure queries
+      allow update: if isAdmin() && isValidInquiryShape(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // NOTIFICATIONS COLLECTION
+    match /notifications/{notificationId} {
+      allow create: if isAdmin() && isValidNotificationShape(incoming());
+      allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn(); // Client secure queries filtering by their own uid
+      allow update: if isSignedIn() && (
+                      (existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['read']) && incoming().read is bool) || 
+                      isAdmin()
+                    ) && isValidNotificationShape(incoming());
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile Document",
+      "description": "Represents the sovereign profile of an authenticated developer or admin on Kogla Tech.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier matching the Firebase Auth UID" },
+        "name": { "type": "string", "description": "Human-readable full name" },
+        "email": { "type": "string", "description": "Corporate or validated email address" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "System role restricting access nodes" },
+        "xp": { "type": "integer", "description": "Accumulated Academy Study XP" },
+        "completedRooms": { "type": "array", "description": "Array of room slugs completed by the developer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of profile creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last profile update" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "Inquiry": {
+      "title": "Admissions or Solutions Intake Inquiry",
+      "description": "Represents a parsed client inquiry, corporate solutions brief, or academic cohort request.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique inquiry token identifier" },
+        "type": { "type": "string", "enum": ["enrollment", "solution_inquiry", "contact"], "description": "Origin of processing gateway" },
+        "title": { "type": "string", "description": "Target course path or development tier requested" },
+        "senderName": { "type": "string", "description": "Full name of contact entity" },
+        "senderEmail": { "type": "string", "description": "Validated return email address" },
+        "description": { "type": "string", "description": "Core message text or curriculum ambitions statement" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Dynamic intake timestamp" },
+        "status": { "type": "string", "enum": ["Unread", "In Progress", "Contacted", "Archived"], "description": "SLA queue processing status" },
+        "userId": { "type": "string", "description": "Link to the logged-in user if submitted in profile state" }
+      },
+      "required": ["id", "type", "title", "senderName", "senderEmail", "description", "timestamp", "status"]
+    },
+    "Notification": {
+      "title": "User Notification Record",
+      "description": "Targeted notification alerts, credentials dispatches, and academic queue status updates.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique notification alert ID" },
+        "userId": { "type": "string", "description": "Target developer UID" },
+        "title": { "type": "string", "description": "Notification bold header" },
+        "body": { "type": "string", "description": "Analytical notification body content" },
+        "read": { "type": "boolean", "description": "Status indicating user interaction click State" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Timestamp when alert launched" }
+      },
+      "required": ["id", "userId", "title", "body", "read", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Airtight user-level profile documents isolating PII variables."
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Secure document collection containing solutions requests and admission statements."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications for alerts, credentials releases, and progress updates."
+    }
+  }
+}
