@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Bell, LogOut, ShieldAlert, Award, Star, CheckSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
-const LOGO_URL = 'https://scontent.xx.fbcdn.net/v/t1.15752-9/679033424_1340416481327917_3114449704387631566_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=9f807c&_nc_ohc=QTFzuqvVyEwQ7kNvwEQ3HkO&_nc_oc=Adq0Aps1oCzdcFqAZAUORHxlDuik930FWgR7q_bG6Rrw_VSh-1RqFtChA7cCqPbZbATlZ4M_Wu3uMuKpC9WlPuHY&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.xx&oh=03_Q7cD5QFiQMxoovDD8V-pDwIuGMWsjPDrhbJXde89ezXPA-rM5w&oe=6A39344C';
+import { useSiteConfig } from '../../context/SiteConfigContext';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const { user, profile, notifications, logout, markNotificationRead } = useAuth();
+  const { config } = useSiteConfig();
   
   const notifDropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -48,9 +48,17 @@ export default function Navbar() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <nav className="fixed top-0 w-full z-50 flex items-center justify-between p-4 bg-black-950/90 backdrop-blur-md border-b border-gray-900 font-sans">
-      <Link to="/" onClick={() => setIsOpen(false)} className="shrink-0 transition-opacity hover:opacity-90">
-        <img src={LOGO_URL} alt="Kogla Tech" className="h-8 border border-gold-500/50 p-1 rounded-sm" />
+    <nav className="fixed top-0 w-full z-50 flex items-center justify-between p-4 bg-black/95 backdrop-blur-md border-b border-gray-900 font-sans">
+      <Link to="/" onClick={() => setIsOpen(false)} className="shrink-0 transition-opacity hover:opacity-90 flex items-center gap-2">
+        {config.logoUrl ? (
+          <img src={config.logoUrl} alt={config.companyName} className="h-9 border border-gold-500/50 p-1 rounded-sm object-contain bg-black/50" />
+        ) : (
+          <span className="text-lg font-display font-bold text-white tracking-widest uppercase flex items-center gap-1">
+            {config.logoText.split(' ').map((word, i) => (
+              <span key={i} className={i === 1 ? 'text-gold-500' : 'text-white'}>{word}</span>
+            ))}
+          </span>
+        )}
       </Link>
       
       {/* Desktop Menu */}
@@ -60,7 +68,7 @@ export default function Navbar() {
             key={item.name} 
             to={item.path.startsWith('#') ? '/' : item.path} 
             onClick={() => handleNavClick(item.path)} 
-            className={`hover:text-gold-500 transition-colors ${location.pathname === item.path ? 'text-gold-500 font-bold' : 'text-gray-400'}`}
+            className={`hover:text-gold-500 transition-colors ${location.pathname === item.path ? 'text-gold-500 font-bold' : 'text-gray-300'}`}
           >
             {item.name}
           </Link>
@@ -82,7 +90,7 @@ export default function Navbar() {
             <div className="relative" ref={notifDropdownRef}>
               <button 
                 onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-                className="p-1.5 hover:bg-gray-900 border border-gray-800 text-gray-400 hover:text-white transition-colors relative"
+                className="p-1.5 hover:bg-gray-900 border border-gray-800 text-gray-300 hover:text-white transition-colors relative"
               >
                 <Bell size={14} />
                 {unreadCount > 0 && (
@@ -102,17 +110,17 @@ export default function Navbar() {
                   >
                     <div className="p-3 bg-black border-b border-gray-900 flex justify-between items-center">
                       <span className="font-mono text-[10px] text-gray-400 uppercase tracking-widest block font-bold">
-                        SYSTEM EXTRAPOLATIONS ({unreadCount})
+                        NOTIFICATIONS ({unreadCount})
                       </span>
                       {unreadCount > 0 && (
-                        <span className="text-[9px] text-gold-500 uppercase font-mono">Live Logs</span>
+                        <span className="text-[9px] text-gold-500 uppercase font-mono">Live logs</span>
                       )}
                     </div>
 
                     <div className="max-h-72 overflow-y-auto divide-y divide-gray-950">
                       {notifications.length === 0 ? (
                         <div className="p-6 text-center text-gray-600 font-mono text-[10px]">
-                          No telemetry notifications broadcasted.
+                          No notifications broadcasted.
                         </div>
                       ) : (
                         notifications.map((notif) => (
@@ -136,7 +144,7 @@ export default function Navbar() {
                             <p className="text-[10px] text-gray-400 leading-relaxed font-mono">
                               {notif.body}
                             </p>
-                            <span className="text-[8px] text-gray-650 font-mono mt-1.5 block uppercase">
+                            <span className="text-[8px] text-gray-600 font-mono mt-1.5 block uppercase">
                               {new Date(notif.timestamp).toLocaleString()}
                             </span>
                           </div>
@@ -153,7 +161,7 @@ export default function Navbar() {
               <Link 
                 to="/admin" 
                 className="p-1.5 hover:bg-red-950/30 border border-red-500/20 text-red-500 hover:text-red-400 transition-colors"
-                title="Sovereign Administrative Gateway"
+                title="Administrative Access Panel"
               >
                 <ShieldAlert size={14} />
               </Link>
@@ -162,15 +170,15 @@ export default function Navbar() {
             {/* Log Out */}
             <button 
               onClick={logout}
-              className="p-1.5 hover:bg-gray-905 bg-transparent border border-gray-800 text-gray-400 hover:text-white transition-colors"
-              title="Terminate Session"
+              className="p-1.5 hover:bg-gray-900 bg-transparent border border-gray-800 text-gray-300 hover:text-white transition-colors"
+              title="Sign Out"
             >
               <LogOut size={14} />
             </button>
           </div>
         ) : (
-          <Link to="/auth/login" className="ml-4 px-3.5 py-1.5 border border-gold-500 text-gold-500 hover:bg-gold-500 hover:text-black transition-all">
-            Decrypt Gateway
+          <Link to="/auth/login" className="ml-4 px-4 py-1.5 border border-gold-500 text-gold-500 hover:bg-gold-500 hover:text-black transition-all font-semibold rounded-sm">
+            Sign In
           </Link>
         )}
       </div>
@@ -201,7 +209,7 @@ export default function Navbar() {
                 key={item.name} 
                 to={item.path.startsWith('#') ? '/' : item.path} 
                 onClick={() => setIsOpen(false)} 
-                className="text-sm text-gray-400 hover:text-gold-500 transition-colors"
+                className="text-sm text-gray-300 hover:text-gold-500 transition-colors"
               >
                 {item.name}
               </Link>
@@ -227,15 +235,15 @@ export default function Navbar() {
                     setIsOpen(false);
                     logout();
                   }}
-                  className="py-2.5 text-center bg-gray-950 text-gray-400 border border-gray-800 text-[10px] uppercase flex items-center justify-center gap-1.5"
+                  className="py-2.5 text-center bg-gray-950 text-gray-300 border border-gray-800 text-[10px] uppercase flex items-center justify-center gap-1.5"
                 >
-                  <LogOut size={13} /> Terminate Connection
+                  <LogOut size={13} /> Sign Out
                 </button>
               </div>
             ) : (
               <div className="flex flex-col gap-2 pt-2 border-t border-gray-900">
                 <Link to="/auth/login" onClick={() => setIsOpen(false)} className="py-2.5 text-center border border-gold-500 text-gold-500 text-[10px] tracking-widest uppercase">
-                  Decrypt Gateway
+                  Sign In
                 </Link>
               </div>
             )}

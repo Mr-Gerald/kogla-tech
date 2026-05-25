@@ -3,6 +3,7 @@ import { ArrowRight, Cpu, Shield, Zap, BookOpen, BarChart3, Globe, ChevronRight,
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { getImageConfig, ImageConfig, addInquiry, DEFAULT_IMAGES } from '../utils/storage';
+import { useSiteConfig } from '../context/SiteConfigContext';
 
 const stats = [
     { label: 'Global Students', value: '250+' },
@@ -16,6 +17,7 @@ const courses = ['Web Development', 'Cybersecurity', 'AI & Automation', 'UI/UX D
 const services = ['AI Automation', 'Cyber Defense Infrastructure', 'Web Development', 'Mobile App Development', 'Business Tech Consulting', 'Digital Branding & Design', 'Product Strategy', 'Cloud Solution Hosting', 'Workflow Optimization', 'Technical Mentorship'];
 
 export default function Home() {
+  const { config } = useSiteConfig();
   const [images, setImages] = useState<ImageConfig>(DEFAULT_IMAGES);
 
   const [contactName, setContactName] = useState('');
@@ -70,18 +72,18 @@ export default function Home() {
         </motion.div>
 
         {/* MAIN HEADLINE HERO CONTENT */}
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }} className="text-center relative z-10 my-auto">
-          <h1 className="text-4xl md:text-7xl font-display font-bold mb-4 bg-gradient-to-b from-white via-gold-500 to-white bg-clip-text text-transparent">
-            Learn. Build. Innovate.
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }} className="text-center relative z-10 my-auto px-4">
+          <h1 className="text-3xl md:text-6xl font-display font-bold mb-4 bg-gradient-to-b from-white via-gold-500 to-white bg-clip-text text-transparent uppercase tracking-wide leading-tight">
+            {config.heroHeadline}
           </h1>
-          <p className="text-xs md:text-base text-gray-400 max-w-lg mx-auto mb-8">
-            Kogla Tech is the premium ecosystem for the next generation of digital innovators. We turn ambition into enterprise-grade reality.
+          <p className="text-xs md:text-sm text-gray-300 max-w-2xl mx-auto mb-8 font-sans leading-relaxed">
+            {config.heroSubheadline}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
-            <a href="#academy" className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 transition-all text-black font-semibold rounded-sm flex items-center justify-center gap-1.5 text-xs">
+            <a href="#academy" className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 transition-all text-black font-semibold rounded-sm flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider font-display">
               Get Started <ArrowRight size={14} />
             </a>
-            <a href="#services" className="px-5 py-2.5 border border-gray-700 hover:border-gold-500 text-gray-200 transition-all rounded-sm text-xs text-center">
+            <a href="#services" className="px-5 py-2.5 border border-gray-700 hover:border-gold-500 text-gray-200 hover:text-white transition-all rounded-sm text-xs text-center uppercase tracking-wider font-display">
               Explore Ecosystem
             </a>
           </div>
@@ -90,7 +92,7 @@ export default function Home() {
         {/* FOOTER OF THE HERO BOX: Animated Marquee CTA + Strategic Partner Showcase */}
         <div className="w-full relative z-10 space-y-6">
           {/* Animated Marquee CTA */}
-          <div className="w-full overflow-hidden whitespace-nowrap bg-black/60 py-3 border-y border-gray-800/80">
+          <div className="w-full overflow-hidden whitespace-nowrap bg-black/60 py-3 border-y border-gray-850">
               <motion.div animate={{ x: ['0%', '-50%'] }} transition={{ repeat: Infinity, duration: 25, ease: 'linear' }} className="inline-block text-gold-500 text-xs font-display tracking-widest uppercase">
                   Register Now for Our Next Cohort • Expert-Led Tech Training • Advanced AI Masterclasses • Global Internship Programs • Apply Today • Build Your Future • Register Now for Our Next Cohort • Expert-Led Tech Training • Advanced AI Masterclasses • Global Internship Programs • Apply Today • Build Your Future
               </motion.div>
@@ -103,8 +105,8 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.3 }} 
             className="max-w-4xl mx-auto text-center"
           >
-            <div className="text-[10px] text-gray-500 uppercase tracking-widest font-display mb-3">TRUSTED COLLABORATORS & INDUSTRY VECTORS</div>
-            <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-3 opacity-60 text-xs text-gray-400 font-mono">
+            <div className="text-[10px] text-gray-550 uppercase tracking-widest font-display mb-3">COLLABORATORS & INDUSTRY VECTORS</div>
+            <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-3 opacity-60 text-xs text-gray-300 font-mono">
               <span className="flex items-center gap-1 hover:text-white transition-colors cursor-default">
                 <Terminal size={12} className="text-gold-500" /> [AI_FOUNDRY]
               </span>
@@ -127,14 +129,14 @@ export default function Home() {
         {stats.map(s => (
             <div key={s.label} className="text-center border-r last:border-r-0 border-gray-800">
                 <div className="text-3xl md:text-4xl font-display text-gold-500 mb-1">{s.value}</div>
-                <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-widest">{s.label}</div>
+                <div className="text-[10px] md:text-xs text-gray-300 uppercase tracking-widest">{s.label}</div>
             </div>
         ))}
       </section>
 
-      <section id="about" className="py-20 px-6 bg-black text-center">
-          <h2 className="text-2xl md:text-3xl font-display font-bold mb-6">About Kogla Tech</h2>
-          <p className="text-xs md:text-sm text-gray-400 max-w-xl mx-auto leading-relaxed">Kogla Tech is a premium, futuristic technology ecosystem focused on digital transformation, elite software solutions, and empowering innovators globally. We operate at the intersection of practical education and enterprise-grade tech delivery.</p>
+      <section id="about" className="py-20 px-6 bg-black text-center border-b border-gray-900">
+          <h2 className="text-2xl md:text-3xl font-display font-black mb-6 uppercase tracking-wider text-white">{config.aboutHeadline}</h2>
+          <p className="text-xs md:text-sm text-gray-300 max-w-2xl mx-auto leading-relaxed font-sans">{config.aboutText}</p>
       </section>
 
       <section id="academy" className="py-20 px-6 bg-gray-900 border-t border-gray-800">

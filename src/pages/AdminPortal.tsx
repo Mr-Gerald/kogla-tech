@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSiteConfig, SiteConfig } from '../context/SiteConfigContext';
 import { db } from '../lib/firebase';
+import { motion } from 'motion/react';
 import { 
   collection, 
   doc, 
@@ -41,7 +43,8 @@ import {
   Loader2,
   Calendar,
   CheckCircle,
-  FileText
+  FileText,
+  Terminal
 } from 'lucide-react';
 
 export default function AdminPortal() {
@@ -68,9 +71,49 @@ export default function AdminPortal() {
 
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [tab, setTab] = useState<'leads' | 'users' | 'images'>('leads');
+  const [tab, setTab] = useState<'leads' | 'users' | 'images' | 'settings'>('leads');
 
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Site Settings config hooks
+  const { config, updateConfig } = useSiteConfig();
+  const [siteForm, setSiteForm] = useState<SiteConfig>(config);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  useEffect(() => {
+    if (config) {
+      setSiteForm(config);
+    }
+  }, [config]);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSettings(true);
+    try {
+      await updateConfig(siteForm);
+      triggerSuccess('Site configurations synchronized globally across the live database!');
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed updating configurations: ${err.message}`);
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setSiteForm(prev => ({ ...prev, logoUrl: reader.result }));
+          triggerSuccess('Logo file loaded! Submit settings below to commit changes.');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Load local state & Firestore Listeners on Auth load
   useEffect(() => {
@@ -427,6 +470,16 @@ export default function AdminPortal() {
           }`}
         >
           <ImageIcon size={13} /> Landing Page Images
+        </button>
+        <button 
+          onClick={() => setTab('settings')}
+          className={`flex-1 md:flex-none px-5 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+            tab === 'settings' 
+              ? 'bg-gold-500 text-black font-bold' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
+          }`}
+        >
+          <Settings size={13} /> Dynamic Site Settings
         </button>
       </div>
 
@@ -1120,6 +1173,235 @@ export default function AdminPortal() {
           </div>
 
         </div>
+      )}
+
+      {/* Tab 4: Site Settings Section */}
+      {tab === 'settings' && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-8 animate-fade-in text-gray-100"
+        >
+          <div className="bg-gray-950 border border-gray-900 rounded-sm p-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gold-500 via-amber-400 to-gold-600"></div>
+            <div className="flex items-center gap-2 mb-6">
+              <Settings className="text-gold-500" size={18} />
+              <h2 className="text-sm font-display font-bold uppercase tracking-wider text-white">Dynamic Brand Control Console</h2>
+            </div>
+            
+            <form onSubmit={handleSaveSettings} className="space-y-6">
+              
+              {/* GROUP 1: Brand & Logo */}
+              <div className="p-4 bg-black border border-gray-900 rounded-sm space-y-4">
+                <h3 className="text-xs font-display font-medium text-gold-500 uppercase tracking-widest pb-1 border-b border-gray-900 flex items-center gap-1.5">
+                  <Sparkles size={12} /> Live Identity Branding
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Company Legal Name</label>
+                    <input 
+                      type="text"
+                      required
+                      value={siteForm.companyName}
+                      onChange={(e) => setSiteForm({ ...siteForm, companyName: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Logo Fallback Text</label>
+                    <input 
+                      type="text"
+                      required
+                      value={siteForm.logoText}
+                      onChange={(e) => setSiteForm({ ...siteForm, logoText: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4 pt-2">
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Active Logo Image URL</label>
+                    <input 
+                      type="text"
+                      value={siteForm.logoUrl}
+                      onChange={(e) => setSiteForm({ ...siteForm, logoUrl: e.target.value })}
+                      placeholder="Paste image web address (URL) or upload a logo file..."
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <label className="flex items-center justify-center gap-2 px-4 py-2 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
+                      <Upload size={13} />
+                      Upload Logo PNG/JPG
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleLogoUpload} 
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {siteForm.logoUrl && (
+                  <div className="p-3 bg-gray-950 border border-gray-850 rounded-sm w-fit">
+                    <span className="block text-[9px] text-gray-500 uppercase font-mono mb-1.5">Live Header Logo Preview</span>
+                    <img src={siteForm.logoUrl} alt="Logo preview" className="h-9 border border-gold-500/30 p-1 bg-black object-contain" />
+                  </div>
+                )}
+              </div>
+
+              {/* GROUP 2: Contact Numbers & Community Links */}
+              <div className="p-4 bg-black border border-gray-900 rounded-sm space-y-4">
+                <h3 className="text-xs font-display font-medium text-gold-500 uppercase tracking-widest pb-1 border-b border-gray-900 flex items-center gap-1.5">
+                  <Mail size={12} /> Global Contact Nodes
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Inquiry Support Email</label>
+                    <input 
+                      type="email"
+                      required
+                      value={siteForm.contactEmail}
+                      onChange={(e) => setSiteForm({ ...siteForm, contactEmail: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Phone Support Hotline</label>
+                    <input 
+                      type="text"
+                      required
+                      value={siteForm.contactPhone}
+                      onChange={(e) => setSiteForm({ ...siteForm, contactPhone: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4 pt-2">
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Join WhatsApp Community Link</label>
+                    <input 
+                      type="text"
+                      required
+                      value={siteForm.communityLink}
+                      onChange={(e) => setSiteForm({ ...siteForm, communityLink: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Direct Chat WhatsApp Link</label>
+                    <input 
+                      type="text"
+                      required
+                      value={siteForm.whatsappLink}
+                      onChange={(e) => setSiteForm({ ...siteForm, whatsappLink: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Telegram Broadcaster Link</label>
+                    <input 
+                      type="text"
+                      required
+                      value={siteForm.telegramLink}
+                      onChange={(e) => setSiteForm({ ...siteForm, telegramLink: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* GROUP 3: Homepage Headlines & Advertisements */}
+              <div className="p-4 bg-black border border-gray-900 rounded-sm space-y-4">
+                <h3 className="text-xs font-display font-medium text-gold-500 uppercase tracking-widest pb-1 border-b border-gray-900 flex items-center gap-1.5">
+                  <Layers size={12} /> Marketing Copy & Headings
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Primary Hero Main Headline</label>
+                    <input 
+                      type="text"
+                      required
+                      value={siteForm.heroHeadline}
+                      onChange={(e) => setSiteForm({ ...siteForm, heroHeadline: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Hero Subheadline Explanation Text</label>
+                    <textarea 
+                      required
+                      value={siteForm.heroSubheadline}
+                      onChange={(e) => setSiteForm({ ...siteForm, heroSubheadline: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 h-20 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 resize-none"
+                    />
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4 border-t border-gray-900 pt-3">
+                    <div>
+                      <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">About Section Headline</label>
+                      <input 
+                        type="text"
+                        required
+                        value={siteForm.aboutHeadline}
+                        onChange={(e) => setSiteForm({ ...siteForm, aboutHeadline: e.target.value })}
+                        className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">About Long Description Description</label>
+                      <textarea 
+                        required
+                        value={siteForm.aboutText}
+                        onChange={(e) => setSiteForm({ ...siteForm, aboutText: e.target.value })}
+                        className="w-full p-2.5 bg-gray-950 border border-gray-800 h-20 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* GROUP 4: Footer compliance */}
+              <div className="p-4 bg-black border border-gray-900 rounded-sm space-y-4">
+                <h3 className="text-xs font-display font-medium text-gold-500 uppercase tracking-widest pb-1 border-b border-gray-900 flex items-center gap-1.5">
+                  <Terminal size={12} /> Footer Copyright Info
+                </h3>
+                <div>
+                  <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Footer Legal Credits & Disclaimers</label>
+                  <input 
+                    type="text"
+                    required
+                    value={siteForm.footerCredits}
+                    onChange={(e) => setSiteForm({ ...siteForm, footerCredits: e.target.value })}
+                    className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Form buttons */}
+              <button 
+                type="submit"
+                disabled={isSavingSettings}
+                className="w-full py-3.5 bg-gold-500 hover:bg-gold-600 active:scale-[0.99] disabled:bg-gold-500/40 text-black font-semibold text-xs transition-all uppercase tracking-widest font-display rounded-sm flex items-center justify-center gap-2 select-none h-12 shadow-md shadow-gold-500/10"
+              >
+                {isSavingSettings ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" /> Synchronizing configurations...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={14} /> Commit Dynamic Changes Live
+                  </>
+                )}
+              </button>
+
+            </form>
+
+          </div>
+        </motion.div>
       )}
 
     </div>
