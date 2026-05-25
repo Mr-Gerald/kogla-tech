@@ -158,6 +158,66 @@ ${codeSnippet}
   });
 }
 
+// Multi-layered educational generator: explains highly technical CS to 5-year-olds and elite engineers alike
+function generateEducationalLesson(pathId: string, title: string, subtitle: string, stepNum: number): string {
+  let kidMetaphor = '';
+  let hardcoreSpec = '';
+  let systemAction = '';
+
+  if (pathId === 'advanced-cybersecurity') {
+    kidMetaphor = `Imagine your target computer is a massive, majestic castle. Inside, some drawers have precious keys, but we also place special dummy envelopes containing sticky, warning buzzers. If a sneaky troll tries to cram a giant wooden block into a tiny drawer, the extra wood overflows and rips the envelope! The moment a sticky envelope breaks, the castle guards sound the alert and lock everything down. That envelope is called a "Canary" or "Buffer Cookie"—it stops intruders immediately!`;
+    hardcoreSpec = `CPU registers store system coordinates inside sequential Stack blocks. When functions execute, parameters and return bounds (like the RIP Instruction Pointer) are saved on the stack under high-speed register offsets (such as rbp, rsp). If compiled buffers lack array bounds verification, extra inputs trigger a Stack Buffer Overflow. Modern sanitizers enforce protection cookies (Canaries), randomized segments offset positioning (ASLR), and Non-Executable bounds (NX / W^X) to block malicious payload injections.`;
+    systemAction = `Press the [Execute Command Payloads] button in the simulator below to launch binary audits (like objdump or gdb frames analyses), certifying register boundary tolerances dynamically.`;
+  } else if (pathId === 'full-stack-engineering') {
+    kidMetaphor = `Imagine a chef baking a dynamic cake for a school party. The server is the kitchen, and your browser is the classroom. If the server tells everyone "I baked a delicious chocolate cake with star frosting!", but the browser opens the box and finds a strawberry cake with sprinkles, everyone gets confused and the cake collapses! This confusion is called a "Hydration Mismatch". A great web kitchen must guarantee that what is prepared on the server is exactly what is unpacked on the screen!`;
+    hardcoreSpec = `Client-side hydration requires the client bundle to match server-side pre-rendered markup exactly. When React encounters a mismatch, it throws expensive hydration warnings and falls back to full DOM re-renders. Distributed production backends mitigate concurrency bottlenecks by declaring Redis caches (under Least-Recently-Used LRU evictions), postgres indexing pipelines, and exponential handshakes to manage persistent WebSocket sessions.`;
+    systemAction = `Execute the build and info commands in the simulator console to analyze React bundle compilation paths or index execution traces.`;
+  } else if (pathId === 'machine-learning-operations') {
+    kidMetaphor = `Imagine you have a giant, heavy encyclopedia with 2,000 pages, but you need to fit it into a tiny toddler backpack. To solve this, you squeeze groups of pages, turning every long paragraph into a single magic letter! Now the book is super light to carry, but anyone reading it can still understand the exact story. Squeezing heavy calculations into light, quick numbers is called "Models Quantization" (FP32 decimals down to INT8 integers)!`;
+    hardcoreSpec = `Large deep networks require excessive memory footprints. Quantization mapping scales high-fidelity floating point factors (FP32/FP16) down to fast 8-bit integers (INT8) using dynamic calibration tensors, decreasing VRAM overhead by 75% with negligible accuracy loss. Production engines combine parallel inferential calls (dynamic batching) inside execution grids, checking live outputs continuously for drift alerts.`;
+    systemAction = `Launch the inferential checker to profile ongoing execution parameters, examining live scale values and pipeline latency rates.`;
+  } else if (pathId === 'ui-ux-engineering') {
+    kidMetaphor = `Imagine your website's search box is connected to a bouncy, soft metal spring. When you pull the box, instead of stopping abruptly like a heavy wooden block, it bounces slightly with a happy, fluid bounce! This elastic motion delights the eye. However, if you keep pulling and shaking the search box 100 times a second, the entire screen freezes up. That freeze is called "Layout Thrashing", and we must keep our animations smooth and paced!`;
+    hardcoreSpec = `Fluid UI layers utilize physics kinematics equations (stiffness, mass, and damping) to drive composited execution loops at 60fps/120fps. Layout Thrashing occurs when components make interleaved style writes followed instantly by dimension reads (like offsets, widths), forcing the browser to instantly halt paint sequences and recalculate CSS structures. Staggering transitions and offloading rendering to composite layers prevents frame drops.`;
+    systemAction = `Run the layout builder checks inside the interactive command panel to review frame times and optimize element transitions.`;
+  } else {
+    kidMetaphor = `Imagine building a massive toy town highway. If you let every model car speed around with no rules, they all crash! Instead, you paint clear lanes, install smart traffic lights that turn yellow and red automatically, and put fragile fragile fragile cars inside protective transparent bubble-wrap bags. The bubble-wrappers are "Isolated Containers," and the smart traffic coordinates are "Cloud Orchestration Pipelines"!`;
+    hardcoreSpec = `Cloud architectures isolate services within micro-containers restricted by kernel namespaces and cgroups (Control Groups). Infrastructure deployments are declared via Terraform scripts, leveraging remote state locks to block concurrent pipeline alterations. Advanced traffic routing and blue-green load balancers split external requests to ensure 99.999% system availability and automatic container failover limits.`;
+    systemAction = `Trigger a Terraform validating check or Docker process scan in the simulator below to audit micro-container container instances or secure VPC nodes.`;
+  }
+
+  return `### CLASSROOM LESSON: ${title}
+  
+> **"${subtitle}"**
+
+---
+
+#### 👶 IN PLAIN ENGLISH (For A 5-Year-Old)
+${kidMetaphor}
+
+---
+
+#### 🧠 ELITE ENGINEERING SPECIFICATIONS (Under the Hood)
+* **Active Topic Focus**: \`${title}\`
+* **Syllabus Segment**: Phase #${Math.floor((stepNum-1)/10) + 1}
+* **Core Technical Formula**:
+${hardcoreSpec}
+
+---
+
+#### 💻 TERMINAL HANDS-ON ADVENTURE
+**Simulated Environmental Command**: \`${title}\` configuration maps to live terminal execution commands. Under this level's simulator, we execute:
+\`\`\`bash
+$ ${title === 'Dynamic Topic Calibration' ? 'help' : stepNum % 2 === 0 ? 'objdump -M intel -d' : 'cat /proc/sys/kernel'}
+\`\`\`
+
+**Laboratory Instruction**:
+1. Read the **👶 In Plain English** explanation to understand the visual logic.
+2. Review the **🧠 Elite Engineering Specifications** to capture the actual underlying code architecture.
+3. Observe the live **Code Sandbox** interface on the right to see standard structural representations.
+4. Input or click the default command in the **Interactive Commands Console** module below to pass tests successfully.`;
+}
+
 // Heavy-duty technical mapping database for the 500 rooms
 function getChapterTechnicalTemplate(pathId: string, modIdx: number, chapIdx: number, stepNum: number) {
   let title = `Dynamic Topic Calibration`;
@@ -321,6 +381,9 @@ Designing fluid interfaces demands meticulous attention to hardware rendering la
     coreContent = `### Cloud Operations Architecture
 Kubernetes pods orchestration, secure VPC routing tunnels, and Infrastructure-as-code are critical. Under step ${stepNum}, you test configurations verifying automatic container replication gates.`;
   }
+
+  // Override standard text blocks with beautiful, highly in-depth intuitive classroom courses
+  coreContent = generateEducationalLesson(pathId, title, subtitle, stepNum);
 
   return { title, subtitle, cmd, question, options, correctIndex, codeSnippet, explanation, coreContent };
 }

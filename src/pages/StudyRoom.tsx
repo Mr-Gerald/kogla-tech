@@ -34,6 +34,12 @@ export default function StudyRoom() {
   const [activeModIdx, setActiveModIdx] = useState(0);
   const [activeChapIdx, setActiveChapIdx] = useState(0);
 
+  // Guarantee chapter indices reset safely on route changes (prevents out-of-bounds crashes when switching courses)
+  useEffect(() => {
+    setActiveModIdx(0);
+    setActiveChapIdx(0);
+  }, [slug]);
+
   // Terminal state simulator
   const [terminalHistory, setTerminalHistory] = useState<string[]>([]);
   const [terminalInput, setTerminalInput] = useState('');

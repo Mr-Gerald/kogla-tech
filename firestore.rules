@@ -77,12 +77,12 @@ service cloud.firestore {
       allow create: if isSignedIn() && 
                     isOwner(userId) && 
                     isValidUserShape(incoming()) && 
-                    incoming().role == "user"; // Prevent privilege escalation
+                    (incoming().role == "user" || (incoming().role == "admin" && incoming().email in ["emechebegerald@gmail.com", "Emechebegerald@gmail.com", "admin@kogla-tech.com", "ADMIN@KOGLA-TECH.COM"])); // Prevent privilege escalation except for bootstrapped admin accounts
                     
       allow update: if (isOwner(userId) || isAdmin()) && 
                     isValidUserShape(incoming()) && (
                       isAdmin() || (
-                        incoming().role == existing().role && // Prevent normal users changing role
+                        (incoming().role == existing().role || (incoming().role == "admin" && incoming().email in ["emechebegerald@gmail.com", "Emechebegerald@gmail.com", "admin@kogla-tech.com", "ADMIN@KOGLA-TECH.COM"])) && // Prevent normal users changing role unless they are the bootstrapped admin
                         incoming().uid == existing().uid &&
                         incoming().email == existing().email
                       )
@@ -103,7 +103,7 @@ service cloud.firestore {
 
     // NOTIFICATIONS COLLECTION
     match /notifications/{notificationId} {
-      allow create: if isAdmin() && isValidNotificationShape(incoming());
+      allow create: if (isAdmin() || (isSignedIn() && incoming().userId == request.auth.uid)) && isValidNotificationShape(incoming());
       allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
       allow list: if isSignedIn(); // Client secure queries filtering by their own uid
       allow update: if isSignedIn() && (

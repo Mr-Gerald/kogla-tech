@@ -1381,6 +1381,69 @@ export default function AdminPortal() {
                 </div>
               </div>
 
+              {/* GROUP 5: Dynamic Accessibility & Visual Theme Controls */}
+              <div className="p-4 bg-black border border-gray-900 rounded-sm space-y-5">
+                <h3 className="text-xs font-display font-medium text-gold-500 uppercase tracking-widest pb-1 border-b border-gray-900 flex items-center gap-1.5">
+                  <span className="text-xs">🎨</span> Display, Accessibility & Theme Tones
+                </h3>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Font Sizer */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="block text-[10px] text-gray-400 uppercase tracking-wider font-mono">
+                        Global Font Scale Factor
+                      </label>
+                      <span className="px-2 py-0.5 bg-gold-500/10 text-gold-500 text-[10px] font-mono font-bold rounded">
+                        {siteForm.fontSizeScale || 100}%
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                      Scale the entire site typography proportionately and simultaneously. Relative headers and body fonts grow and shrink together.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-mono text-gray-500">80%</span>
+                      <input 
+                        type="range"
+                        min="80"
+                        max="180"
+                        step="5"
+                        value={siteForm.fontSizeScale || 100}
+                        onChange={(e) => setSiteForm({ ...siteForm, fontSizeScale: parseInt(e.target.value) })}
+                        className="flex-1 accent-gold-500 h-1.5 rounded-lg cursor-pointer bg-gray-950"
+                      />
+                      <span className="text-[10px] font-mono text-gray-300">180%</span>
+                    </div>
+                  </div>
+
+                  {/* Theme Mode Toggles */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">
+                      Corporate Visual Mode
+                    </label>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                      Toggle between Dark (default cosmic), Light (high-contrast eye-safe light background), or Mixed (amber cyber deck) mode. Texts automatically adapt contrast rates.
+                    </p>
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      {(['dark', 'light', 'mixed'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setSiteForm({ ...siteForm, themeMode: mode })}
+                          className={`py-2 text-[10px] font-mono uppercase tracking-wider border rounded-xs transition-all ${
+                            (siteForm.themeMode || 'dark') === mode
+                              ? 'bg-gold-500 border-gold-500 text-black font-bold'
+                              : 'bg-transparent border-gray-901 hover:border-gray-800 text-gray-400'
+                          }`}
+                        >
+                          {mode} Mode
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Form buttons */}
               <button 
                 type="submit"

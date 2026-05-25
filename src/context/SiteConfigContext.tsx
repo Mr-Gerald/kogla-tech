@@ -16,6 +16,8 @@ export interface SiteConfig {
   aboutHeadline: string;
   aboutText: string;
   footerCredits: string;
+  fontSizeScale?: number;
+  themeMode?: 'dark' | 'light' | 'mixed';
 }
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
@@ -32,6 +34,8 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   aboutHeadline: 'Engineered for High-Stakes Operations',
   aboutText: 'We design custom enterprise-grade platforms, establish agile automation pipelines, and host real-time developer sandboxes. Operating from Lagos, we trace the future of computing across Africa.',
   footerCredits: 'Kogla Tech. All system execution logs reserved.',
+  fontSizeScale: 100,
+  themeMode: 'dark',
 };
 
 interface SiteConfigContextType {
@@ -78,6 +82,17 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const scale = config.fontSizeScale || 100;
+    document.documentElement.style.fontSize = `${scale}%`;
+  }, [config.fontSizeScale]);
+
+  useEffect(() => {
+    const mode = config.themeMode || 'dark';
+    document.documentElement.classList.remove('theme-dark', 'theme-light', 'theme-mixed');
+    document.documentElement.classList.add(`theme-${mode}`);
+  }, [config.themeMode]);
 
   const updateConfig = async (newConfig: Partial<SiteConfig>) => {
     const updated = { ...config, ...newConfig };

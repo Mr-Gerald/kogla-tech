@@ -1,26 +1,115 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;600&display=swap');
 @import "tailwindcss";
 
+:root {
+  --bg-primary: #050505;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #000000;
+  --text-primary: #f5f5f5;
+  --text-secondary: #d4d4d4;
+  --text-muted: #a3a3a3;
+  --border-primary: #121212;
+  --bg-card: #0c0c0c;
+  --text-white-only: #ffffff;
+  
+  --color-gray-300-val: #f5f5f5;
+  --color-gray-400-val: #e5e5e5;
+  --color-gray-450-val: #dcdcdc;
+  --color-gray-405-val: #e5e5e5;
+  --color-gray-500-val: #d4d4d4;
+  --color-gray-550-val: #d4d4d4;
+  --color-gray-650-val: #1e1e1e;
+  --color-gray-901-val: #111111;
+  --color-gray-801-val: #1a1a1a;
+  --color-gray-810-val: #222222;
+  --color-gray-600-val: #a3a3a3;
+  --color-gray-700-val: #737373;
+}
+
+/* Comprehensive Light Theme Configuration */
+html.theme-light {
+  --bg-primary: #f4f6f8;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #eaedf1;
+  --text-primary: #12151c;
+  --text-secondary: #2d313c;
+  --text-muted: #4e5564;
+  --border-primary: #dcdfe4;
+  --bg-card: #ffffff;
+  --text-white-only: #12151c;
+  
+  --color-gray-350-val: #4e5564;
+  --color-gray-300-val: #1c202a;
+  --color-gray-400-val: #2c313d;
+  --color-gray-450-val: #3a4150;
+  --color-gray-405-val: #2c313d;
+  --color-gray-500-val: #444c5c;
+  --color-gray-550-val: #444c5c;
+  --color-gray-650-val: #e2e8f0;
+  --color-gray-901-val: #e2e8f0;
+  --color-gray-801-val: #cbd5e1;
+  --color-gray-810-val: #edf2f7;
+  --color-gray-600-val: #555e70;
+  --color-gray-700-val: #6b7280;
+}
+
+/* Mixed Theme: Cyber Deck Amber Accent */
+html.theme-mixed {
+  --bg-primary: #0a0e14;
+  --bg-secondary: #0f141c;
+  --bg-tertiary: #040608;
+  --text-primary: #f0f2f5;
+  --text-secondary: #ccd1db;
+  --text-muted: #8c96a5;
+  --border-primary: #1e2633;
+  --bg-card: #111722;
+  --text-white-only: #ffffff;
+  
+  --color-gray-300-val: #e5e7eb;
+  --color-gray-400-val: #d1d5db;
+  --color-gray-450-val: #9ca3af;
+  --color-gray-405-val: #d1d5db;
+  --color-gray-500-val: #9ca3af;
+  --color-gray-550-val: #9ca3af;
+  --color-gray-650-val: #162235;
+  --color-gray-901-val: #1c2c42;
+  --color-gray-801-val: #203550;
+  --color-gray-810-val: #2b4566;
+  --color-gray-600-val: #8892b0;
+  --color-gray-700-val: #667085;
+}
+
 @theme {
   --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --color-gold-500: #d4af37;
   --color-gold-600: #c5a028;
-  --color-black-950: #050505;
   
-  /* Global Dynamic Gray Boosters for Enhanced Readability */
-  --color-gray-300: #f5f5f5;
-  --color-gray-400: #e5e5e5; /* Boosted to high-contrast off-white */
-  --color-gray-450: #dcdcdc;
-  --color-gray-405: #e5e5e5;
-  --color-gray-500: #d4d4d4; /* Boosted to clearly readable silver */
-  --color-gray-550: #d4d4d4;
-  --color-gray-600: #a3a3a3; /* Boosted to visible neutral gray */
-  --color-gray-700: #737373;
+  --color-black-950: var(--bg-primary);
+  --color-gray-950: var(--bg-card);
+  --color-black: var(--bg-tertiary);
+  --color-gray-900: var(--border-primary);
+  --color-gray-800: var(--border-primary);
+  --color-white: var(--text-white-only);
+  --color-gray-100: var(--text-primary);
+  
+  /* Dynamic Grays mapped to values */
+  --color-gray-300: var(--color-gray-300-val);
+  --color-gray-400: var(--color-gray-400-val);
+  --color-gray-450: var(--color-gray-450-val);
+  --color-gray-405: var(--color-gray-405-val);
+  --color-gray-500: var(--color-gray-500-val);
+  --color-gray-550: var(--color-gray-550-val);
+  --color-gray-650: var(--color-gray-650-val);
+  --color-gray-901: var(--color-gray-901-val);
+  --color-gray-801: var(--color-gray-801-val);
+  --color-gray-810: var(--color-gray-810-val);
+  --color-gray-600: var(--color-gray-600-val);
+  --color-gray-700: var(--color-gray-700-val);
 }
 
 @layer base {
   body {
-    @apply bg-black-950 text-gray-100 font-sans antialiased text-[15.5px] leading-relaxed;
+    @apply bg-black-950 text-gray-100 font-sans antialiased text-[15.5px] leading-relaxed transition-colors duration-300;
   }
 }
