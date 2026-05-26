@@ -207,6 +207,69 @@ export default function Home() {
         </div>
       </section>
 
+      <section id="partnerships" className="py-24 px-6 bg-gradient-to-b from-gray-950 to-black border-t border-gray-900 relative">
+        <div className="absolute top-0 right-10 w-72 h-72 bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="max-w-6xl mx-auto space-y-12">
+          
+          <div className="text-center max-w-3xl mx-auto space-y-4">
+            <span className="text-[10px] text-gold-500 font-mono font-bold tracking-widest uppercase block bg-gold-500/10 border border-gold-500/20 px-3 py-1 rounded-full w-fit mx-auto">
+              Corporate Partnerships & Integrations
+            </span>
+            <h2 className="text-2xl md:text-4xl font-display font-medium text-white uppercase tracking-wider">
+              Accelerate Your Enterprise Vector
+            </h2>
+            <p className="text-xs md:text-sm text-gray-400 font-sans leading-relaxed">
+              We engineer mission-critical systems and build expert-level engineering teams for global enterprises, scaling startups, and high-security defense contractors. Our multi-disciplinary squads integrate directly into your operations to resolve structural bottlenecks and deploy secure, resilient architectures.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            
+            <div className="p-6 bg-gray-950 border border-gray-900 hover:border-gold-500/30 rounded-sm space-y-4 transition-all group">
+              <div className="p-3 bg-gold-400/5 border border-gold-400/10 rounded-sm w-fit group-hover:bg-gold-500/10 transition-colors">
+                <Building size={20} className="text-gold-500" />
+              </div>
+              <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Bespoke Solutions Engineering</h3>
+              <p className="text-xs text-gray-400 leading-relaxed font-sans">
+                Outsource your high-stakes operational engineering. From deep zero-trust cloud network provisioning to custom low-level database adapters and high-transaction client-facing web runtimes, our solutions perform flawlessly under maximum transactional volumes.
+              </p>
+            </div>
+
+            <div className="p-6 bg-gray-950 border border-gray-900 hover:border-gold-500/30 rounded-sm space-y-4 transition-all group">
+              <div className="p-3 bg-gold-400/5 border border-gold-400/10 rounded-sm w-fit group-hover:bg-gold-500/10 transition-colors">
+                <Users size={20} className="text-gold-500" />
+              </div>
+              <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Specialized Corporate Academy</h3>
+              <p className="text-xs text-gray-400 leading-relaxed font-sans">
+                Up-skill your technical workforce directly. Secure premium group clearances for our Level-4 sovereign training sandboxes, aligning your developers with advanced cybersecurity modules, AI pipeline instrumentation techniques, and zero-defect systems workflows.
+              </p>
+            </div>
+
+            <div className="p-6 bg-gray-950 border border-gray-900 hover:border-gold-500/30 rounded-sm space-y-4 transition-all group">
+              <div className="p-3 bg-gold-400/5 border border-gold-400/10 rounded-sm w-fit group-hover:bg-gold-500/10 transition-colors">
+                <Shield size={20} className="text-gold-500" />
+              </div>
+              <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Joint Ventures & Research</h3>
+              <p className="text-xs text-gray-400 leading-relaxed font-sans">
+                Partner with our state-of-the-art Innovation Labs on custom LLM optimization, secure decentralized consensus databases, or autonomous agentic operating pipelines with transaction-safe state controls and hardware enclave authorization vectors.
+              </p>
+            </div>
+
+          </div>
+
+          <div className="p-6 bg-gray-950 border border-gray-900 rounded-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="space-y-1">
+              <h4 className="text-xs font-display font-bold text-white uppercase tracking-wider">Are you an Enterprise Leader, CTO, or Venture representative?</h4>
+              <p className="text-[11px] text-gray-400 font-sans">Submit a priority consultation request using our secure routing portal below. Our specialist response team will follow up within 2 hours.</p>
+            </div>
+            <a href="#contact" className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-semibold rounded-xs text-[11px] uppercase tracking-wider font-display shrink-0 transition-colors">
+              Request Executive Consulting
+            </a>
+          </div>
+
+        </div>
+      </section>
+
       <section id="contact" className="py-20 px-6 bg-gray-950 border-t border-gray-800">
         <div className="max-w-2xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-display font-bold mb-10 text-center">Get In Touch</h2>

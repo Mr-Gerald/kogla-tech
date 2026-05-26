@@ -189,6 +189,56 @@ export default function About() {
           </div>
         </div>
 
+        {/* Enterprise Client Relations Portfolio */}
+        <div className="p-8 bg-gradient-to-r from-gray-950 to-black border border-gray-900 rounded-sm space-y-8">
+          <div className="space-y-2">
+            <span className="text-[9px] font-mono text-gold-500 bg-gold-400/5 px-2 py-0.5 border border-gold-500/10 rounded-sm uppercase tracking-widest font-bold">
+              Institutional Integration
+            </span>
+            <h3 className="text-xl md:text-2xl font-display font-bold text-white uppercase tracking-wider">
+              A Trusted Technology Partner For Modern Enterprises
+            </h3>
+            <p className="text-xs text-gray-400 font-sans leading-relaxed">
+              We operate as a high-fidelity collaborative node for global agencies and businesses. Our models of alignment are designed to de-risk high-stakes initiatives:
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 text-xs md:text-sm">
+            <div className="space-y-2">
+              <h4 className="font-display font-semibold text-white uppercase tracking-wide flex items-center gap-2">
+                <span className="text-gold-500 font-bold">&#10003;</span> SLA-Guaranteed Execution
+              </h4>
+              <p className="text-gray-400 leading-relaxed font-sans">
+                Our Solutions Engineering squads deliver under fully transparent schedules, supported by rigorous CI/CD compliance, high-grade documentation, and active zero-latency SLA parameters.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-display font-semibold text-white uppercase tracking-wide flex items-center gap-2">
+                <span className="text-gold-500 font-bold">&#10003;</span> Exclusive IP Security
+              </h4>
+              <p className="text-gray-400 leading-relaxed font-sans">
+                All software designed, fine-tuned models, and cyberdefense perimeters are 100% owned by the partnering enterprise, with strict isolation matching international security mandates.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-display font-semibold text-white uppercase tracking-wide flex items-center gap-2">
+                <span className="text-gold-500 font-bold">&#10003;</span> Custom Sandboxed Training
+              </h4>
+              <p className="text-gray-400 leading-relaxed font-sans">
+                We design custom cohorts to upskill internal engineering teams, creating bespoke interactive rooms on your specific software stacks to accelerate onboarding and lower operational friction.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-display font-semibold text-white uppercase tracking-wide flex items-center gap-2">
+                <span className="text-gold-500 font-bold">&#10003;</span> Dynamic Solutions Scale
+              </h4>
+              <p className="text-gray-400 leading-relaxed font-sans">
+                From pre-revenue automation consulting to handling hyper-scale load spikes on transactional backends, we customize teams and infrastructure to align perfectly with your organizational phase.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Compliance Footer Box */}
         <div className="p-6 bg-black border border-gray-900 rounded-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 font-mono text-xs text-gray-400">
           <div className="space-y-1 max-w-2xl">
