@@ -19,12 +19,14 @@ import {
   BookOpenCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useSiteConfig } from '../context/SiteConfigContext';
 import { ACADEMY_PATHS, AcademyChapter, AcademyModule } from '../data/academyContent';
 
 export default function StudyRoom() {
-  const { slug } = useParams();
+  const { slug, roomId } = useParams();
   const navigate = useNavigate();
   const { user, profile, completeRoom } = useAuth();
+  const { config } = useSiteConfig();
 
   // Load active path (default to cybersecurity if slug not provided or unmatched)
   const pathSlug = slug || 'advanced-cybersecurity';
@@ -34,11 +36,34 @@ export default function StudyRoom() {
   const [activeModIdx, setActiveModIdx] = useState(0);
   const [activeChapIdx, setActiveChapIdx] = useState(0);
 
-  // Guarantee chapter indices reset safely on route changes (prevents out-of-bounds crashes when switching courses)
+  // Auto redirection effect: if no roomId exists, redirect to the first room of this path immediately
   useEffect(() => {
-    setActiveModIdx(0);
-    setActiveChapIdx(0);
-  }, [slug]);
+    if (activePath && !roomId) {
+      const firstRoomId = activePath.modules[0]?.chapters[0]?.id || `${pathSlug}-room-1`;
+      navigate(`/study/${pathSlug}/room/${firstRoomId}`, { replace: true });
+    }
+  }, [slug, roomId, activePath, pathSlug, navigate]);
+
+  // Guarantee chapter indices synchronize with the URL's roomId in real-time
+  useEffect(() => {
+    if (roomId && activePath) {
+      let found = false;
+      for (let mIdx = 0; mIdx < activePath.modules.length; mIdx++) {
+        const mod = activePath.modules[mIdx];
+        const cIdx = mod.chapters.findIndex(c => c.id === roomId);
+        if (cIdx !== -1) {
+          setActiveModIdx(mIdx);
+          setActiveChapIdx(cIdx);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        setActiveModIdx(0);
+        setActiveChapIdx(0);
+      }
+    }
+  }, [roomId, activePath]);
 
   // Terminal state simulator
   const [terminalHistory, setTerminalHistory] = useState<string[]>([]);
@@ -236,24 +261,21 @@ export default function StudyRoom() {
                       const isCurrent = activeModIdx === modIdx && activeChapIdx === chapIdx;
 
                       return (
-                        <button
+                        <Link
                           key={chap.id}
-                          onClick={() => {
-                            setActiveModIdx(modIdx);
-                            setActiveChapIdx(chapIdx);
-                          }}
-                          className={`w-full text-left p-2.5 flex items-center justify-between text-xs transition-colors rounded-sm ${isCurrent ? 'bg-gold-500/10 border-l-2 border-gold-500 text-white' : 'hover:bg-gray-901 text-gray-400'}`}
+                          to={`/study/${pathSlug}/room/${chap.id}`}
+                          className={`w-full text-left p-2.5 flex items-center justify-between text-xs transition-colors rounded-sm ${isCurrent ? 'bg-gold-500/10 border-l-2 border-gold-500 text-gold-500 font-medium' : 'hover:bg-gray-901 text-gray-400 hover:text-white'}`}
                         >
                           <div className="space-y-0.5 max-w-[85%]">
-                            <span className="block text-[9px] text-gold-500 font-mono">Room {modIdx * 10 + chapIdx + 1}</span>
+                            <span className="block text-[9px] text-gold-500 font-mono font-bold">Room {modIdx * 10 + chapIdx + 1}</span>
                             <span className="block truncate font-medium text-[11px]">{chap.title.replace(`Room ${modIdx * 10 + chapIdx + 1}: `, '')}</span>
                           </div>
                           {chapCompleted ? (
                             <CheckCircle2 size={13} className="text-gold-500 shrink-0" />
                           ) : (
-                            <ChevronRight size={10} className="text-gray-600 shrink-0 font-bold" />
+                            <ChevronRight size={10} className="text-gray-500 shrink-0 font-bold" />
                           )}
-                        </button>
+                        </Link>
                       );
                     })}
                   </div>
@@ -301,7 +323,7 @@ export default function StudyRoom() {
               </div>
 
               {/* Detailed Readout Core Content */}
-              <div className="prose prose-invert prose-xs text-gray-300 leading-relaxed max-w-none text-xs md:text-sm font-sans space-y-6">
+              <div className={`prose ${config.themeMode === 'light' ? 'prose-neutral text-gray-800 font-medium' : 'prose-invert text-gray-300'} prose-xs leading-relaxed max-w-none text-xs md:text-sm font-sans space-y-6`}>
                 {/* Visual Content representation splits by newlines to keep beautiful UI layout */}
                 {activeChapter.content.split('\n\n').map((paragraph, index) => {
                   if (paragraph.startsWith('```')) {
@@ -407,13 +429,15 @@ export default function StudyRoom() {
               <div className="flex justify-between items-center border-t border-gray-900 pt-6">
                 <button
                   onClick={handlePrev}
-                  className="px-4 py-2 hover:bg-gray-901 border border-gray-801 text-gray-400 hover:text-white text-xs font-mono rounded-sm transition-colors uppercase disabled:opacity-30 flex items-center gap-1"
+                  disabled={activeChapIdx === 0 && activeModIdx === 0}
+                  className="px-4 py-2 hover:bg-gray-901 border border-gray-801 text-gray-400 hover:text-white text-xs font-mono rounded-sm transition-colors uppercase disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1"
                 >
                   <ArrowLeft size={12} /> Previous
                 </button>
                 <button
                   onClick={handleNext}
-                  className="px-4 py-2 hover:bg-gray-901 border border-gray-810 text-gray-400 hover:text-white text-xs font-mono rounded-sm transition-colors uppercase disabled:opacity-30 flex items-center gap-1"
+                  disabled={activeModIdx === activePath.modules.length - 1 && activeChapIdx === activeModule.chapters.length - 1}
+                  className="px-4 py-2 hover:bg-gray-901 border border-gray-810 text-gray-400 hover:text-white text-xs font-mono rounded-sm transition-colors uppercase disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1"
                 >
                   Next <ArrowRight size={12} />
                 </button>

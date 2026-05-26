@@ -51,6 +51,7 @@ export default function App() {
                 <Route path="/admin" element={<AdminPortal />} />
                 <Route path="/study" element={<StudyRoom />} />
                 <Route path="/study/:slug" element={<StudyRoom />} />
+                <Route path="/study/:slug/room/:roomId" element={<StudyRoom />} />
               </Routes>
             </main>
             <Footer />

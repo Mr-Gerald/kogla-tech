@@ -112,5 +112,11 @@ service cloud.firestore {
                     ) && isValidNotificationShape(incoming());
       allow delete: if isAdmin();
     }
+
+    // SYSTEM CONFIGURATION
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
