@@ -115,6 +115,20 @@ export default function AdminPortal() {
     }
   };
 
+  const handleFaviconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setSiteForm(prev => ({ ...prev, faviconUrl: reader.result }));
+          triggerSuccess('Favicon file loaded! Submit settings below to commit changes.');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Load local state & Firestore Listeners on Auth load
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -1248,6 +1262,39 @@ export default function AdminPortal() {
                   <div className="p-3 bg-gray-950 border border-gray-850 rounded-sm w-fit">
                     <span className="block text-[9px] text-gray-500 uppercase font-mono mb-1.5">Live Header Logo Preview</span>
                     <img src={siteForm.logoUrl} alt="Logo preview" className="h-9 border border-gold-500/30 p-1 bg-black object-contain" />
+                  </div>
+                )}
+
+                {/* Dynamic Browser Favicon Customizer */}
+                <div className="grid md:grid-cols-3 gap-4 pt-4 border-t border-gray-901">
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Active Browser Favicon URL</label>
+                    <input 
+                      type="text"
+                      value={siteForm.faviconUrl || ''}
+                      onChange={(e) => setSiteForm({ ...siteForm, faviconUrl: e.target.value })}
+                      placeholder="Paste image web address (URL) or upload a favicon file..."
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <label className="flex items-center justify-center gap-2 px-4 py-2 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
+                      <Upload size={13} />
+                      Upload Favicon PNG/JPG
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleFaviconUpload} 
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {siteForm.faviconUrl && (
+                  <div className="p-3 bg-gray-950 border border-gray-850 rounded-sm w-fit">
+                    <span className="block text-[9px] text-gray-500 uppercase font-mono mb-1.5">Live Tab Favicon Preview</span>
+                    <img src={siteForm.faviconUrl} alt="Favicon preview" className="h-6 w-6 border border-gold-500/30 p-0.5 bg-black object-contain" />
                   </div>
                 )}
               </div>

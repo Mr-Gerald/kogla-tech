@@ -27,8 +27,18 @@ export default function StudyRoom() {
   const { user, profile, completeRoom } = useAuth();
   const { config } = useSiteConfig();
 
-  // Load active path (default to cybersecurity if slug not provided or unmatched)
-  const pathSlug = slug || 'advanced-cybersecurity';
+  // Load active path with alias mapping (default to cybersecurity if slug not provided or unmatched)
+  const rawSlug = slug || 'advanced-cybersecurity';
+  const pathSlug = (function(s) {
+    const clean = s ? s.toLowerCase().trim() : '';
+    if (clean === 'cybersecurity' || clean === 'advanced-cybersecurity') return 'advanced-cybersecurity';
+    if (clean === 'web-development' || clean === 'full-stack-engineering') return 'full-stack-engineering';
+    if (clean === 'ai-automation' || clean === 'machine-learning-operations') return 'machine-learning-operations';
+    if (clean === 'ui-ux-design' || clean === 'ui-ux-engineering') return 'ui-ux-engineering';
+    if (clean === 'cloud-architecture' || clean === 'cloud-native-devops') return 'cloud-native-devops';
+    return clean;
+  })(rawSlug);
+
   const activePath = ACADEMY_PATHS[pathSlug] || ACADEMY_PATHS['advanced-cybersecurity'];
 
   // Track active module and active chapter
@@ -399,10 +409,10 @@ export default function StudyRoom() {
               </div>
 
               {/* Classroom core work area grid */}
-              <div className="flex flex-col lg:flex-row gap-6 items-stretch">
+              <div className="max-w-4xl mx-auto space-y-8">
                 
-                {/* LEFT/MAIN PANE: Interactive Teaching lesson & verification Quiz (Takes full space) */}
-                <div className="flex-1 bg-gray-950/20 border border-gray-900 p-6 md:p-8 rounded-sm space-y-8 min-w-0">
+                {/* MAIN PANE: Interactive Teaching lesson & verification Quiz */}
+                <div className="bg-gray-950/20 border border-gray-900 p-6 md:p-8 rounded-sm space-y-8">
                   
                   {/* Lesson Metrics breadcrumb header */}
                   <div className="flex justify-between items-center gap-4 pb-2 border-b border-gray-900">
@@ -447,26 +457,26 @@ export default function StudyRoom() {
                           </h3>
                         );
                       }
-                      if (cleanPara.startsWith('#### 👶')) {
+                      if (cleanPara.startsWith('#### 💡')) {
                         return (
-                          <div key={index} className="p-4 bg-gold-500/5 border-l-2 border-gold-500 rounded-r-xs space-y-1 my-6 text-xs md:text-sm">
-                            <h4 className="text-[11px] font-display font-bold uppercase text-gold-500 tracking-wider">
-                              👶 IN PLAIN ENGLISH (For A 5-Year-Old)
+                          <div key={index} className="p-5 bg-gold-500/5 border-l-2 border-gold-500 rounded-r-xs space-y-2 my-6 text-xs md:text-sm">
+                            <h4 className="text-[11px] font-display font-bold uppercase text-gold-500 tracking-wider flex items-center gap-1.5">
+                              <span>💡</span> COGNITIVE CONCEPT FOUNDATION
                             </h4>
-                            <p className="text-gray-300 leading-relaxed italic">
-                              {cleanPara.replace('#### 👶 IN PLAIN ENGLISH (For A 5-Year-Old)', '').trim()}
+                            <p className="text-gray-300 leading-relaxed font-sans font-medium">
+                              {cleanPara.replace('#### 💡', '').trim()}
                             </p>
                           </div>
                         );
                       }
                       if (cleanPara.startsWith('#### 🧠')) {
                         return (
-                          <div key={index} className="p-4 bg-gray-950 border border-gray-900 rounded-sm space-y-1 my-6 text-xs md:text-sm">
-                            <h4 className="text-[11px] font-display font-bold uppercase text-white tracking-wider">
-                              🧠 ELITE ENGINEERING SPECIFICATIONS (Under the Hood)
+                          <div key={index} className="p-5 bg-gray-950 border border-gray-900 rounded-sm space-y-2 my-6 text-xs md:text-sm">
+                            <h4 className="text-[11px] font-display font-bold uppercase text-white tracking-wider flex items-center gap-1.5">
+                              <span>🧠</span> DEEP-DIVE UNDER-THE-HOOD MECHANICS
                             </h4>
                             <div className="text-gray-400 leading-relaxed font-sans space-y-2">
-                              {cleanPara.replace('#### 🧠 ELITE ENGINEERING SPECIFICATIONS (Under the Hood)', '').trim().split('\n').map((line, lIdx) => (
+                              {cleanPara.replace('#### 🧠', '').trim().split('\n').map((line, lIdx) => (
                                 <p key={lIdx}>{line}</p>
                               ))}
                             </div>
@@ -475,13 +485,15 @@ export default function StudyRoom() {
                       }
                       if (cleanPara.startsWith('#### 💻')) {
                         return (
-                          <div key={index} className="p-4 bg-black border border-gray-900 rounded-xs space-y-2 my-6">
-                            <h4 className="text-[11px] font-display font-bold uppercase text-green-400 tracking-wider">
-                              💻 TERMINAL HANDS-ON ADVENTURE
+                          <div key={index} className="p-5 bg-black border border-gray-900 rounded-xs space-y-2 my-6">
+                            <h4 className="text-[11px] font-display font-bold uppercase text-green-400 tracking-wider flex items-center gap-1.5 font-mono">
+                              <span>💻</span> RE-VERIFIED SYSTEM SCHEMATICS
                             </h4>
-                            <p className="text-xs text-gray-400 font-mono leading-relaxed">
-                              {cleanPara.replace('#### 💻 TERMINAL HANDS-ON ADVENTURE', '').trim()}
-                            </p>
+                            <div className="text-xs text-gray-400 font-mono leading-relaxed space-y-1">
+                              {cleanPara.replace('#### 💻', '').trim().split('\n').map((line, lIdx) => (
+                                <p key={lIdx}>{line}</p>
+                              ))}
+                            </div>
                           </div>
                         );
                       }
@@ -579,7 +591,7 @@ export default function StudyRoom() {
                     >
                       <ArrowLeft size={12} /> Previous Room
                     </button>
-                    <span className="text-[10px] font-mono text-gray-600">
+                    <span className="text-[10px] font-mono text-gray-650">
                       Chapter Range Index: {currentRoomIdx !== -1 ? currentRoomIdx + 1 : 1} / {totalRooms}
                     </span>
                     <button
@@ -611,62 +623,6 @@ export default function StudyRoom() {
                   )}
 
                 </div>
-
-                {/* RIGHT PANE: Side Workstation Console Sandbox Terminal */}
-                <div className="w-full lg:w-96 bg-black border border-gray-900 flex flex-col shrink-0 text-xs font-mono rounded-sm self-stretch min-h-[500px]">
-                  <div className="p-3 bg-gray-950 border-b border-gray-900 flex justify-between items-center text-[10px] text-gray-400">
-                    <span className="flex items-center gap-1.5 uppercase font-bold text-[9px] tracking-widest text-gold-500">
-                      <Terminal size={12} className="text-gold-400 animate-pulse" /> Sandbox Console Terminal
-                    </span>
-                    <span className="text-[9px] uppercase font-bold text-red-500">[LIVE SIM]</span>
-                  </div>
-
-                  {/* Console print zone */}
-                  <div className="flex-1 p-4 overflow-y-auto space-y-3 max-h-[400px] lg:max-h-none text-green-500 font-mono text-[11px] leading-relaxed select-text">
-                    {terminalHistory.map((line, index) => (
-                      <div key={index} className="whitespace-pre-wrap break-all border-b border-gray-950/20 pb-1.5 last:border-0">
-                        {line}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Suggester deploy prompt box */}
-                  {activeChapter.terminalCommand && (
-                    <div className="p-3 bg-gray-950/70 border-t border-gray-901 space-y-2">
-                      <span className="text-[9px] text-gray-500 uppercase block tracking-widest font-bold">Suggested Sandbox Payload:</span>
-                      <div className="flex items-center justify-between gap-3 p-2 bg-black border border-gray-900 rounded-xs">
-                        <span className="text-white text-[10px] max-w-[70%] truncate font-mono text-gold-400 block p-0.5">
-                          {activeChapter.terminalCommand}
-                        </span>
-                        <button
-                          onClick={() => handleCommandSimulate(activeChapter.terminalCommand!)}
-                          className="px-2.5 py-1 bg-gold-500 hover:bg-gold-600 text-black text-[9px] font-bold uppercase rounded-xs tracking-wider transition-all"
-                        >
-                          Execute Payload
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Manual input form box */}
-                  <form 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleCommandSimulate(terminalInput);
-                    }}
-                    className="p-3 bg-gray-950 border-t border-gray-900 flex items-center rounded-b-sm"
-                  >
-                    <span className="text-gray-500 mr-1.5 text-[11px] font-bold">$</span>
-                    <input
-                      type="text"
-                      value={terminalInput}
-                      onChange={(e) => setTerminalInput(e.target.value)}
-                      placeholder="Type custom verification command payload..."
-                      className="w-full bg-transparent p-1 focus:outline-none text-[11px] text-green-400 placeholder:text-gray-700 font-mono"
-                    />
-                  </form>
-                </div>
-
               </div>
             </motion.div>
           )}

@@ -158,64 +158,55 @@ ${codeSnippet}
   });
 }
 
-// Multi-layered educational generator: explains highly technical CS to 5-year-olds and elite engineers alike
+// Multi-layered educational generator: explains highly technical CS using intuitive analogies and elite engineering specifications
 function generateEducationalLesson(pathId: string, title: string, subtitle: string, stepNum: number): string {
-  let kidMetaphor = '';
+  let conceptInsight = '';
   let hardcoreSpec = '';
-  let systemAction = '';
+  let fieldVerification = '';
 
   if (pathId === 'advanced-cybersecurity') {
-    kidMetaphor = `Imagine your target computer is a massive, majestic castle. Inside, some drawers have precious keys, but we also place special dummy envelopes containing sticky, warning buzzers. If a sneaky troll tries to cram a giant wooden block into a tiny drawer, the extra wood overflows and rips the envelope! The moment a sticky envelope breaks, the castle guards sound the alert and lock everything down. That envelope is called a "Canary" or "Buffer Cookie"—it stops intruders immediately!`;
-    hardcoreSpec = `CPU registers store system coordinates inside sequential Stack blocks. When functions execute, parameters and return bounds (like the RIP Instruction Pointer) are saved on the stack under high-speed register offsets (such as rbp, rsp). If compiled buffers lack array bounds verification, extra inputs trigger a Stack Buffer Overflow. Modern sanitizers enforce protection cookies (Canaries), randomized segments offset positioning (ASLR), and Non-Executable bounds (NX / W^X) to block malicious payload injections.`;
-    systemAction = `Press the [Execute Command Payloads] button in the simulator below to launch binary audits (like objdump or gdb frames analyses), certifying register boundary tolerances dynamically.`;
+    conceptInsight = `System memory is organized as a sequential map of data and logic addresses. When programs execute functions, they establish private memory slots (Stack frames) to hold parameters and dynamic instructions. To prevent attackers from overflowing these array buffer sizes to rewrite return pointers, engineers place cryptographic sentinel values (Security Canaries) right before those sensitive addresses. If any payload tries to write past arrays boundaries, it inevitably overwrites the sentinel, tripping safety alarms and instantly halting CPU instruction loops.`;
+    hardcoreSpec = `• Registers and Frame Pointers: High-speed CPU registers store execution frames continuously. Local buffers are allocated on the stack below the Saved Frame Pointer (SFP) and Instruction Pointer (RIP/EIP).\n• Stack Buffer Overflows: Exploitation occurs when input routines lack length verification, corrupting adjacent boundaries.\n• Dynamic Mitigations: Modern build chains enforce stack cookies (-fstack-protector-all), Address Space Layout Randomization (ASLR) offsets, and Non-Executable flags (NX / W^X) to sanitize active memory spaces.`;
+    fieldVerification = `• Verify compilation boundaries inside binary headers using static analysis tools.\n• Check active register frames and check address boundaries during local testing.\n• Confirm proper deployment parameters for memory safeguards on application hosts.`;
   } else if (pathId === 'full-stack-engineering') {
-    kidMetaphor = `Imagine a chef baking a dynamic cake for a school party. The server is the kitchen, and your browser is the classroom. If the server tells everyone "I baked a delicious chocolate cake with star frosting!", but the browser opens the box and finds a strawberry cake with sprinkles, everyone gets confused and the cake collapses! This confusion is called a "Hydration Mismatch". A great web kitchen must guarantee that what is prepared on the server is exactly what is unpacked on the screen!`;
-    hardcoreSpec = `Client-side hydration requires the client bundle to match server-side pre-rendered markup exactly. When React encounters a mismatch, it throws expensive hydration warnings and falls back to full DOM re-renders. Distributed production backends mitigate concurrency bottlenecks by declaring Redis caches (under Least-Recently-Used LRU evictions), postgres indexing pipelines, and exponential handshakes to manage persistent WebSocket sessions.`;
-    systemAction = `Execute the build and info commands in the simulator console to analyze React bundle compilation paths or index execution traces.`;
+    conceptInsight = `To deliver instant load times, servers pre-compile visual HTML structures before transferring them to the browser (Server-Side Rendering). Once downloaded, the browser client-side JavaScript engine executes hydration loops to attach page interactivity. If the visual structure rendered on the server differs from the DOM tree generated in the client, hydration mismatches disrupt layout execution, triggering full layout updates and degrading user experience.`;
+    hardcoreSpec = `• Server and Client Reconciliation: Hydration syncs server pre-rendered markup to active client-side Virtual DOM nodes.\n• Rendering Latency: Unsynchronized inputs trigger console warnings and force costly, full-screen UI updates.\n• Scalability Protections: High-performance backends implement Redis caching pools, custom composite indices, and connection limits to stabilize real-time events.`;
+    fieldVerification = `• Audit client logs to find and resolve hydration mismatch inconsistencies.\n• Measure database performance using structural analysis metrics.\n• Inspect active websocket connection pools to keep communication lag low.`;
   } else if (pathId === 'machine-learning-operations') {
-    kidMetaphor = `Imagine you have a giant, heavy encyclopedia with 2,000 pages, but you need to fit it into a tiny toddler backpack. To solve this, you squeeze groups of pages, turning every long paragraph into a single magic letter! Now the book is super light to carry, but anyone reading it can still understand the exact story. Squeezing heavy calculations into light, quick numbers is called "Models Quantization" (FP32 decimals down to INT8 integers)!`;
-    hardcoreSpec = `Large deep networks require excessive memory footprints. Quantization mapping scales high-fidelity floating point factors (FP32/FP16) down to fast 8-bit integers (INT8) using dynamic calibration tensors, decreasing VRAM overhead by 75% with negligible accuracy loss. Production engines combine parallel inferential calls (dynamic batching) inside execution grids, checking live outputs continuously for drift alerts.`;
-    systemAction = `Launch the inferential checker to profile ongoing execution parameters, examining live scale values and pipeline latency rates.`;
+    conceptInsight = `Large-scale machine learning and neural network weights require gigabytes of high-performance physical memory (VRAM). Squeezing these multi-layer weights to run on lightweight edge hardware is achieved by converting rich decimal coefficients down to compact integers (Model Quantization). This process preserves predictive scores while reducing overall memory constraints.`;
+    hardcoreSpec = `• Weight Quantization: Maps dense 32-bit floating point weights (FP32) to compact 8-bit integers (INT8) through selective scaling parameters.\n• Performance Offsets: Cuts active model memory footprints by up to 75% while maintaining model capability thresholds.\n• Edge Scheduling: Employs dynamic tensor batching queues and automated system checkers to report memory load anomalies.`;
+    fieldVerification = `• Track weights calibration values during model compression loops.\n• Audit real-time VRAM allocation bounds across cluster nodes.\n• Check active response throughput under mock load conditions.`;
   } else if (pathId === 'ui-ux-engineering') {
-    kidMetaphor = `Imagine your website's search box is connected to a bouncy, soft metal spring. When you pull the box, instead of stopping abruptly like a heavy wooden block, it bounces slightly with a happy, fluid bounce! This elastic motion delights the eye. However, if you keep pulling and shaking the search box 100 times a second, the entire screen freezes up. That freeze is called "Layout Thrashing", and we must keep our animations smooth and paced!`;
-    hardcoreSpec = `Fluid UI layers utilize physics kinematics equations (stiffness, mass, and damping) to drive composited execution loops at 60fps/120fps. Layout Thrashing occurs when components make interleaved style writes followed instantly by dimension reads (like offsets, widths), forcing the browser to instantly halt paint sequences and recalculate CSS structures. Staggering transitions and offloading rendering to composite layers prevents frame drops.`;
-    systemAction = `Run the layout builder checks inside the interactive command panel to review frame times and optimize element transitions.`;
+    conceptInsight = `High-end digital experiences utilize kinetic motion loops that match natural physical behavior. Designing these animations requires efficient style updates. If a script updates an element's style and instantly queries its layout configuration, it locks the browser's paint loops, forcing immediate layout recalculations (Layout Thrashing) and causing visible lag.`;
+    hardcoreSpec = `• Performance Kinematics: Employs dynamic stiffness, mass, and friction coefficients to render interactive loops smoothly at 60Hz/120Hz.\n• Layout Thrashing Constraints: Occurs when styling updates are interleaved with size measurements, causing CPU bottlenecks.\n• Optimization Patterns: Uses GPU-accelerated CSS properties, leverages browser layout schedules, and optimizes event scroll listeners.`;
+    fieldVerification = `• Analyze animation performance logs inside browser diagnostic suites.\n• Track style recalculation times to find and remove rendering blocks.\n• Validate responsiveness limits across different user hardware configurations.`;
   } else {
-    kidMetaphor = `Imagine building a massive toy town highway. If you let every model car speed around with no rules, they all crash! Instead, you paint clear lanes, install smart traffic lights that turn yellow and red automatically, and put fragile fragile fragile cars inside protective transparent bubble-wrap bags. The bubble-wrappers are "Isolated Containers," and the smart traffic coordinates are "Cloud Orchestration Pipelines"!`;
-    hardcoreSpec = `Cloud architectures isolate services within micro-containers restricted by kernel namespaces and cgroups (Control Groups). Infrastructure deployments are declared via Terraform scripts, leveraging remote state locks to block concurrent pipeline alterations. Advanced traffic routing and blue-green load balancers split external requests to ensure 99.999% system availability and automatic container failover limits.`;
-    systemAction = `Trigger a Terraform validating check or Docker process scan in the simulator below to audit micro-container container instances or secure VPC nodes.`;
+    conceptInsight = `Operating large-scale systems requires isolating applications from one another using lightweight, secure sandboxes (Containers). To coordinate hundreds of these modules efficiently, engineering pipelines declare configurations within standardized infrastructure templates, allowing automated control engines to balance workloads dynamically.`;
+    hardcoreSpec = `• Container Isolation: Employs Linux namespaces and control groups (cgroups) to partition CPU and RAM allocations.\n• Infrastructure-as-Code: Implements modular system blueprints using secure state locks to manage cloud infrastructure builds safely.\n• High Availability Architecture: Automatically scales resources and manages routing targets to ensure 99.999% application uptime.`;
+    fieldVerification = `• Audit container limits to ensure server resources are partitioned correctly.\n• Validate deployment blueprints with build-time verification commands.\n• Test failover sequences under heavy traffic spikes.`;
   }
 
   return `### CLASSROOM LESSON: ${title}
   
-> **"${subtitle}"**
+> "${subtitle}"
 
 ---
 
-#### 👶 IN PLAIN ENGLISH (For A 5-Year-Old)
-${kidMetaphor}
+#### 💡 ${conceptInsight}
 
 ---
 
-#### 🧠 ELITE ENGINEERING SPECIFICATIONS (Under the Hood)
-* **Active Topic Focus**: \`${title}\`
-* **Syllabus Segment**: Phase #${Math.floor((stepNum-1)/10) + 1}
-* **Core Technical Formula**:
-${hardcoreSpec}
+#### 🧠\n${hardcoreSpec}
 
 ---
 
-#### 💻 TERMINAL HANDS-ON ADVENTURE
-**Simulated Environmental Command**: \`${title}\` configuration maps to live terminal execution commands. Under this level's simulator, we execute:
-\`\`\`bash
-$ ${title === 'Dynamic Topic Calibration' ? 'help' : stepNum % 2 === 0 ? 'objdump -M intel -d' : 'cat /proc/sys/kernel'}
-\`\`\`
+#### 💻\n${fieldVerification}
 
-**Laboratory Instruction**:
-1. Read the **👶 In Plain English** explanation to understand the visual logic.
-2. Review the **🧠 Elite Engineering Specifications** to capture the actual underlying code architecture.
-3. Observe the live **Code Sandbox** interface on the right to see standard structural representations.
-4. Input or click the default command in the **Interactive Commands Console** module below to pass tests successfully.`;
+**Academic Milestone Instruction**:
+1. Review the **💡 COGNITIVE CONCEPT FOUNDATION** to grasp the logical operation simply.
+2. Study the **🧠 DEEP-DIVE UNDER-THE-HOOD MECHANICS** to master the hardware-software boundaries.
+3. Validate the **💻 RE-VERIFIED SYSTEM SCHEMATICS** to implement safe engineering architectures in the field.
+4. Respond to the quiz checkpoint below to secure your credits and advance your training module.`;
 }
 
 // Heavy-duty technical mapping database for the 500 rooms

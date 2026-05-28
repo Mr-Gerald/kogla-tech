@@ -18,6 +18,7 @@ export interface SiteConfig {
   footerCredits: string;
   fontSizeScale?: number;
   themeMode?: 'dark' | 'light' | 'mixed';
+  faviconUrl?: string;
 }
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
@@ -36,6 +37,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   footerCredits: 'Kogla Tech. All system execution logs reserved.',
   fontSizeScale: 100,
   themeMode: 'dark',
+  faviconUrl: 'https://scontent.xx.fbcdn.net/v/t1.15752-9/679033424_1340416481327917_3114449704387631566_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=9f807c&_nc_ohc=QTFzuqvVyEwQ7kNvwEQ3HkO&_nc_oc=Adq0Aps1oCzdcFqAZAUORHxlDuik930FWgR7q_bG6Rrw_VSh-1RqFtChA7cCqPbZbATlZ4M_Wu3uMuKpC9WlPuHY&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.xx&oh=03_Q7cD5QFiQMxoovDD8V-pDwIuGMWsjPDrhbJXde89ezXPA-rM5w&oe=6A39344C',
 };
 
 interface SiteConfigContextType {
@@ -93,6 +95,17 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
     document.documentElement.classList.remove('theme-dark', 'theme-light', 'theme-mixed');
     document.documentElement.classList.add(`theme-${mode}`);
   }, [config.themeMode]);
+
+  useEffect(() => {
+    const favicon = config.faviconUrl || 'https://scontent.xx.fbcdn.net/v/t1.15752-9/679033424_1340416481327917_3114449704387631566_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=9f807c&_nc_ohc=QTFzuqvVyEwQ7kNvwEQ3HkO&_nc_oc=Adq0Aps1oCzdcFqAZAUORHxlDuik930FWgR7q_bG6Rrw_VSh-1RqFtChA7cCqPbZbATlZ4M_Wu3uMuKpC9WlPuHY&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.xx&oh=03_Q7cD5QFiQMxoovDD8V-pDwIuGMWsjPDrhbJXde89ezXPA-rM5w&oe=6A39344C';
+    let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+    link.href = favicon;
+  }, [config.faviconUrl]);
 
   const updateConfig = async (newConfig: Partial<SiteConfig>) => {
     const updated = { ...config, ...newConfig };
