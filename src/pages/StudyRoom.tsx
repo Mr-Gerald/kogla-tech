@@ -45,10 +45,18 @@ export default function StudyRoom() {
   const [activeModIdx, setActiveModIdx] = useState(0);
   const [activeChapIdx, setActiveChapIdx] = useState(0);
 
+  // Track and save the last visited curriculum path
+  useEffect(() => {
+    if (pathSlug && pathSlug !== 'web-development') {
+      localStorage.setItem('kogla_last_visited_path', pathSlug);
+    }
+  }, [pathSlug]);
+
   // Sync active track index and auto-redirect to valid slug if requested on empty path index
   useEffect(() => {
     if (!slug) {
-      navigate('/study/advanced-cybersecurity', { replace: true });
+      const lastVisited = localStorage.getItem('kogla_last_visited_path') || 'advanced-cybersecurity';
+      navigate(`/study/${lastVisited}`, { replace: true });
     }
   }, [slug, navigate]);
 

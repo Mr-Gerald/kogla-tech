@@ -103,7 +103,7 @@ export default function Academy() {
             </p>
           </div>
           <Link 
-            to="/study/advanced-cybersecurity"
+            to="/study"
             className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 active:scale-[0.98] transition-all text-black font-semibold text-xs uppercase tracking-widest font-display rounded-sm shrink-0 flex items-center gap-2"
           >
             Launch Interactive Workspace <Terminal size={12} />
