@@ -67,7 +67,13 @@ export default function Login() {
         if (isSystemAdmin) {
           navigate('/admin'); // Redirect to Admin Command center
         } else {
-          navigate('/academy'); // Redirect users to learning catalog
+          const redirectTo = sessionStorage.getItem('studyRedirectTo');
+          if (redirectTo) {
+            sessionStorage.removeItem('studyRedirectTo');
+            navigate(redirectTo);
+          } else {
+            navigate('/academy'); // Redirect users to learning catalog
+          }
         }
       }, 1000);
 

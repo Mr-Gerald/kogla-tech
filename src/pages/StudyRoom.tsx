@@ -52,6 +52,13 @@ export default function StudyRoom() {
     }
   }, [slug, navigate]);
 
+  // Capture unauthenticated target path for authentication redirection
+  useEffect(() => {
+    if (!user || !profile) {
+      sessionStorage.setItem('studyRedirectTo', window.location.pathname);
+    }
+  }, [user, profile]);
+
   // Synchronize chapter indices when URL's roomId changes
   useEffect(() => {
     if (roomId && activePath) {

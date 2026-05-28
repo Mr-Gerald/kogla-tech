@@ -70,7 +70,13 @@ export default function Signup() {
       });
 
       setLoadingState(false);
-      navigate('/academy'); // Redirect to training academy
+      const redirectTo = sessionStorage.getItem('studyRedirectTo');
+      if (redirectTo) {
+        sessionStorage.removeItem('studyRedirectTo');
+        navigate(redirectTo);
+      } else {
+        navigate('/academy'); // Redirect to training academy
+      }
     } catch (err: any) {
       let friendlyError = err.message;
       if (err.code === 'auth/email-already-in-use') {
