@@ -152,7 +152,9 @@ export default function Home() {
       </section>
 
       <section id="academy" className="py-20 px-6 bg-gray-900 border-t border-gray-800">
-          <img src={images.academy} alt="Academy Collage" className="w-full h-56 object-cover mb-8 rounded-sm"/>
+          <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
+              <img src={images.academy} alt="Academy Collage" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
+          </div>
           <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Academy & Learning Paths</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
             {courses.map(title => (
@@ -165,7 +167,9 @@ export default function Home() {
       </section>
 
       <section id="services" className="py-20 px-6 bg-black border-t border-gray-800">
-          <img src={images.services} alt="Services Platform Display" className="w-full h-56 object-cover mb-8 rounded-sm"/>
+          <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
+              <img src={images.services} alt="Services Platform Display" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
+          </div>
           <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Premium Solution Ecosystem</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
             {services.map(title => (
@@ -178,7 +182,9 @@ export default function Home() {
       </section>
 
       <section id="projects" className="py-20 px-6 bg-gray-950 border-t border-gray-800">
-          <img src={images.projects} alt="Projects Portfolio Showcase" className="w-full h-56 object-cover mb-8 rounded-sm"/>
+          <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
+              <img src={images.projects} alt="Projects Portfolio Showcase" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
+          </div>
           <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Featured Case Studies</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
             {[['AI Infrastructure', 'Enterprise AI/ML'], ['Cyber Immunity', 'Zero-Trust Defense'], ['Digital Transformation', 'Retail Enterprise'], ['Web Ecosystem', 'Global SaaS']].map(([title, desc]) => (
@@ -202,7 +208,9 @@ export default function Home() {
       </section>
 
       <section className="py-20 px-6 bg-black border-t border-gray-800">
-        <img src={images.labs} alt="AI Research labs Hardware" className="w-full h-56 object-cover mb-8 rounded-sm"/>
+        <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
+            <img src={images.labs} alt="AI Research labs Hardware" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
+        </div>
         <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Innovation Labs & AI Research</h2>
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {['LLM Optimization', 'Cyber Security Labs', 'Automation OS'].map(title => (
