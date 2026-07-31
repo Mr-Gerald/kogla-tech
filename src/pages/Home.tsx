@@ -6,9 +6,9 @@ import { getImageConfig, ImageConfig, addInquiry, DEFAULT_IMAGES } from '../util
 import { useSiteConfig } from '../context/SiteConfigContext';
 
 const stats = [
-    { label: 'Global Students', value: '250+' },
+    { label: 'Global Students', value: '150+' },
     { label: 'Projects Completed', value: '1,000+' },
-    { label: 'Tutors', value: '22' },
+    { label: 'Tutors', value: '13' },
     { label: 'Global Divisions', value: '4' },
 ];
 
@@ -193,16 +193,16 @@ export default function Home() {
       </section>
 
       <motion.section 
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-50px" }}
         transition={{ duration: 0.8 }}
-        className="py-16 px-6 bg-gray-950 border-y border-gray-900 grid grid-cols-2 md:grid-cols-4 gap-6"
+        className="py-8 px-6 bg-zinc-950 border-y border-zinc-900 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-7xl mx-auto rounded-lg my-6"
       >
         {stats.map(s => (
-            <div key={s.label} className="text-center border-r last:border-r-0 border-gray-800">
-                <div className="text-3xl md:text-4xl font-display text-gold-500 mb-1">{s.value}</div>
-                <div className="text-[10px] md:text-xs text-gray-300 uppercase tracking-widest">{s.label}</div>
+            <div key={s.label} className="text-center border-r last:border-r-0 border-zinc-800/80 px-2">
+                <div className="text-2xl md:text-3xl font-display font-bold text-gold-500 mb-0.5">{s.value}</div>
+                <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-mono">{s.label}</div>
             </div>
         ))}
       </motion.section>
