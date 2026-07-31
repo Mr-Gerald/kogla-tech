@@ -297,7 +297,7 @@ export default function CourseDetails() {
 
       {/* Meta Specs Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-        <div className="lg:col-span-2 grid grid-cols-3 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="p-4 bg-gray-950 border border-gray-900 rounded-sm hover:border-gold-500/25 transition-all">
             <span className="text-gray-500 text-[9px] uppercase tracking-widest font-mono block mb-1">Duration</span>
             <span className="text-white text-sm font-semibold flex items-center gap-1.5 font-display">

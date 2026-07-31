@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Zap, ArrowLeft, Send, CheckSquare, ShieldCheck, Building2, Layers, Cpu, Code, Settings2, BarChart3, CloudLightning } from 'lucide-react';
+import { Zap, ArrowLeft, Send, CheckSquare, ShieldCheck, Building2, Layers, Cpu, Code, Settings2, BarChart3, CloudLightning, Mail, MessageCircle } from 'lucide-react';
 import React, { useState } from 'react';
 import { addInquiry } from '../utils/storage';
 
@@ -371,6 +371,27 @@ export default function ServiceWorkflow() {
                   Submit Operational Packet <Send size={12} />
                 </button>
               </form>
+
+              {/* Instant Contact Options (Email first, then WhatsApp) */}
+              <div className="pt-4 border-t border-gray-900 space-y-2">
+                <span className="text-[10px] uppercase font-mono text-gray-400 block tracking-wider">Instant Direct Contact</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <a 
+                    href={`mailto:support@koglatech.com?subject=${encodeURIComponent(`Inquiry & Priority Booking: ${details.title} - Kogla Tech`)}`}
+                    className="py-2 px-3 bg-gold-500 hover:bg-gold-600 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded-sm transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Mail size={13} /> Send Email
+                  </a>
+                  <a 
+                    href={`https://wa.me/2348000000000?text=${encodeURIComponent(`Hello Kogla Tech, I want to book your ${details.title} service. Let's discuss!`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[10px] uppercase tracking-wider font-display rounded-sm transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <MessageCircle size={13} /> WhatsApp
+                  </a>
+                </div>
+              </div>
             </div>
           )}
         </div>

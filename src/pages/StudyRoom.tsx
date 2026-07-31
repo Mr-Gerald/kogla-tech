@@ -560,7 +560,7 @@ export default function StudyRoom() {
               </div>
 
               {/* Progress & Operational Status Deck Grid */}
-              <div className="grid md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 
                 {/* Progress Card */}
                 <div className="p-5 bg-zinc-950 border border-zinc-850 rounded-lg relative overflow-hidden flex flex-col justify-between">

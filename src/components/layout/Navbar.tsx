@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Bell, LogOut, ShieldAlert, Award, Star, CheckSquare } from 'lucide-react';
+import { Menu, X, Bell, LogOut, ShieldAlert, Award, Star, CheckSquare, Mail, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteConfig } from '../../context/SiteConfigContext';
 
@@ -27,22 +27,16 @@ export default function Navbar() {
   }, []);
   
   const navItems = [
-    { name: 'Home', path: isHome ? '#home' : '/' },
+    { name: 'Home', path: '/' },
     { name: 'Academy', path: '/academy' },
-    { name: 'About', path: isHome ? '#about' : '/about' },
-    { name: 'Services', path: isHome ? '#services' : '/services' },
-    { name: 'Projects', path: isHome ? '#projects' : '/projects' },
-    { name: 'Contact', path: isHome ? '#contact' : '/contact' },
+    { name: 'About', path: '/about' },
+    { name: 'Services', path: '/services' },
+    { name: 'Projects', path: '/projects' },
+    { name: 'Contact', path: '/contact' },
   ];
   
-  const handleNavClick = (path: string) => {
+  const handleNavClick = () => {
     setIsOpen(false);
-    if (path.startsWith('#')) {
-      const element = document.querySelector(path);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -66,8 +60,8 @@ export default function Navbar() {
         {navItems.map(item => (
           <Link 
             key={item.name} 
-            to={item.path.startsWith('#') ? '/' : item.path} 
-            onClick={() => handleNavClick(item.path)} 
+            to={item.path} 
+            onClick={handleNavClick} 
             className={`hover:text-gold-500 transition-colors ${location.pathname === item.path ? 'text-gold-500 font-bold' : 'text-gray-300'}`}
           >
             {item.name}
@@ -207,13 +201,33 @@ export default function Navbar() {
             {navItems.map(item => (
               <Link 
                 key={item.name} 
-                to={item.path.startsWith('#') ? '/' : item.path} 
-                onClick={() => setIsOpen(false)} 
+                to={item.path} 
+                onClick={handleNavClick} 
                 className="text-sm text-gray-300 hover:text-gold-500 transition-colors"
               >
                 {item.name}
               </Link>
             ))}
+
+            {/* Instant Contact Options in Mobile Menu Dropdown */}
+            <div className="pt-3 border-t border-gray-900 grid grid-cols-2 gap-2">
+              <a 
+                href="mailto:support@koglatech.com?subject=Inquiry%20-%20Kogla%20Tech"
+                onClick={() => setIsOpen(false)}
+                className="py-2 px-3 bg-gold-500 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded-sm flex items-center justify-center gap-1.5"
+              >
+                <Mail size={12} /> Email Us
+              </a>
+              <a 
+                href="https://wa.me/2348000000000?text=Hello%20Kogla%20Tech,%20I%20would%20like%20to%20inquire%20about%20your%20services."
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsOpen(false)}
+                className="py-2 px-3 bg-emerald-600 text-white font-semibold text-[10px] uppercase tracking-wider font-display rounded-sm flex items-center justify-center gap-1.5"
+              >
+                <MessageCircle size={12} /> WhatsApp
+              </a>
+            </div>
 
             {user && profile ? (
               <div className="flex flex-col gap-3 pt-4 border-t border-gray-900">

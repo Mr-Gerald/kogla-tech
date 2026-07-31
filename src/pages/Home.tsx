@@ -59,129 +59,218 @@ export default function Home() {
 
   return (
     <div className="text-gray-100">
-      <section id="home" className="relative min-h-screen flex flex-col items-center justify-between pt-24 pb-8 px-6 overflow-hidden">
+      <section id="home" className="relative min-h-screen flex flex-col justify-between pt-28 pb-12 px-6 md:px-16 overflow-hidden">
         
-        {/* Dynamic Live Banner Background */}
+        {/* Dynamic Live Banner Background with Deep Contrast */}
         <div className="absolute inset-0 z-0">
-          <img src={images.hero} alt="Programming workspace" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/75"></div>
+          <img src={images.hero} alt="Programming workspace" className="w-full h-full object-cover scale-105 animate-pulse duration-[15000ms]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-black/75"></div>
         </div>
 
-        {/* ABOVE HEADLINE HEADER CONTENT */}
+        {/* TOP HEADER STATUS BAR */}
         <motion.div 
-          initial={{ opacity: 0, y: -15 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          transition={{ duration: 0.8, delay: 0.1 }} 
-          className="relative z-10 text-center w-full max-w-xl mx-auto mt-6"
+          initial={{ opacity: 0, x: -20 }} 
+          animate={{ opacity: 1, x: 0 }} 
+          transition={{ duration: 0.8 }} 
+          className="relative z-10 flex flex-wrap items-center justify-between gap-4 max-w-7xl mx-auto w-full"
         >
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-black/60 border border-gold-500/30 text-gold-500 rounded-sm text-[10px] tracking-widest font-display uppercase font-semibold">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold-400 animate-pulse"></span>
-            ACTIVE VENTURES: COHORT CO-2026 OPEN FOR ADMISSIONS
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-950/80 border border-gold-500/30 text-gold-500 rounded-sm text-[10px] tracking-widest font-display uppercase font-semibold shadow-xl">
+            <span className="h-2 w-2 rounded-full bg-gold-400 animate-ping"></span>
+            COHORT CO-2026: ADMISSIONS OPEN NOW
+          </div>
+          <div className="hidden md:flex items-center gap-3 text-xs font-mono text-zinc-400">
+            <span className="flex items-center gap-1.5"><Terminal size={12} className="text-gold-500" /> GLOBAL TECHNOLOGY PARTNER</span>
+            <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+            <span>24/7 SUPPORT READY</span>
           </div>
         </motion.div>
 
-        {/* MAIN HEADLINE HERO CONTENT */}
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }} className="text-center relative z-10 my-auto px-4">
-          <h1 className="text-3xl md:text-6xl font-display font-bold mb-4 bg-gradient-to-b from-white via-gold-500 to-white bg-clip-text text-transparent uppercase tracking-wide leading-tight">
-            {config.heroHeadline}
-          </h1>
-          <p className="text-xs md:text-sm text-gray-300 max-w-2xl mx-auto mb-8 font-sans leading-relaxed">
-            {config.heroSubheadline}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
-            <a href="#academy" className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 transition-all text-black font-semibold rounded-sm flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider font-display">
-              Get Started <ArrowRight size={14} />
-            </a>
-            <a href="#services" className="px-5 py-2.5 border border-gray-700 hover:border-gold-500 text-gray-200 hover:text-white transition-all rounded-sm text-xs text-center uppercase tracking-wider font-display flex items-center justify-center">
-              Explore Ecosystem
-            </a>
-            <a href="#contact" className="px-5 py-2.5 border border-gold-500/50 hover:bg-gold-500/10 text-gold-400 hover:text-white transition-all rounded-sm text-xs text-center uppercase tracking-wider font-display flex items-center justify-center gap-1.5">
-              <MessageCircle size={14} /> Contact Us Instantly
-            </a>
-          </div>
-        </motion.div>
+        {/* MAIN ASYMMETRIC EDITORIAL HERO CONTENT */}
+        <div className="relative z-10 max-w-7xl mx-auto w-full my-auto grid lg:grid-cols-12 gap-12 items-center py-12">
+          
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.9 }} 
+            className="lg:col-span-7 space-y-6 text-left"
+          >
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold block">
+                WELCOME TO KOGLA TECH
+              </span>
+              <motion.h1 
+                animate={{ 
+                  backgroundPosition: ["0% 50%", "200% 50%"],
+                  filter: ["drop-shadow(0 0 2px rgba(234,179,8,0.3))", "drop-shadow(0 0 16px rgba(253,224,71,0.85))", "drop-shadow(0 0 2px rgba(234,179,8,0.3))"]
+                }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                style={{ 
+                  backgroundImage: "linear-gradient(90deg, #fde047 0%, #ffffff 35%, #ca8a04 70%, #fde047 100%)",
+                  backgroundSize: "250% auto",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent"
+                }}
+                className="text-3xl sm:text-5xl md:text-6xl font-display font-black tracking-tight uppercase leading-[1.05]"
+              >
+                {config.heroHeadline}
+              </motion.h1>
+            </div>
+
+            <p className="text-xs sm:text-sm md:text-base text-zinc-300 max-w-2xl font-sans leading-relaxed border-l-2 border-gold-500 pl-4 bg-gradient-to-r from-gold-500/5 to-transparent py-2">
+              {config.heroSubheadline}
+            </p>
+
+            <div className="flex flex-wrap gap-4 pt-4">
+              <a href="#academy" className="px-6 py-3 bg-gold-500 hover:bg-gold-600 transition-all text-black font-bold rounded-sm flex items-center gap-2 text-xs uppercase tracking-wider font-display shadow-lg shadow-gold-500/10">
+                Explore Academy <ArrowRight size={14} />
+              </a>
+              <a href="#services" className="px-6 py-3 bg-zinc-950/80 border border-zinc-800 hover:border-gold-500 text-zinc-200 hover:text-white transition-all rounded-sm text-xs uppercase tracking-wider font-display flex items-center gap-2">
+                Explore Services
+              </a>
+              <a href="#contact" className="px-6 py-3 border border-gold-500/40 hover:bg-gold-500/10 text-gold-400 hover:text-white transition-all rounded-sm text-xs uppercase tracking-wider font-display flex items-center gap-2">
+                <MessageCircle size={14} /> Contact Us
+              </a>
+            </div>
+          </motion.div>
+
+          {/* RIGHT SIDE: EDITORIAL HERO IMAGE CARD */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            transition={{ duration: 0.9, delay: 0.2 }} 
+            className="lg:col-span-5 block"
+          >
+            <div className="relative rounded-lg overflow-hidden border border-gold-500/30 shadow-2xl group bg-zinc-950">
+              <div className="absolute inset-0 bg-gold-500/10 mix-blend-overlay pointer-events-none z-10"></div>
+              <img 
+                src={images.hero} 
+                alt="Kogla Tech Professional Workspace" 
+                className="w-full h-[360px] md:h-[420px] object-cover group-hover:scale-105 transition-transform duration-700 filter contrast-110"
+              />
+              <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent z-20 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-mono text-gold-400 uppercase tracking-widest block font-bold">PROFESSIONAL EXCELLENCE</span>
+                  <span className="text-xs text-white font-mono">KOGLA TECH // GLOBAL LEADERSHIP</span>
+                </div>
+                <span className="px-2.5 py-1 bg-gold-500 text-black font-mono font-bold text-[10px] rounded-sm uppercase">
+                  VERIFIED
+                </span>
+              </div>
+            </div>
+          </motion.div>
+
+        </div>
         
         {/* FOOTER OF THE HERO BOX: Animated Marquee CTA + Strategic Partner Showcase */}
-        <div className="w-full relative z-10 space-y-6">
+        <div className="w-full relative z-10 space-y-6 max-w-7xl mx-auto">
           {/* Animated Marquee CTA */}
-          <div className="w-full overflow-hidden whitespace-nowrap bg-black/60 py-3 border-y border-gray-850">
+          <div className="w-full overflow-hidden whitespace-nowrap bg-black/80 py-3 border-y border-zinc-850 rounded">
               <motion.div animate={{ x: ['0%', '-50%'] }} transition={{ repeat: Infinity, duration: 25, ease: 'linear' }} className="inline-block text-gold-500 text-xs font-display tracking-widest uppercase">
                   Register Now for Our Next Cohort • Expert-Led Tech Training • Advanced AI Masterclasses • Global Internship Programs • Apply Today • Build Your Future • Register Now for Our Next Cohort • Expert-Led Tech Training • Advanced AI Masterclasses • Global Internship Programs • Apply Today • Build Your Future
               </motion.div>
           </div>
 
-          {/* BEAUTIFUL WORKSPACE PARTNER SEGMENT (BELOW MARQUEE - FILLING BLANK HERO SPACE) */}
-          <motion.div 
-            initial={{ opacity: 0, y: 15 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.8, delay: 0.3 }} 
-            className="max-w-4xl mx-auto text-center"
-          >
-            <div className="text-[10px] text-gray-550 uppercase tracking-widest font-display mb-3">COLLABORATORS & INDUSTRY VECTORS</div>
-            <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-3 opacity-60 text-xs text-gray-300 font-mono">
-              <span className="flex items-center gap-1 hover:text-white transition-colors cursor-default">
+          {/* BEAUTIFUL WORKSPACE PARTNER SEGMENT */}
+          <div className="flex flex-wrap justify-between items-center gap-4 text-xs text-zinc-400 font-mono pt-2">
+            <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-display font-bold">COLLABORATORS & INDUSTRY VECTORS:</span>
+            <div className="flex flex-wrap items-center gap-6 opacity-75">
+              <span className="flex items-center gap-1.5 hover:text-white transition-colors cursor-default">
                 <Terminal size={12} className="text-gold-500" /> [AI_FOUNDRY]
               </span>
-              <span className="flex items-center gap-1 hover:text-white transition-colors cursor-default">
+              <span className="flex items-center gap-1.5 hover:text-white transition-colors cursor-default">
                 <Shield size={12} className="text-gold-500" /> [ZERO_TRUST_LABS]
               </span>
-              <span className="flex items-center gap-1 hover:text-white transition-colors cursor-default">
+              <span className="flex items-center gap-1.5 hover:text-white transition-colors cursor-default">
                 <Cpu size={12} className="text-gold-500" /> [QUANTUM_GRID]
               </span>
-              <span className="flex items-center gap-1 hover:text-white transition-colors cursor-default">
+              <span className="flex items-center gap-1.5 hover:text-white transition-colors cursor-default">
                 <Layers size={12} className="text-gold-500" /> [NEXT_GEN_INCUBATOR]
               </span>
             </div>
-          </motion.div>
+          </div>
         </div>
 
       </section>
 
-      <section className="py-16 px-6 bg-gray-950 border-y border-gray-900 grid grid-cols-2 md:grid-cols-4 gap-6">
+      <motion.section 
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.8 }}
+        className="py-16 px-6 bg-gray-950 border-y border-gray-900 grid grid-cols-2 md:grid-cols-4 gap-6"
+      >
         {stats.map(s => (
             <div key={s.label} className="text-center border-r last:border-r-0 border-gray-800">
                 <div className="text-3xl md:text-4xl font-display text-gold-500 mb-1">{s.value}</div>
                 <div className="text-[10px] md:text-xs text-gray-300 uppercase tracking-widest">{s.label}</div>
             </div>
         ))}
-      </section>
+      </motion.section>
 
-      <section id="about" className="py-20 px-6 bg-black text-center border-b border-gray-900">
+      <motion.section 
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.8 }}
+        id="about" 
+        className="py-20 px-6 bg-black text-center border-b border-gray-900"
+      >
           <h2 className="text-2xl md:text-3xl font-display font-black mb-6 uppercase tracking-wider text-white">{config.aboutHeadline}</h2>
           <p className="text-xs md:text-sm text-gray-300 max-w-2xl mx-auto leading-relaxed font-sans">{config.aboutText}</p>
-      </section>
+      </motion.section>
 
-      <section id="academy" className="py-20 px-6 bg-gray-900 border-t border-gray-800">
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.8 }}
+        id="academy" 
+        className="py-20 px-6 bg-gray-900 border-t border-gray-800"
+      >
           <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
               <img src={images.academy} alt="Academy Collage" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
           </div>
           <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Academy & Learning Paths</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
             {courses.map(title => (
-                <Link key={title} to={`/academy/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="p-4 border border-gray-800 bg-gray-950 hover:border-gold-500 transition-all flex flex-col items-center text-center">
-                    <BookOpen className="text-gold-500 mb-3" size={20} />
+                <Link key={title} to={`/academy/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="p-4 border border-gray-800 bg-gray-950 hover:border-gold-500 transition-all flex flex-col items-center text-center group">
+                    <BookOpen className="text-gold-500 mb-3 group-hover:scale-110 transition-transform" size={20} />
                     <h3 className="text-xs font-semibold font-display">{title}</h3>
                 </Link>
             ))}
           </div>
-      </section>
+      </motion.section>
 
-      <section id="services" className="py-20 px-6 bg-black border-t border-gray-800">
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.8 }}
+        id="services" 
+        className="py-20 px-6 bg-black border-t border-gray-800"
+      >
           <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
               <img src={images.services} alt="Services Platform Display" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
           </div>
           <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Premium Solution Ecosystem</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
             {services.map(title => (
-                <Link key={title} to={`/services/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="p-6 border border-gray-800 bg-gray-900 hover:border-gold-500 transition-all flex items-center gap-3">
-                    <Zap className="text-gold-500" size={20} />
+                <Link key={title} to={`/services/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="p-6 border border-gray-800 bg-gray-900 hover:border-gold-500 transition-all flex items-center gap-3 group">
+                    <Zap className="text-gold-500 group-hover:scale-110 transition-transform" size={20} />
                     <h3 className="text-xs font-semibold font-display">{title}</h3>
                 </Link>
             ))}
           </div>
-      </section>
+      </motion.section>
 
-      <section id="projects" className="py-20 px-6 bg-gray-950 border-t border-gray-800">
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.8 }}
+        id="projects" 
+        className="py-20 px-6 bg-gray-950 border-t border-gray-800"
+      >
           <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
               <img src={images.projects} alt="Projects Portfolio Showcase" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
           </div>
@@ -205,9 +294,15 @@ export default function Home() {
                 </Link>
             ))}
           </div>
-      </section>
+      </motion.section>
 
-      <section className="py-20 px-6 bg-black border-t border-gray-800">
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.8 }}
+        className="py-20 px-6 bg-black border-t border-gray-800"
+      >
         <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
             <img src={images.labs} alt="AI Research labs Hardware" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
         </div>
@@ -225,9 +320,16 @@ export default function Home() {
                 </Link>
             ))}
         </div>
-      </section>
+      </motion.section>
 
-      <section id="partnerships" className="py-24 px-6 bg-gradient-to-b from-gray-950 to-black border-t border-gray-900 relative">
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.8 }}
+        id="partnerships" 
+        className="py-24 px-6 bg-gradient-to-b from-gray-950 to-black border-t border-gray-900 relative"
+      >
         <div className="absolute top-0 right-10 w-72 h-72 bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="max-w-6xl mx-auto space-y-12">
           
@@ -288,10 +390,17 @@ export default function Home() {
           </div>
 
         </div>
-      </section>
+      </motion.section>
 
       {/* PROFESSIONAL INSTANT CONTACT US SECTION */}
-      <section id="contact" className="py-24 px-6 bg-gray-950 border-t border-gray-850">
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.8 }}
+        id="contact" 
+        className="py-24 px-6 bg-gray-950 border-t border-gray-850"
+      >
         <div className="max-w-4xl mx-auto space-y-12">
           
           <div className="text-center space-y-3">
@@ -431,7 +540,7 @@ export default function Home() {
           </div>
 
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }
