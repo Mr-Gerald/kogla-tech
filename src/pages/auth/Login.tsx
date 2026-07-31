@@ -21,7 +21,7 @@ export default function Login() {
     setLoadingState(true);
 
     if (!email || !password) {
-      setErrorMsg('Both credential pathways must be specified.');
+      setErrorMsg('Please enter both email and password.');
       setLoadingState(false);
       return;
     }
@@ -43,7 +43,7 @@ export default function Login() {
       if (!profileSnap.exists()) {
         const initialProfile = {
           uid: user.uid,
-          name: user.displayName || email.split('@')[0] || 'Sovereign Developer',
+          name: user.displayName || email.split('@')[0] || 'User',
           email: email,
           role: role,
           xp: 0,
@@ -60,7 +60,7 @@ export default function Login() {
         }
       }
 
-      setSuccessMsg('Operational verification complete. Synchronizing systems...');
+      setSuccessMsg('Login successful. Redirecting...');
       
       setTimeout(() => {
         setLoadingState(false);
@@ -81,9 +81,9 @@ export default function Login() {
       console.error(err);
       let friendlyError = err.message;
       if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        friendlyError = 'Invalid credentials. Please verify your administrative or developer keys.';
+        friendlyError = 'Invalid email or password. Please verify your credentials.';
       } else if (err.code === 'auth/invalid-email') {
-        friendlyError = 'Sovereign standard error: email address format is invalid.';
+        friendlyError = 'Please enter a valid email address format.';
       }
       setErrorMsg(friendlyError);
       setLoadingState(false);
@@ -100,34 +100,34 @@ export default function Login() {
       >
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-full uppercase tracking-widest font-mono mb-4">
-            <Key size={11} /> Authentication Node
+            <Key size={11} /> Secure Account Access
           </div>
           <h1 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-wider">
             Log In
           </h1>
-          <p className="text-[10px] text-gray-500 font-mono mt-1">
-            Provide credentials to verify clearance nodes.
+          <p className="text-[10px] text-gray-400 font-mono mt-1">
+            Sign in to access your portal and courses.
           </p>
         </div>
 
         {errorMsg && (
           <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-400 text-xs rounded-sm mb-6 flex items-start gap-2 max-h-48 overflow-y-auto">
-            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">[ERROR]:</span>
-            <p className="text-[11px] leading-relaxed font-mono">{errorMsg}</p>
+            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">Error:</span>
+            <p className="text-[11px] leading-relaxed font-sans">{errorMsg}</p>
           </div>
         )}
 
         {successMsg && (
           <div className="p-3 bg-green-950/40 border border-green-500/20 text-green-400 text-xs rounded-sm mb-6 flex items-start gap-2">
-            <span className="font-bold text-[10px] font-mono text-green-500 uppercase shrink-0 mt-0.5">[OK]:</span>
-            <p className="text-[11px] leading-relaxed font-mono">{successMsg}</p>
+            <span className="font-bold text-[10px] font-mono text-green-500 uppercase shrink-0 mt-0.5">Success:</span>
+            <p className="text-[11px] leading-relaxed font-sans">{successMsg}</p>
           </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-[9px] text-gray-500 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-              <Mail size={10} /> Corporate Email
+            <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
+              <Mail size={10} /> Email Address
             </label>
             <input 
               type="email" 
@@ -135,14 +135,14 @@ export default function Login() {
               disabled={loadingState}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="developer@kogla-tech.com" 
-              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-mono placeholder:text-gray-700" 
+              placeholder="name@example.com" 
+              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
             />
           </div>
 
           <div>
             <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-              <Lock size={10} /> Password Keys
+              <Lock size={10} /> Password
             </label>
             <input 
               type="password" 
@@ -151,7 +151,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••" 
-              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-mono placeholder:text-gray-700" 
+              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
             />
           </div>
 
@@ -162,18 +162,18 @@ export default function Login() {
           >
             {loadingState ? (
               <>
-                <Loader2 size={13} className="animate-spin" /> Verifying Credentials...
+                <Loader2 size={13} className="animate-spin" /> Signing In...
               </>
             ) : (
-              'Decrypt and Access'
+              'Log In'
             )}
           </button>
         </form>
 
         <div className="mt-6 text-xs text-center space-y-2">
-          <Link to="/auth/forgot-password" className="text-gray-400 hover:text-white block font-mono">Forgot password?</Link>
-          <div className="text-gray-600">
-            Don't have an account? <Link to="/auth/signup" className="text-gold-500 hover:underline">Sign Up</Link>
+          <Link to="/auth/forgot-password" className="text-gray-400 hover:text-white block font-sans">Forgot password?</Link>
+          <div className="text-gray-500">
+            Don't have an account? <Link to="/auth/signup" className="text-gold-500 hover:underline font-semibold">Sign Up</Link>
           </div>
         </div>
       </motion.div>

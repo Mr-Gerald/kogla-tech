@@ -3,6 +3,7 @@ export interface UserProfile {
   name: string;
   email: string;
   role: 'user' | 'admin';
+  isPaid?: boolean;
   xp: number;
   completedRooms: string[];
   createdAt: string;

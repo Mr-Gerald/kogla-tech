@@ -75,7 +75,7 @@ const SERVICES_REGISTRY: Record<string, ServiceBlueprint> = {
       focus: 'Financial Settlement Portal',
       outcome: 'Boosted average conversion rates by 42% by reducing load limits down to 240ms while satisfying strict privacy standards.'
     },
-    duration: '3-5 Weeks deployment'
+    duration: '1-2 Weeks deployment'
   },
   'mobile-app-development': {
     title: 'High-Performance Mobile Architectures',

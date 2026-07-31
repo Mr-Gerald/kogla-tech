@@ -21,7 +21,8 @@ import {
   Cpu,
   RefreshCw,
   Clock,
-  ExternalLink
+  ExternalLink,
+  MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig } from '../context/SiteConfigContext';
@@ -328,6 +329,56 @@ export default function StudyRoom() {
       ]);
     }
   }, [activePath, activeModIdx, activeChapIdx, activeChapter]);
+
+  const isPaidUser = profile?.role === 'admin' || profile?.isPaid === true;
+
+  if (!isPaidUser) {
+    return (
+      <div className="pt-32 px-6 pb-24 max-w-2xl mx-auto text-center font-sans">
+        <div className="p-8 bg-black border border-gold-500/40 rounded-sm shadow-2xl relative overflow-hidden space-y-6">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gold-500 via-gold-600 to-gold-400" />
+          <div className="w-16 h-16 mx-auto rounded-full bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-400 mb-2">
+            <Lock size={32} />
+          </div>
+          <div className="space-y-2">
+            <span className="text-[10px] text-gold-500 font-mono font-bold tracking-widest uppercase bg-gold-500/10 border border-gold-500/20 px-3 py-1 rounded-full">
+              Academy Study Online • Premium Clearance Required
+            </span>
+            <h1 className="text-2xl font-display font-bold text-white uppercase tracking-wider">
+              {activePath?.title || 'Academy Study Module'}
+            </h1>
+            <p className="text-xs text-gray-300 leading-relaxed font-sans max-w-md mx-auto">
+              All academy study rooms and interactive online labs are set to <strong>premium</strong>. Only paid users approved by administrators from the admin portal can access this workspace.
+            </p>
+          </div>
+
+          <div className="p-4 bg-gray-950 border border-gray-900 rounded-sm text-left font-mono text-[11px] text-gray-400 space-y-2">
+            <div className="text-gold-400 font-bold uppercase tracking-wider mb-1">How to Get Instant Access:</div>
+            <p>1. Contact our WhatsApp support desk with your registered email and the training track you want.</p>
+            <p>2. Complete payment verification with our admissions team.</p>
+            <p>3. An administrator will instantly approve your account from the admin portal to unlock all rooms!</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+            <a 
+              href={`https://wa.me/2348000000000?text=${encodeURIComponent(`Hello Kogla Tech, I want to pay and get approved for the Academy Course (${activePath?.title || 'Study Course'}). My Email: ${profile?.email || 'N/A'}. Please guide me on payment!`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-widest font-display rounded-sm transition-colors flex items-center justify-center gap-2"
+            >
+              <MessageCircle size={15} /> Contact WhatsApp to Pay & Unlock
+            </a>
+            <Link 
+              to="/academy"
+              className="py-3 px-6 bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 font-mono text-xs uppercase tracking-widest rounded-sm transition-colors flex items-center justify-center"
+            >
+              Back to Catalog
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!activePath || !activeChapter) {
     return (

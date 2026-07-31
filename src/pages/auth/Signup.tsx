@@ -20,13 +20,13 @@ export default function Signup() {
     setLoadingState(true);
 
     if (!name || !email || !password) {
-      setErrorMsg('All registration parameters must be supplied.');
+      setErrorMsg('Please fill in all registration fields.');
       setLoadingState(false);
       return;
     }
 
     if (password.length < 6) {
-      setErrorMsg('Password integrity constraint: Minimum 6 characters required.');
+      setErrorMsg('Password must be at least 6 characters.');
       setLoadingState(false);
       return;
     }
@@ -63,8 +63,8 @@ export default function Signup() {
       await setDoc(doc(db, 'notifications', notifId), {
         id: notifId,
         userId: user.uid,
-        title: 'Academic Port Active',
-        body: `Congratulations ${name}. Your sovereign credentials has been successfully deployed. Access our Academy room or Study path to start your engineering journey.`,
+        title: 'Welcome to Kogla Tech',
+        body: `Congratulations ${name}. Your account has been successfully created. Access our Academy or services to begin.`,
         read: false,
         timestamp: new Date().toISOString()
       });
@@ -80,11 +80,11 @@ export default function Signup() {
     } catch (err: any) {
       let friendlyError = err.message;
       if (err.code === 'auth/email-already-in-use') {
-        friendlyError = 'This corporate email address is already registered.';
+        friendlyError = 'This email address is already registered.';
       } else if (err.code === 'auth/invalid-email') {
-        friendlyError = 'The supplied email address format is invalid.';
+        friendlyError = 'Please enter a valid email address format.';
       } else if (err.code === 'auth/weak-password') {
-        friendlyError = 'Weak password: Minimum 6 characters required.';
+        friendlyError = 'Password must be at least 6 characters.';
       }
       setErrorMsg(friendlyError);
       setLoadingState(false);
@@ -101,27 +101,27 @@ export default function Signup() {
       >
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-full uppercase tracking-widest font-mono mb-4">
-            <ShieldCheck size={11} /> Registration Node
+            <ShieldCheck size={11} /> Create Account
           </div>
           <h1 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-wider">
             Join Kogla Tech
           </h1>
-          <p className="text-[10px] text-gray-500 font-mono mt-1">
-            Establish your credential keys across our secure digital matrix.
+          <p className="text-[10px] text-gray-400 font-mono mt-1">
+            Create your account to access our professional academy and services.
           </p>
         </div>
 
         {errorMsg && (
           <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-400 text-xs rounded-sm mb-6 flex items-start gap-2 max-h-48 overflow-y-auto">
-            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">[ERROR]:</span>
-            <p className="text-[11px] leading-relaxed font-mono">{errorMsg}</p>
+            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">Error:</span>
+            <p className="text-[11px] leading-relaxed font-sans">{errorMsg}</p>
           </div>
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-[9px] text-gray-500 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-              <User size={10} /> Validated Full Name
+            <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
+              <User size={10} /> Full Name
             </label>
             <input 
               type="text" 
@@ -129,14 +129,14 @@ export default function Signup() {
               disabled={loadingState}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Alexandra Sterling" 
-              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-mono placeholder:text-gray-700" 
+              placeholder="John Doe" 
+              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
             />
           </div>
 
           <div>
-            <label className="block text-[9px] text-gray-500 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-              <Mail size={10} /> Corporate Email
+            <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
+              <Mail size={10} /> Email Address
             </label>
             <input 
               type="email" 
@@ -144,14 +144,14 @@ export default function Signup() {
               disabled={loadingState}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="sterling@apexcorp.luxury" 
-              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-mono placeholder:text-gray-700" 
+              placeholder="name@example.com" 
+              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
             />
           </div>
 
           <div>
             <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-              <Lock size={10} /> Password Credentials
+              <Lock size={10} /> Password
             </label>
             <input 
               type="password" 
@@ -160,7 +160,7 @@ export default function Signup() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Minimum 6 characters" 
-              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-mono placeholder:text-gray-700" 
+              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
             />
           </div>
 
@@ -171,17 +171,17 @@ export default function Signup() {
           >
             {loadingState ? (
               <>
-                <Loader2 size={13} className="animate-spin" /> Transmitting Account Keys...
+                <Loader2 size={13} className="animate-spin" /> Creating Account...
               </>
             ) : (
-              'Deploy Account Profile'
+              'Create Account'
             )}
           </button>
         </form>
 
         <div className="mt-6 pt-4 border-t border-gray-900 text-center text-xs">
-          <span className="text-gray-600">Already registered? </span>
-          <Link to="/auth/login" className="text-gold-500 hover:text-gold-400 font-mono uppercase tracking-wider font-bold">Log In</Link>
+          <span className="text-gray-500">Already have an account? </span>
+          <Link to="/auth/login" className="text-gold-500 hover:text-gold-400 font-semibold uppercase tracking-wider font-sans">Log In</Link>
         </div>
       </motion.div>
     </div>

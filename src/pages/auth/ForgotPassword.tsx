@@ -18,7 +18,7 @@ export default function ForgotPassword() {
     setLoadingState(true);
 
     if (!email) {
-      setErrorMsg('Please specify the return email path.');
+      setErrorMsg('Please enter your email address.');
       setLoadingState(false);
       return;
     }
@@ -31,9 +31,9 @@ export default function ForgotPassword() {
       console.error(err);
       let friendlyError = err.message;
       if (err.code === 'auth/user-not-found') {
-        friendlyError = 'No verified account links found matching that email system.';
+        friendlyError = 'No account found matching that email address.';
       } else if (err.code === 'auth/invalid-email') {
-        friendlyError = 'Invalid email pathway format.';
+        friendlyError = 'Please enter a valid email address format.';
       }
       setErrorMsg(friendlyError);
       setLoadingState(false);
@@ -50,20 +50,20 @@ export default function ForgotPassword() {
       >
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-full uppercase tracking-widest font-mono mb-4">
-            <KeyRound size={11} /> Recovery Module
+            <KeyRound size={11} /> Password Recovery
           </div>
           <h1 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-wider">
-            Recover Keys
+            Reset Password
           </h1>
-          <p className="text-[10px] text-gray-500 font-mono mt-1">
-            Recompute access variables through structured email resets.
+          <p className="text-[10px] text-gray-400 font-mono mt-1">
+            Enter your email to receive a password reset link.
           </p>
         </div>
 
         {errorMsg && (
           <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-400 text-xs rounded-sm mb-6 flex items-start gap-2">
-            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">[FAIL]:</span>
-            <p className="text-[11px] leading-relaxed font-mono">{errorMsg}</p>
+            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">Error:</span>
+            <p className="text-[11px] leading-relaxed font-sans">{errorMsg}</p>
           </div>
         )}
 
@@ -71,23 +71,23 @@ export default function ForgotPassword() {
           <div className="space-y-6 text-center py-4">
             <CheckCircle className="text-gold-500 mx-auto" size={40} />
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-white uppercase tracking-wider font-mono">Transmission Dispatched</h3>
-              <p className="text-xs text-gray-400 leading-relaxed font-mono">
-                A verification packet containing reset instructions has been sent to <span className="text-white font-bold">{email}</span>. Please verify your inbox and spam domains.
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider font-sans">Email Sent Successfully</h3>
+              <p className="text-xs text-gray-300 leading-relaxed font-sans">
+                A password reset link has been sent to <span className="text-white font-bold">{email}</span>. Please check your inbox and spam folder.
               </p>
             </div>
             <Link 
               to="/auth/login" 
               className="inline-block px-6 py-2 bg-transparent hover:bg-gold-500/10 border border-gold-500 text-gold-500 text-[10px] font-mono tracking-widest uppercase transition-all rounded-sm"
             >
-              Return to Login Panel
+              Return to Login
             </Link>
           </div>
         ) : (
           <form onSubmit={handleReset} className="space-y-4">
             <div>
-              <label className="block text-[9px] text-gray-500 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-                <Mail size={10} /> Corporate Email
+              <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
+                <Mail size={10} /> Email Address
               </label>
               <input 
                 type="email" 
@@ -95,8 +95,8 @@ export default function ForgotPassword() {
                 disabled={loadingState}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="developer@kogla-tech.com" 
-                className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-mono placeholder:text-gray-700" 
+                placeholder="name@example.com" 
+                className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
               />
             </div>
 
@@ -107,10 +107,10 @@ export default function ForgotPassword() {
             >
               {loadingState ? (
                 <>
-                  <Loader2 size={13} className="animate-spin" /> Dispatched Recompute...
+                  <Loader2 size={13} className="animate-spin" /> Sending Reset Link...
                 </>
               ) : (
-                'Transmit Reset Packet'
+                'Send Reset Link'
               )}
             </button>
           </form>
@@ -118,7 +118,7 @@ export default function ForgotPassword() {
 
         {!success && (
           <div className="mt-6 pt-4 border-t border-gray-900 text-center text-xs">
-            <Link to="/auth/login" className="text-gold-500 hover:text-gold-400 font-mono uppercase tracking-wider font-bold">Back to Login</Link>
+            <Link to="/auth/login" className="text-gold-500 hover:text-gold-400 font-semibold uppercase tracking-wider font-sans">Back to Login</Link>
           </div>
         )}
       </motion.div>

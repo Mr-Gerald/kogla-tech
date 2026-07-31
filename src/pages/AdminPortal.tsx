@@ -231,6 +231,20 @@ export default function AdminPortal() {
     }
   };
 
+  const handleTogglePaid = async (userId: string, currentPaidState?: boolean) => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, { isPaid: !currentPaidState, updatedAt: new Date().toISOString() });
+      if (selectedUser && selectedUser.uid === userId) {
+        setSelectedUser({ ...selectedUser, isPaid: !currentPaidState });
+      }
+      triggerSuccess(`User paid clearance successfully updated to ${!currentPaidState ? 'PAID / APPROVED' : 'UNPAID'}!`);
+    } catch (err: any) {
+      setErrorMsg(`Failed updating user paid status: ${err.message}`);
+      setTimeout(() => setErrorMsg(''), 5000);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (confirm('Verify: Permanently purge this database inquiries file?')) {
       try {
@@ -786,6 +800,26 @@ export default function AdminPortal() {
                   </div>
                 </div>
 
+                {/* Academy Paid Clearance Approval Toggle */}
+                <div className="pt-2 pb-4 border-b border-gray-900 space-y-3 font-mono text-[10px]">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Academy Paid Status:</span>
+                    <span className={`px-2 py-0.5 rounded-sm font-bold uppercase ${selectedUser.isPaid ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
+                      {selectedUser.isPaid ? '✓ PAID & APPROVED' : 'LOCKED (UNPAID)'}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => handleTogglePaid(selectedUser.uid, selectedUser.isPaid)}
+                    className={`w-full py-2.5 uppercase tracking-widest font-bold rounded-sm border transition-all ${
+                      selectedUser.isPaid 
+                        ? 'bg-red-950/40 border-red-900/60 text-red-400 hover:bg-red-900 hover:text-white' 
+                        : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-black'
+                    }`}
+                  >
+                    {selectedUser.isPaid ? 'Revoke Paid Clearance' : 'Approve & Grant Paid Clearance'}
+                  </button>
+                </div>
+
                 {/* Direct notifications dispatch form */}
                 <form onSubmit={handleSendNotification} className="space-y-4 pt-2">
                   <div className="flex items-center gap-1.5 border-b border-gray-900 pb-2">
@@ -1184,6 +1218,18 @@ export default function AdminPortal() {
             <p className="text-xs text-gray-400 leading-relaxed">
               When configuring image records or applying Base64 file codes, calculations execute inside client state. To support seamless Nigerian imagery options, click on the preset buttons labeled "Nigerian Tech Developer Workspace", "Nigerian Tech Students Cohort", or "African SaaS Solutions" above, which links directly to beautiful alternative photography.
             </p>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => {
+                saveImageConfig(images);
+                triggerSuccess('All website images successfully saved and synchronized!');
+              }}
+              className="px-6 py-3 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs font-display uppercase tracking-widest rounded-sm transition-all shadow-lg flex items-center gap-2"
+            >
+              Save Image Configuration
+            </button>
           </div>
 
         </div>

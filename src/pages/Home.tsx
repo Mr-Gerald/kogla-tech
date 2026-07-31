@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ArrowRight, Cpu, Shield, Zap, BookOpen, BarChart3, Globe, ChevronRight, Mail, Users, Building, Code, Smartphone, Layers, Cloud, Briefcase, Award, MessageSquare, Terminal, Eye, Star } from 'lucide-react';
+import { ArrowRight, Cpu, Shield, Zap, BookOpen, BarChart3, Globe, ChevronRight, Mail, Users, Building, Code, Smartphone, Layers, Cloud, Briefcase, Award, MessageSquare, Terminal, Eye, Star, MessageCircle, Send } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { getImageConfig, ImageConfig, addInquiry, DEFAULT_IMAGES } from '../utils/storage';
@@ -14,7 +14,16 @@ const stats = [
 
 const ecosystem = ['Academy', 'Solutions', 'AI', 'Cybersecurity', 'Labs', 'Digital', 'Innovations', 'Incubator'];
 const courses = ['Web Development', 'Cybersecurity', 'AI & Automation', 'UI/UX Design', 'Data Analysis', 'Product Mgmt', 'Digital Marketing', 'Cloud Architecture', 'Mobile Apps'];
-const services = ['AI Automation', 'Cyber Defense Infrastructure', 'Web Development', 'Mobile App Development', 'Business Tech Consulting', 'Digital Branding & Design', 'Product Strategy', 'Cloud Solution Hosting', 'Workflow Optimization', 'Technical Mentorship'];
+const services = [
+  'Web Development',
+  'AI Automation',
+  'Cybersecurity',
+  'Digital Marketing',
+  'UI/UX Design',
+  'Social Media Management',
+  'Graphic Designs',
+  'Business Technology Solutions'
+];
 
 export default function Home() {
   const { config } = useSiteConfig();
@@ -83,8 +92,11 @@ export default function Home() {
             <a href="#academy" className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 transition-all text-black font-semibold rounded-sm flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider font-display">
               Get Started <ArrowRight size={14} />
             </a>
-            <a href="#services" className="px-5 py-2.5 border border-gray-700 hover:border-gold-500 text-gray-200 hover:text-white transition-all rounded-sm text-xs text-center uppercase tracking-wider font-display">
+            <a href="#services" className="px-5 py-2.5 border border-gray-700 hover:border-gold-500 text-gray-200 hover:text-white transition-all rounded-sm text-xs text-center uppercase tracking-wider font-display flex items-center justify-center">
               Explore Ecosystem
+            </a>
+            <a href="#contact" className="px-5 py-2.5 border border-gold-500/50 hover:bg-gold-500/10 text-gold-400 hover:text-white transition-all rounded-sm text-xs text-center uppercase tracking-wider font-display flex items-center justify-center gap-1.5">
+              <MessageCircle size={14} /> Contact Us Instantly
             </a>
           </div>
         </motion.div>
@@ -260,7 +272,7 @@ export default function Home() {
           <div className="p-6 bg-gray-950 border border-gray-900 rounded-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div className="space-y-1">
               <h4 className="text-xs font-display font-bold text-white uppercase tracking-wider">Are you an Enterprise Leader, CTO, or Venture representative?</h4>
-              <p className="text-[11px] text-gray-400 font-sans">Submit a priority consultation request using our secure routing portal below. Our specialist response team will follow up within 2 hours.</p>
+              <p className="text-[11px] text-gray-400 font-sans">Submit a priority consultation request or connect instantly via WhatsApp, Telegram, or Email below.</p>
             </div>
             <a href="#contact" className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-semibold rounded-xs text-[11px] uppercase tracking-wider font-display shrink-0 transition-colors">
               Request Executive Consulting
@@ -270,44 +282,150 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="contact" className="py-20 px-6 bg-gray-950 border-t border-gray-800">
-        <div className="max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-display font-bold mb-10 text-center">Get In Touch</h2>
-            {submissionSuccess && (
-              <div className="p-3 bg-gold-500 text-black font-semibold text-xs rounded-sm mb-6 text-center animate-pulse">
-                Consultation Request Submitted Successfully! A Specialist will reach out to you within 2 Hours.
+      {/* PROFESSIONAL INSTANT CONTACT US SECTION */}
+      <section id="contact" className="py-24 px-6 bg-gray-950 border-t border-gray-850">
+        <div className="max-w-4xl mx-auto space-y-12">
+          
+          <div className="text-center space-y-3">
+            <span className="text-[10px] text-gold-500 font-mono font-bold tracking-widest uppercase bg-gold-500/10 border border-gold-500/20 px-3 py-1 rounded-full">
+              Instant Communication Channels
+            </span>
+            <h2 className="text-2xl md:text-4xl font-display font-bold text-white uppercase tracking-wider">
+              Connect With Us At Once
+            </h2>
+            <p className="text-xs md:text-sm text-gray-400 max-w-xl mx-auto font-sans">
+              Choose your preferred channel below to reach our engineering and admissions team immediately, or submit a secure dispatch form directly stored in our database.
+            </p>
+          </div>
+
+          {/* 3 PROFESSIONAL PROMPT CARDS FOR WHATSAPP, EMAIL, TELEGRAM */}
+          <div className="grid md:grid-cols-3 gap-6">
+            
+            {/* WhatsApp Card */}
+            <a 
+              href="https://wa.me/2348000000000?text=Hello%20Kogla%20Tech,%20I%20would%20like%20to%20inquire%20about%20your%20services%20and%20academy%20programs." 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-6 bg-black border border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
+            >
+              <div className="space-y-3">
+                <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                  <MessageCircle size={22} />
+                </div>
+                <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">WhatsApp Support</h3>
+                <p className="text-xs text-gray-400 font-sans">
+                  Chat directly with our admissions and technical consultants instantly via WhatsApp.
+                </p>
               </div>
-            )}
-            <form onSubmit={handleContactSubmit} className="space-y-3">
-                <input 
-                  type="text" 
-                  required
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  placeholder="Name" 
-                  className="w-full p-2.5 bg-black border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500" 
-                />
-                <input 
-                  type="email" 
-                  required
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="Business Email" 
-                  className="w-full p-2.5 bg-black border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500" 
-                />
-                <textarea 
-                  value={contactMessage}
-                  onChange={(e) => setContactMessage(e.target.value)}
-                  placeholder="Message" 
-                  className="w-full p-2.5 bg-black border border-gray-800 h-20 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 resize-none" 
-                />
-                <button type="submit" className="w-full px-6 py-2.5 bg-gold-500 hover:bg-gold-600 font-semibold text-xs text-black uppercase tracking-wider font-display transition-colors">
-                  Send Request
+              <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
+                Launch WhatsApp Chat <ArrowRight size={12} />
+              </div>
+            </a>
+
+            {/* Email Card */}
+            <a 
+              href="mailto:support@koglatech.com?subject=Kogla%20Tech%20Enterprise%20Inquiry"
+              className="p-6 bg-black border border-gold-500/30 hover:border-gold-500 hover:bg-gold-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
+            >
+              <div className="space-y-3">
+                <div className="w-12 h-12 mx-auto rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 group-hover:scale-110 transition-transform">
+                  <Mail size={22} />
+                </div>
+                <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Direct Email</h3>
+                <p className="text-xs text-gray-400 font-sans">
+                  Send official inquiries, partnership requests, or custom briefs to our support desk.
+                </p>
+              </div>
+              <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-gold-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
+                support@koglatech.com <ArrowRight size={12} />
+              </div>
+            </a>
+
+            {/* Telegram Card */}
+            <a 
+              href="https://t.me/koglatech" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-6 bg-black border border-sky-500/30 hover:border-sky-500 hover:bg-sky-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
+            >
+              <div className="space-y-3">
+                <div className="w-12 h-12 mx-auto rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 group-hover:scale-110 transition-transform">
+                  <Send size={22} />
+                </div>
+                <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Telegram Channel</h3>
+                <p className="text-xs text-gray-400 font-sans">
+                  Join our active developer community and direct support channel on Telegram.
+                </p>
+              </div>
+              <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-sky-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
+                Open Telegram <ArrowRight size={12} />
+              </div>
+            </a>
+
+          </div>
+
+          {/* SECURE INQUIRY FORM */}
+          <div className="p-8 bg-black border border-gray-850 rounded-sm shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gold-500 via-gold-600 to-gold-400" />
+            <div className="max-w-2xl mx-auto space-y-6">
+              
+              <div className="text-center space-y-1">
+                <h3 className="text-base font-display font-bold text-white uppercase tracking-wider">Secure Inquiry Submission</h3>
+                <p className="text-[11px] text-gray-400 font-sans">
+                  Submissions here are securely stored in our encrypted database for priority response tracking.
+                </p>
+              </div>
+
+              {submissionSuccess && (
+                <div className="p-3.5 bg-gold-500 text-black font-bold text-xs rounded-sm text-center animate-pulse font-mono uppercase tracking-wider">
+                  ✓ Consultation Request Saved to Database Successfully! Specialist responding in &lt; 2 Hours.
+                </div>
+              )}
+
+              <form onSubmit={handleContactSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-1.5">Full Name / Organization</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="e.g. Alexandra Sterling (Apex Corp)" 
+                    className="w-full p-3 bg-gray-950 border border-gray-850 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-1.5">Business Email Address</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="name@company.com" 
+                    className="w-full p-3 bg-gray-950 border border-gray-850 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-1.5">Project Scope / Message</label>
+                  <textarea 
+                    value={contactMessage}
+                    onChange={(e) => setContactMessage(e.target.value)}
+                    placeholder="Describe your requirement, course enrollment query, or engineering project..." 
+                    className="w-full p-3 bg-gray-950 border border-gray-850 h-28 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 resize-none font-mono" 
+                  />
+                </div>
+                <button type="submit" className="w-full py-3 bg-gold-500 hover:bg-gold-600 font-bold text-xs text-black uppercase tracking-widest font-display transition-colors rounded-sm flex items-center justify-center gap-2">
+                  <Send size={14} /> Submit Inquiry Securely
                 </button>
-            </form>
+              </form>
+
+            </div>
+          </div>
+
         </div>
       </section>
     </div>
   );
 }
+
 
