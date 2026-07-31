@@ -336,65 +336,57 @@ export default function AdminPortal() {
     );
   }
 
-  // 2. Lockdown check for users without active "admin" status in Firebase database profile
+  // 2. Lockdown check for users without active "admin" status
   if (!user || profile?.role !== 'admin') {
     return (
       <div className="pt-32 px-4 pb-32 max-w-lg mx-auto text-gray-100 font-sans flex flex-col items-center justify-center min-h-[75vh]">
         <div className="w-full bg-gray-950 border border-gray-900 p-8 rounded-sm shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 blur-2xl rounded-full"></div>
-          <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gold-500"></div>
           
           <div className="flex flex-col items-center text-center mb-6">
-            <div className="p-3.5 bg-red-950/40 border border-red-500/30 text-red-500 rounded-full mb-3">
-              <Lock size={28} className="animate-pulse" />
+            <div className="p-3.5 bg-gold-500/10 border border-gold-500/20 text-gold-500 rounded-full mb-3">
+              <Lock size={28} />
             </div>
             <h2 className="text-xl font-display font-bold uppercase text-white tracking-widest">
-              Administrative Clearances Required
+              Administrative Access Restricted
             </h2>
-            <p className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest font-mono p-1 bg-red-950/20 border border-red-950 rounded-xs">
-              Direct Role: {profile?.role ? profile.role.toUpperCase() : 'ANONYMOUS CLIENT'}
+            <p className="text-[11px] text-gray-400 mt-2 font-sans">
+              This area is reserved for authorized administrators only.
             </p>
           </div>
 
-          <div className="p-4 bg-black border border-gray-900 rounded-sm text-xs text-gray-400 font-mono leading-relaxed mb-6 space-y-3">
+          <div className="p-4 bg-black border border-gray-900 rounded-sm text-xs text-gray-300 font-sans leading-relaxed mb-6 space-y-3">
             <p>
-              [SECURITY EXCEPTION]: Authorized Administrative Suite logins are strictly validated via Firebase Authentication database mappings.
+              Please sign in with an administrator account to manage platform settings, view lead inquiries, and configure website content.
             </p>
-            <p>
-              To study corporate lead streams, adjust landing page panels configurations, and review registered student profiles, complete steps below:
-            </p>
-            <ol className="list-decimal list-inside text-[11px] text-gray-500 space-y-1">
-              <li>Log in using authorized credentials.</li>
-              <li>Sovereign admin profile holds target access matching: <span className="text-gold-500 font-bold">emechebegerald@gmail.com</span></li>
-            </ol>
           </div>
 
           <div className="flex flex-col gap-3">
             {user ? (
               <>
-                <div className="text-center text-xs text-gray-500 font-mono mb-2">
-                  Authenticated as: <span className="text-white font-bold">{user.email}</span>
+                <div className="text-center text-xs text-gray-400 font-sans mb-2">
+                  Currently signed in as: <span className="text-white font-semibold">{user.email}</span> (Standard User)
                 </div>
                 <button 
                   onClick={() => logout()}
-                  className="w-full py-3 bg-red-950 hover:bg-red-950 hover:text-white border border-red-500/30 text-red-400 font-semibold text-xs uppercase tracking-wider font-display transition-all"
+                  className="w-full py-3 bg-gray-900 hover:bg-gray-800 border border-gray-800 text-white font-semibold text-xs uppercase tracking-wider font-display transition-all rounded-sm"
                 >
-                  Unlink Current Profile Keys
+                  Sign Out / Switch Account
                 </button>
               </>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="flex gap-3">
                 <Link 
                   to="/auth/login" 
-                  className="py-3 bg-gold-500 hover:bg-gold-600 text-black font-semibold text-xs text-center uppercase tracking-wider font-display rounded-sm transition-all"
+                  className="flex-1 py-3 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display text-center rounded-sm transition-colors"
                 >
                   Log In
                 </Link>
                 <Link 
                   to="/auth/signup" 
-                  className="py-3 bg-transparent hover:bg-gray-900 border border-gray-800 text-gray-400 font-semibold text-xs text-center uppercase tracking-wider font-mono rounded-sm transition-all"
+                  className="flex-1 py-3 bg-transparent hover:bg-gray-900 border border-gray-800 text-white font-semibold text-xs uppercase tracking-wider font-display text-center rounded-sm transition-colors"
                 >
-                  Register Profile
+                  Register
                 </Link>
               </div>
             )}

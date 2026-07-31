@@ -162,17 +162,17 @@ export default function Footer() {
         {/* Column 5: Portals & Operators */}
         <div className="space-y-3">
           <h4 className="text-white font-display text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border-b border-gray-900 pb-2">
-            <Terminal size={11} className="text-gold-500" /> Administrative Access
+            <Terminal size={11} className="text-gold-500" /> Account Portal
           </h4>
-          <ul className="space-y-1.5 font-mono text-[10px] text-gray-400">
+          <ul className="space-y-1.5 font-sans text-[11px] text-gray-400">
             <li>
-              <Link to="/auth/login" className="hover:text-gold-500 transition-colors font-bold text-gold-500">
-                Staff Sign In
+              <Link to="/auth/login" className="hover:text-gold-500 transition-colors font-medium text-gold-500">
+                Sign In
               </Link>
             </li>
             <li>
               <Link to="/admin" className="hover:text-gold-500 transition-colors">
-                Admin Console
+                Management Console
               </Link>
             </li>
             <li>
@@ -182,7 +182,7 @@ export default function Footer() {
             </li>
             <li>
               <Link to="/contact" className="hover:text-gold-500 transition-colors">
-                Contact Intake
+                Contact Us
               </Link>
             </li>
           </ul>
