@@ -226,20 +226,53 @@ export default function Home() {
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.8 }}
         id="academy" 
-        className="py-20 px-6 bg-gray-900 border-t border-gray-800"
+        className="py-24 px-6 md:px-12 bg-zinc-950 border-t border-zinc-900"
       >
-          <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
-              <img src={images.academy} alt="Academy Collage" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-stretch">
+          {/* Left Column: Image with exquisite design */}
+          <div className="lg:col-span-5 relative group min-h-[320px] lg:min-h-[440px] rounded-lg overflow-hidden border border-zinc-850 hover:border-gold-500/50 transition-all duration-500 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 pointer-events-none" />
+            <img 
+              src={images.academy} 
+              alt="Kogla Academy Learning Environment" 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
+            />
+            <div className="absolute bottom-4 left-4 z-20">
+              <span className="px-2.5 py-1 bg-gold-500 text-black font-mono font-bold text-[9px] rounded-sm uppercase tracking-wider">
+                KOGLA ACADEMY
+              </span>
+            </div>
           </div>
-          <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Academy & Learning Paths</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
-            {courses.map(title => (
-                <Link key={title} to={`/academy/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="p-4 border border-gray-800 bg-gray-950 hover:border-gold-500 transition-all flex flex-col items-center text-center group">
-                    <BookOpen className="text-gold-500 mb-3 group-hover:scale-110 transition-transform" size={20} />
-                    <h3 className="text-xs font-semibold font-display">{title}</h3>
+
+          {/* Right Column: Write-up & Learning Paths */}
+          <div className="lg:col-span-7 flex flex-col justify-center space-y-6">
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold block">
+                IMMERSIVE ACADEMIC TRAINING
+              </span>
+              <h2 className="text-2xl md:text-4xl font-display font-black text-white uppercase tracking-tight">
+                Academy & Learning Paths
+              </h2>
+            </div>
+            
+            <p className="text-xs md:text-sm text-zinc-400 font-sans leading-relaxed border-l-2 border-gold-500/50 pl-4 py-1">
+              Gain hands-on skills through interactive practice labs, live study rooms, real-time code sandboxes, and XP progression rewards. Master industry-aligned curriculums designed to launch you into elite engineering careers.
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+              {courses.map(title => (
+                <Link 
+                  key={title} 
+                  to={`/academy/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} 
+                  className="p-3.5 border border-zinc-900 bg-zinc-900/40 hover:bg-zinc-900 hover:border-gold-500/50 transition-all flex items-center gap-2.5 group rounded-sm"
+                >
+                  <BookOpen className="text-gold-500 group-hover:scale-110 transition-transform shrink-0" size={16} />
+                  <span className="text-xs font-bold font-display text-zinc-200 group-hover:text-white transition-colors tracking-wide">{title}</span>
                 </Link>
-            ))}
+              ))}
+            </div>
           </div>
+        </div>
       </motion.section>
 
       <motion.section 
@@ -248,20 +281,53 @@ export default function Home() {
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.8 }}
         id="services" 
-        className="py-20 px-6 bg-black border-t border-gray-800"
+        className="py-24 px-6 md:px-12 bg-black border-t border-zinc-900"
       >
-          <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
-              <img src={images.services} alt="Services Platform Display" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
-          </div>
-          <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Premium Solution Ecosystem</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
-            {services.map(title => (
-                <Link key={title} to={`/services/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="p-6 border border-gray-800 bg-gray-900 hover:border-gold-500 transition-all flex items-center gap-3 group">
-                    <Zap className="text-gold-500 group-hover:scale-110 transition-transform" size={20} />
-                    <h3 className="text-xs font-semibold font-display">{title}</h3>
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-stretch">
+          {/* Left Column: Write-up & Ecosystem Paths */}
+          <div className="lg:col-span-7 lg:order-1 order-2 flex flex-col justify-center space-y-6">
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold block">
+                ENTERPRISE-GRADE CAPABILITIES
+              </span>
+              <h2 className="text-2xl md:text-4xl font-display font-black text-white uppercase tracking-tight">
+                Premium Solution Ecosystem
+              </h2>
+            </div>
+            
+            <p className="text-xs md:text-sm text-zinc-400 font-sans leading-relaxed border-l-2 border-gold-500/50 pl-4 py-1">
+              We design and engineer bespoke software systems, high-speed automated pipelines, zero-trust cybersecurity defenses, and elite digital assets optimized for heavy transaction volumes and global scale.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              {services.map(title => (
+                <Link 
+                  key={title} 
+                  to={`/services/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} 
+                  className="p-3.5 border border-zinc-900 bg-zinc-900/20 hover:bg-zinc-900/60 hover:border-gold-500/50 transition-all flex items-center gap-2.5 group rounded-sm"
+                >
+                  <Zap className="text-gold-500 group-hover:scale-110 transition-transform shrink-0" size={16} />
+                  <span className="text-xs font-bold font-display text-zinc-200 group-hover:text-white transition-colors tracking-wide">{title}</span>
                 </Link>
-            ))}
+              ))}
+            </div>
           </div>
+
+          {/* Right Column: Image with exquisite design */}
+          <div className="lg:col-span-5 lg:order-2 order-1 relative group min-h-[320px] lg:min-h-[440px] rounded-lg overflow-hidden border border-zinc-850 hover:border-gold-500/50 transition-all duration-500 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 pointer-events-none" />
+            <img 
+              src={images.services} 
+              alt="Kogla Services Platform Display" 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
+            />
+            <div className="absolute bottom-4 left-4 z-20">
+              <span className="px-2.5 py-1 bg-gold-500 text-black font-mono font-bold text-[9px] rounded-sm uppercase tracking-wider">
+                KOGLA SERVICES
+              </span>
+            </div>
+          </div>
+        </div>
       </motion.section>
 
       <motion.section 
@@ -270,31 +336,68 @@ export default function Home() {
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.8 }}
         id="projects" 
-        className="py-20 px-6 bg-gray-950 border-t border-gray-800"
+        className="py-24 px-6 md:px-12 bg-zinc-950 border-t border-zinc-900"
       >
-          <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
-              <img src={images.projects} alt="Projects Portfolio Showcase" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-stretch">
+          {/* Left Column: Image with exquisite design */}
+          <div className="lg:col-span-5 relative group min-h-[320px] lg:min-h-[440px] rounded-lg overflow-hidden border border-zinc-850 hover:border-gold-500/50 transition-all duration-500 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 pointer-events-none" />
+            <img 
+              src={images.projects} 
+              alt="Projects Portfolio Showcase" 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
+            />
+            <div className="absolute bottom-4 left-4 z-20">
+              <span className="px-2.5 py-1 bg-gold-500 text-black font-mono font-bold text-[9px] rounded-sm uppercase tracking-wider">
+                PORTFOLIO VECTORS
+              </span>
+            </div>
           </div>
-          <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Featured Case Studies</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-            {[['AI Infrastructure', 'Enterprise AI/ML'], ['Cyber Immunity', 'Zero-Trust Defense'], ['Digital Transformation', 'Retail Enterprise'], ['Web Ecosystem', 'Global SaaS']].map(([title, desc]) => (
+
+          {/* Right Column: Write-up & Case Studies */}
+          <div className="lg:col-span-7 flex flex-col justify-center space-y-6">
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold block">
+                ENGINEERING TRIUMPHS
+              </span>
+              <h2 className="text-2xl md:text-4xl font-display font-black text-white uppercase tracking-tight">
+                Featured Case Studies
+              </h2>
+            </div>
+            
+            <p className="text-xs md:text-sm text-zinc-400 font-sans leading-relaxed border-l-2 border-gold-500/50 pl-4 py-1">
+              Explore concrete examples of our production deployments, highly integrated fintech engines, stateful real-time tools, and high-performance applications that deliver uninterrupted value globally.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              {[
+                ['AI Infrastructure', 'Enterprise AI/ML'], 
+                ['Cyber Immunity', 'Zero-Trust Defense'], 
+                ['Digital Transformation', 'Retail Enterprise'], 
+                ['Web Ecosystem', 'Global SaaS']
+              ].map(([title, desc]) => (
                 <Link 
                   key={title} 
                   to={`/projects/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} 
-                  className="h-40 p-6 border border-gray-800 bg-gray-900 hover:border-gold-500 hover:shadow-[0_0_15px_rgba(212,175,55,0.05)] transition-all flex flex-col justify-end group cursor-pointer"
+                  className="p-5 border border-zinc-900 bg-zinc-900/40 hover:bg-zinc-900/80 hover:border-gold-500/50 hover:shadow-[0_0_20px_rgba(212,175,55,0.05)] transition-all flex flex-col justify-between group cursor-pointer h-32 rounded-sm"
                 >
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <h3 className="text-lg font-display font-bold text-white group-hover:text-gold-500 transition-colors">{title}</h3>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{desc}</p>
-                      </div>
-                      <div className="text-gray-600 group-hover:text-gold-500 group-hover:translate-x-1 transition-all">
-                        <ArrowRight size={18} />
-                      </div>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-sm font-display font-bold text-white group-hover:text-gold-500 transition-colors uppercase tracking-wide">{title}</h3>
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-widest mt-1 font-mono">{desc}</p>
                     </div>
+                    <div className="text-zinc-600 group-hover:text-gold-500 group-hover:translate-x-1 transition-all font-mono">
+                      <ArrowRight size={16} />
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-mono text-gold-500/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                    VIEW CASE STUDY &bull; SECURE
+                  </div>
                 </Link>
-            ))}
+              ))}
+            </div>
           </div>
+        </div>
       </motion.section>
 
       <motion.section 
@@ -302,24 +405,55 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.8 }}
-        className="py-20 px-6 bg-black border-t border-gray-800"
+        className="py-24 px-6 md:px-12 bg-black border-t border-zinc-900"
       >
-        <div className="max-w-5xl mx-auto mb-12 overflow-hidden rounded-md border border-gray-800 shadow-2xl h-64 md:h-80">
-            <img src={images.labs} alt="AI Research labs Hardware" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"/>
-        </div>
-        <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-10">Innovation Labs & AI Research</h2>
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {['LLM Optimization', 'Cyber Security Labs', 'Automation OS'].map(title => (
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-stretch">
+          {/* Left Column: Write-up & Innovation labs paths */}
+          <div className="lg:col-span-7 lg:order-1 order-2 flex flex-col justify-center space-y-6">
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold block">
+                EXPERIMENTAL FRONTIERS
+              </span>
+              <h2 className="text-2xl md:text-4xl font-display font-black text-white uppercase tracking-tight">
+                Innovation Labs & AI Research
+              </h2>
+            </div>
+            
+            <p className="text-xs md:text-sm text-zinc-400 font-sans leading-relaxed border-l-2 border-gold-500/50 pl-4 py-1">
+              Our advanced labs push the boundaries of computational efficiency, training custom LLM models, and testing stateful autonomous agent pipelines in highly secure cloud sandboxes.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              {['LLM Optimization', 'Cyber Security Labs', 'Automation OS'].map(title => (
                 <Link 
                   key={title} 
                   to={`/labs/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} 
-                  className="p-8 border border-gray-800 bg-gray-900 text-center hover:border-gold-500 hover:shadow-[0_0_15px_rgba(212,175,55,0.05)] transition-all cursor-pointer block group rounded-sm"
+                  className="p-5 border border-zinc-900 bg-zinc-900/20 hover:bg-zinc-900/60 hover:border-gold-500/50 transition-all text-center flex flex-col justify-between group cursor-pointer rounded-sm min-h-[140px]"
                 >
-                    <Cpu size={32} className="text-gold-500 mx-auto mb-4 group-hover:scale-110 transition-transform"/>
-                    <h3 className="text-sm font-bold font-display text-white group-hover:text-gold-500 transition-colors uppercase tracking-wider">{title}</h3>
-                    <p className="text-[10px] text-gray-500 font-mono tracking-widest mt-2">RESEARCH LEVEL-4 &bull; ENTERPRISE</p>
+                  <Cpu size={24} className="text-gold-500 mx-auto group-hover:scale-110 transition-transform"/>
+                  <div>
+                    <h3 className="text-xs font-bold font-display text-zinc-200 group-hover:text-gold-500 transition-colors uppercase tracking-wider">{title}</h3>
+                    <p className="text-[8px] text-zinc-500 font-mono tracking-widest mt-1">RESEARCH LEVEL-4</p>
+                  </div>
                 </Link>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column: Image with exquisite design */}
+          <div className="lg:col-span-5 lg:order-2 order-1 relative group min-h-[320px] lg:min-h-[440px] rounded-lg overflow-hidden border border-zinc-850 hover:border-gold-500/50 transition-all duration-500 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 pointer-events-none" />
+            <img 
+              src={images.labs} 
+              alt="AI Research labs Hardware" 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
+            />
+            <div className="absolute bottom-4 left-4 z-20">
+              <span className="px-2.5 py-1 bg-gold-500 text-black font-mono font-bold text-[9px] rounded-sm uppercase tracking-wider">
+                INNOVATION LABS
+              </span>
+            </div>
+          </div>
         </div>
       </motion.section>
 

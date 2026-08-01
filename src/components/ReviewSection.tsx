@@ -150,6 +150,16 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       ? (reviewsWithRating.reduce((acc, r) => acc + (r.rating || 5), 0) / reviewsWithRating.length).toFixed(1)
       : '5.0';
 
+  // Calculate aggregate rating breakdown
+  const totalWithRating = reviewsWithRating.length;
+  const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  reviewsWithRating.forEach((r) => {
+    const rval = r.rating || 5;
+    if (rval >= 1 && rval <= 5) {
+      ratingCounts[rval as 5 | 4 | 3 | 2 | 1]++;
+    }
+  });
+
   return (
     <section id="reviews" className="py-12 px-4 sm:px-6 max-w-6xl mx-auto font-sans text-gray-100">
       
@@ -183,115 +193,180 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         </div>
       </div>
 
-      {/* NEW REVIEW SUBMISSION BLOCK */}
-      <div className="bg-zinc-950/90 border border-zinc-850 rounded-lg p-5 mb-10 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl pointer-events-none"></div>
+      {/* NEW REVIEW SUBMISSION & STATS GRID */}
+      <div className="grid lg:grid-cols-12 gap-8 mb-10 items-stretch">
+        
+        {/* LEFT COLUMN: Share Your Experience Form */}
+        <div className="lg:col-span-7 bg-zinc-950/90 border border-zinc-850 rounded-lg p-5 sm:p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl pointer-events-none"></div>
+          
+          <div>
+            <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+              <MessageSquare size={16} className="text-gold-500" /> Share Your Experience
+            </h3>
 
-        <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-          <MessageSquare size={16} className="text-gold-500" /> Share Your Experience
-        </h3>
+            {user ? (
+              <form onSubmit={handlePostReview} className="space-y-4">
+                {/* Rating Stars Selection */}
+                <div className="flex flex-wrap items-center gap-3 bg-zinc-900/80 p-3.5 rounded-md border border-zinc-800 shadow-inner">
+                  <span className="text-xs text-zinc-300 font-mono font-semibold">Your Rating:</span>
+                  <div 
+                    className="flex items-center gap-1.5"
+                    onMouseLeave={() => setHoverRating(null)}
+                  >
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const activeStarCount = hoverRating !== null ? hoverRating : newRating;
+                      const isGold = star <= activeStarCount;
 
-        {user ? (
-          <form onSubmit={handlePostReview} className="space-y-4">
-            {/* Rating Stars Selection */}
-            <div className="flex flex-wrap items-center gap-3 bg-zinc-900/80 p-3.5 rounded-md border border-zinc-800 shadow-inner">
-              <span className="text-xs text-zinc-300 font-mono font-semibold">Your Rating:</span>
-              <div 
-                className="flex items-center gap-1.5"
-                onMouseLeave={() => setHoverRating(null)}
-              >
-                {[1, 2, 3, 4, 5].map((star) => {
-                  const activeStarCount = hoverRating !== null ? hoverRating : newRating;
-                  const isGold = star <= activeStarCount;
+                      return (
+                        <button
+                          type="button"
+                          key={star}
+                          onClick={() => setNewRating(star)}
+                          onMouseEnter={() => setHoverRating(star)}
+                          className="p-1.5 focus:outline-none transition-all hover:scale-125 group relative"
+                          title={`Rate ${star} out of 5 stars`}
+                        >
+                          <Star
+                            size={22}
+                            className={`transition-all duration-200 ${
+                              isGold
+                                ? 'fill-gold-400 text-gold-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)] scale-110'
+                                : 'text-zinc-600 hover:text-gold-400/50'
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-xs font-mono text-gold-400 font-bold ml-2 px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 rounded">
+                    {hoverRating !== null ? hoverRating : newRating} / 5 Stars {
+                      (hoverRating !== null ? hoverRating : newRating) === 5 ? '★ Exceptional' :
+                      (hoverRating !== null ? hoverRating : newRating) === 4 ? '★ Very Good' :
+                      (hoverRating !== null ? hoverRating : newRating) === 3 ? '★ Good' :
+                      (hoverRating !== null ? hoverRating : newRating) === 2 ? '★ Fair' : '★ Needs Improvement'
+                    }
+                  </span>
+                </div>
 
-                  return (
-                    <button
-                      type="button"
-                      key={star}
-                      onClick={() => setNewRating(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      className="p-1.5 focus:outline-none transition-all hover:scale-125 group relative"
-                      title={`Rate ${star} out of 5 stars`}
-                    >
-                      <Star
-                        size={22}
-                        className={`transition-all duration-200 ${
-                          isGold
-                            ? 'fill-gold-400 text-gold-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)] scale-110'
-                            : 'text-zinc-600 hover:text-gold-400/50'
-                        }`}
-                      />
-                    </button>
-                  );
-                })}
+                {/* Title & Content Fields */}
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Review Title (e.g. Exceptional Full-Stack Academy & Services)"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full bg-zinc-900/90 border border-zinc-800 rounded px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 transition-colors"
+                  />
+                  <textarea
+                    rows={3}
+                    placeholder="Write your review or feedback here... (Publicly posted to Kogla Tech community)"
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                    required
+                    className="w-full bg-zinc-900/90 border border-zinc-800 rounded p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 transition-colors resize-y"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono">
+                    <UserCheck size={14} className="text-emerald-400" />
+                    Posting as <span className="text-white font-semibold">{user.displayName || user.email}</span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !newContent.trim()}
+                    className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-black font-bold rounded text-xs uppercase tracking-wider font-display flex items-center gap-2 transition-all shadow-md"
+                  >
+                    {isSubmitting ? 'Posting...' : 'Submit Review'} <Send size={14} />
+                  </button>
+                </div>
+
+                {submitSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-2.5 bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs rounded flex items-center gap-2"
+                  >
+                    <CheckCircle2 size={14} /> Review published successfully!
+                  </motion.div>
+                )}
+              </form>
+            ) : (
+              <div className="bg-zinc-900/70 border border-zinc-800 rounded p-4 text-center space-y-3">
+                <p className="text-xs text-zinc-300">
+                  Only logged-in members can submit reviews and participate in community discussions.
+                </p>
+                <button
+                  onClick={signInWithGoogle}
+                  className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded font-display inline-flex items-center gap-2 shadow"
+                >
+                  <LogIn size={14} /> Sign In With Google to Review
+                </button>
               </div>
-              <span className="text-xs font-mono text-gold-400 font-bold ml-2 px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 rounded">
-                {hoverRating !== null ? hoverRating : newRating} / 5 Stars {
-                  (hoverRating !== null ? hoverRating : newRating) === 5 ? '★ Exceptional' :
-                  (hoverRating !== null ? hoverRating : newRating) === 4 ? '★ Very Good' :
-                  (hoverRating !== null ? hoverRating : newRating) === 3 ? '★ Good' :
-                  (hoverRating !== null ? hoverRating : newRating) === 2 ? '★ Fair' : '★ Needs Improvement'
-                }
-              </span>
-            </div>
-
-            {/* Title & Content Fields */}
-            <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Review Title (e.g. Exceptional Full-Stack Academy & Services)"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                className="w-full bg-zinc-900/90 border border-zinc-800 rounded px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 transition-colors"
-              />
-              <textarea
-                rows={3}
-                placeholder="Write your review or feedback here... (Publicly posted to Kogla Tech community)"
-                value={newContent}
-                onChange={(e) => setNewContent(e.target.value)}
-                required
-                className="w-full bg-zinc-900/90 border border-zinc-800 rounded p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 transition-colors resize-y"
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono">
-                <UserCheck size={14} className="text-emerald-400" />
-                Posting as <span className="text-white font-semibold">{user.displayName || user.email}</span>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting || !newContent.trim()}
-                className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-black font-bold rounded text-xs uppercase tracking-wider font-display flex items-center gap-2 transition-all shadow-md"
-              >
-                {isSubmitting ? 'Posting...' : 'Submit Review'} <Send size={14} />
-              </button>
-            </div>
-
-            {submitSuccess && (
-              <motion.div
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-2.5 bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs rounded flex items-center gap-2"
-              >
-                <CheckCircle2 size={14} /> Review published successfully!
-              </motion.div>
             )}
-          </form>
-        ) : (
-          <div className="bg-zinc-900/70 border border-zinc-800 rounded p-4 text-center space-y-3">
-            <p className="text-xs text-zinc-300">
-              Only logged-in members can submit reviews and participate in community discussions.
-            </p>
-            <button
-              onClick={signInWithGoogle}
-              className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded font-display inline-flex items-center gap-2 shadow"
-            >
-              <LogIn size={14} /> Sign In With Google to Review
-            </button>
           </div>
-        )}
+        </div>
+
+        {/* RIGHT COLUMN: Community Ratings Breakdown & Trust */}
+        <div className="lg:col-span-5 bg-zinc-950/40 border border-zinc-850/80 rounded-lg p-5 sm:p-6 shadow-xl flex flex-col justify-between space-y-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
+          
+          <div className="space-y-4">
+            <h3 className="text-xs font-mono font-bold text-gold-500 uppercase tracking-widest">
+              Community Stats & Breakdown
+            </h3>
+            
+            {/* Visual breakdown of ratings */}
+            <div className="space-y-2.5">
+              {[5, 4, 3, 2, 1].map((stars) => {
+                const count = ratingCounts[stars as 5 | 4 | 3 | 2 | 1] || 0;
+                const percentage = totalWithRating > 0 ? (count / totalWithRating) * 100 : 0;
+                return (
+                  <div key={stars} className="flex items-center gap-3 text-xs">
+                    <span className="w-10 text-right text-zinc-400 font-mono font-medium shrink-0 flex items-center gap-1 justify-end">
+                      {stars} <Star size={11} className="fill-gold-400 text-gold-400 shrink-0" />
+                    </span>
+                    <div className="flex-1 h-2 bg-zinc-900 border border-zinc-850 rounded overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-gold-500 to-gold-400 rounded transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                    <span className="w-8 text-zinc-500 text-left font-mono text-[11px] shrink-0">
+                      {count}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Guidelines / Trust assurance bullets */}
+          <div className="pt-4 border-t border-zinc-850/60 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2 size={14} className="text-gold-500 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wide">Verified Submissions</h4>
+                <p className="text-[10px] text-zinc-400 font-sans leading-relaxed">
+                  Every feedback and rating is securely bound to verified Google accounts to eliminate artificial manipulation.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2 size={14} className="text-gold-500 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wide">Direct Response Loop</h4>
+                <p className="text-[10px] text-zinc-400 font-sans leading-relaxed">
+                  Our engineering lead, academy instructors, and operations team monitor threads directly for prompt responses.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* REVIEWS & THREADED REPLIES LIST */}
