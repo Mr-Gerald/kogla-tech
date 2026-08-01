@@ -26,7 +26,10 @@ import {
   Trash2,
   ExternalLink,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  Upload,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, ReviewRecord } from '../types';
@@ -50,6 +53,65 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [personalSuccess, setPersonalSuccess] = useState(false);
+
+  // Direct Device File Upload Ref & Handler
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadingDp, setUploadingDp] = useState(false);
+
+  const handleDeviceDpUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, WEBP, GIF).');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size exceeds 10MB limit. Please select a smaller photo.');
+      return;
+    }
+
+    setUploadingDp(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIM = 400; // Optimize for fast profile loading
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          setAvatarUrl(dataUrl);
+        }
+        setUploadingDp(false);
+      };
+      img.onerror = () => {
+        setUploadingDp(false);
+        alert('Failed to read image file. Please try another image.');
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Form State for Security
   const [sendingReset, setSendingReset] = useState(false);
@@ -222,24 +284,40 @@ export default function Profile() {
   return (
     <div className="pt-28 pb-20 px-4 sm:px-6 max-w-7xl mx-auto font-sans text-gray-100">
       
+      {/* Hidden File Input for Device DP Upload */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleDeviceDpUpload} 
+        accept="image/*" 
+        className="hidden" 
+      />
+
       {/* PROFILE TOP BANNER */}
       <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 mb-8 relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-gold-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
-          {/* Avatar Display */}
-          <div className="relative group">
+          {/* Avatar Display with Direct Device Upload Trigger */}
+          <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()} title="Click to upload new DP from device">
             {avatarUrl ? (
               <img 
                 src={avatarUrl} 
                 alt={profile?.name} 
-                className="w-20 h-20 rounded-full object-cover border-2 border-gold-500/60 shadow-lg"
+                className="w-22 h-22 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-gold-500/70 shadow-xl group-hover:opacity-85 transition-opacity"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gold-500/20 border-2 border-gold-500/60 flex items-center justify-center text-gold-400 font-bold font-display text-2xl shadow-lg">
+              <div className="w-22 h-22 sm:w-24 sm:h-24 rounded-full bg-gold-500/20 border-2 border-gold-500/70 flex items-center justify-center text-gold-400 font-bold font-display text-3xl shadow-xl group-hover:opacity-85 transition-opacity">
                 {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
               </div>
             )}
+
+            {/* Camera Hover Overlay */}
+            <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-gold-400 gap-1 p-2 text-center">
+              <Camera size={20} />
+              <span className="text-[9px] font-mono uppercase font-bold text-white">Upload DP</span>
+            </div>
+
             <span className="absolute bottom-0 right-0 bg-emerald-500 border-2 border-zinc-950 w-5 h-5 rounded-full shadow" title="Account Active"></span>
           </div>
 
@@ -396,17 +474,74 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] text-zinc-400 uppercase tracking-widest font-mono mb-1">
-                    Avatar Image URL
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded p-2.5 text-xs text-white focus:outline-none focus:border-gold-500"
-                  />
+                {/* DP Avatar Upload Block */}
+                <div className="bg-zinc-900/70 border border-zinc-800 p-4 rounded-md space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] text-zinc-300 uppercase tracking-widest font-mono font-bold flex items-center gap-1.5">
+                      <Camera size={13} className="text-gold-400" /> Display Picture (DP) Avatar
+                    </label>
+                    <span className="text-[10px] text-zinc-500 font-mono">Mobile Gallery & Camera Supported</span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* DP Preview Box */}
+                    <div className="relative shrink-0">
+                      {avatarUrl ? (
+                        <img 
+                          src={avatarUrl} 
+                          alt="DP Preview" 
+                          className="w-16 h-16 rounded-full object-cover border-2 border-gold-500/70 shadow"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-gold-500/20 border-2 border-gold-500/70 flex items-center justify-center text-gold-400 font-bold font-display text-xl">
+                          {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Device Upload Button & URL input */}
+                    <div className="flex-1 w-full space-y-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingDp}
+                          className="px-4 py-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-black font-bold text-xs uppercase font-mono rounded inline-flex items-center gap-2 transition-all shadow-md"
+                        >
+                          {uploadingDp ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin" /> Processing Photo...
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={13} /> Upload DP From Device
+                            </>
+                          )}
+                        </button>
+
+                        {avatarUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setAvatarUrl('')}
+                            className="px-2.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-mono rounded"
+                            title="Remove DP"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type="url"
+                          placeholder="Or paste image URL (https://...)"
+                          value={avatarUrl}
+                          onChange={(e) => setAvatarUrl(e.target.value)}
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div>

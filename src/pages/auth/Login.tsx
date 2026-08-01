@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
+import { formatUserError } from '../../lib/errorUtils';
 import { ShieldCheck, Mail, Lock, Loader2, Key } from 'lucide-react';
 
 export default function Login() {
@@ -43,7 +44,7 @@ export default function Login() {
       }, 800);
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'Google Sign-In failed. Please try again.');
+      setErrorMsg(formatUserError(err));
       setGoogleLoading(false);
     }
   };
@@ -113,13 +114,7 @@ export default function Login() {
 
     } catch (err: any) {
       console.error(err);
-      let friendlyError = err.message;
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        friendlyError = 'Invalid email or password. Please verify your credentials.';
-      } else if (err.code === 'auth/invalid-email') {
-        friendlyError = 'Please enter a valid email address format.';
-      }
-      setErrorMsg(friendlyError);
+      setErrorMsg(formatUserError(err));
       setLoadingState(false);
     }
   };

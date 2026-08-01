@@ -24,6 +24,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
 
   // New review form state
   const [newRating, setNewRating] = useState<number>(5);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,29 +194,44 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         {user ? (
           <form onSubmit={handlePostReview} className="space-y-4">
             {/* Rating Stars Selection */}
-            <div className="flex items-center gap-3 bg-zinc-900/60 p-3 rounded-md border border-zinc-800">
-              <span className="text-xs text-zinc-300 font-mono">Your Rating:</span>
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    type="button"
-                    key={star}
-                    onClick={() => setNewRating(star)}
-                    className="p-1 focus:outline-none transition-transform hover:scale-110"
-                  >
-                    <Star
-                      size={18}
-                      className={
-                        star <= newRating
-                          ? 'fill-gold-400 text-gold-400'
-                          : 'text-zinc-600 hover:text-gold-400/50'
-                      }
-                    />
-                  </button>
-                ))}
+            <div className="flex flex-wrap items-center gap-3 bg-zinc-900/80 p-3.5 rounded-md border border-zinc-800 shadow-inner">
+              <span className="text-xs text-zinc-300 font-mono font-semibold">Your Rating:</span>
+              <div 
+                className="flex items-center gap-1.5"
+                onMouseLeave={() => setHoverRating(null)}
+              >
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const activeStarCount = hoverRating !== null ? hoverRating : newRating;
+                  const isGold = star <= activeStarCount;
+
+                  return (
+                    <button
+                      type="button"
+                      key={star}
+                      onClick={() => setNewRating(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      className="p-1.5 focus:outline-none transition-all hover:scale-125 group relative"
+                      title={`Rate ${star} out of 5 stars`}
+                    >
+                      <Star
+                        size={22}
+                        className={`transition-all duration-200 ${
+                          isGold
+                            ? 'fill-gold-400 text-gold-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)] scale-110'
+                            : 'text-zinc-600 hover:text-gold-400/50'
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
               </div>
-              <span className="text-xs font-mono text-gold-400 font-semibold ml-2">
-                {newRating} / 5 Stars
+              <span className="text-xs font-mono text-gold-400 font-bold ml-2 px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 rounded">
+                {hoverRating !== null ? hoverRating : newRating} / 5 Stars {
+                  (hoverRating !== null ? hoverRating : newRating) === 5 ? '★ Exceptional' :
+                  (hoverRating !== null ? hoverRating : newRating) === 4 ? '★ Very Good' :
+                  (hoverRating !== null ? hoverRating : newRating) === 3 ? '★ Good' :
+                  (hoverRating !== null ? hoverRating : newRating) === 2 ? '★ Fair' : '★ Needs Improvement'
+                }
               </span>
             </div>
 

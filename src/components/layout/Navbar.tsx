@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Bell, LogOut, ShieldAlert, Award, Star, CheckSquare, Mail, MessageCircle, User } from 'lucide-react';
+import { Menu, X, Bell, LogOut, ShieldAlert, Award, Star, CheckSquare, Mail, MessageCircle, User, Phone } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteConfig } from '../../context/SiteConfigContext';
 
@@ -220,22 +220,29 @@ export default function Navbar() {
             ))}
 
             {/* Instant Contact Options in Mobile Menu Dropdown */}
-            <div className="pt-3 border-t border-gray-900 grid grid-cols-2 gap-2">
+            <div className="pt-3 border-t border-gray-900 grid grid-cols-3 gap-1.5">
               <a 
-                href="mailto:support@koglatech.com?subject=Inquiry%20-%20Kogla%20Tech"
+                href={`mailto:${config.contactEmail || 'solutions@kogla-tech.com'}?subject=Inquiry%20-%20Kogla%20Tech`}
                 onClick={() => setIsOpen(false)}
-                className="py-2 px-3 bg-gold-500 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded-sm flex items-center justify-center gap-1.5"
+                className="py-2 px-1.5 bg-gray-900 border border-gray-800 hover:border-gold-500 text-white font-bold text-[9px] uppercase tracking-wider font-display rounded-sm flex items-center justify-center gap-1"
               >
-                <Mail size={12} /> Email Us
+                <Mail size={11} /> Email
               </a>
               <a 
-                href="https://wa.me/2348000000000?text=Hello%20Kogla%20Tech,%20I%20would%20like%20to%20inquire%20about%20your%20services."
+                href={`tel:${(config.contactPhone || '+2349120713573').replace(/[^0-9+]/g, '')}`}
+                onClick={() => setIsOpen(false)}
+                className="py-2 px-1.5 bg-gold-500 text-black font-bold text-[9px] uppercase tracking-wider font-display rounded-sm flex items-center justify-center gap-1"
+              >
+                <Phone size={11} className="fill-current" /> Call Us
+              </a>
+              <a 
+                href={config.whatsappLink || 'https://wa.me/2349120713573'}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setIsOpen(false)}
-                className="py-2 px-3 bg-emerald-600 text-white font-semibold text-[10px] uppercase tracking-wider font-display rounded-sm flex items-center justify-center gap-1.5"
+                className="py-2 px-1.5 bg-emerald-600 text-white font-semibold text-[9px] uppercase tracking-wider font-display rounded-sm flex items-center justify-center gap-1"
               >
-                <MessageCircle size={12} /> WhatsApp
+                <MessageCircle size={11} /> WhatsApp
               </a>
             </div>
 

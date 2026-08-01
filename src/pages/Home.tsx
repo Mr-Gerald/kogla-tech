@@ -419,12 +419,12 @@ export default function Home() {
             </p>
           </div>
 
-          {/* 3 PROFESSIONAL PROMPT CARDS FOR WHATSAPP, EMAIL, TELEGRAM */}
-          <div className="grid md:grid-cols-3 gap-6">
+          {/* 4 PROFESSIONAL PROMPT CARDS FOR WHATSAPP, CALL US, EMAIL, TELEGRAM */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             
             {/* WhatsApp Card */}
             <a 
-              href="https://wa.me/2348000000000?text=Hello%20Kogla%20Tech,%20I%20would%20like%20to%20inquire%20about%20your%20services%20and%20academy%20programs." 
+              href={config.whatsappLink || 'https://wa.me/2349120713573'} 
               target="_blank" 
               rel="noopener noreferrer"
               className="p-6 bg-black border border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
@@ -439,17 +439,36 @@ export default function Home() {
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
-                Launch WhatsApp Chat <ArrowRight size={12} />
+                WhatsApp Chat <ArrowRight size={12} />
+              </div>
+            </a>
+
+            {/* Call Us Hotline Card */}
+            <a 
+              href={`tel:${(config.contactPhone || '+2349120713573').replace(/[^0-9+]/g, '')}`}
+              className="p-6 bg-black border border-gold-500/40 hover:border-gold-500 hover:bg-gold-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
+            >
+              <div className="space-y-3">
+                <div className="w-12 h-12 mx-auto rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 group-hover:scale-110 transition-transform">
+                  <Zap size={22} />
+                </div>
+                <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Call Us Hotline</h3>
+                <p className="text-xs text-gray-400 font-sans">
+                  Direct phone line for voice inquiries, urgent consults, and admissions.
+                </p>
+              </div>
+              <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-gold-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
+                Call {config.contactPhone || '+234 912 071 3573'} <ArrowRight size={12} />
               </div>
             </a>
 
             {/* Email Card */}
             <a 
-              href="mailto:support@koglatech.com?subject=Kogla%20Tech%20Enterprise%20Inquiry"
-              className="p-6 bg-black border border-gold-500/30 hover:border-gold-500 hover:bg-gold-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
+              href={`mailto:${config.contactEmail || 'solutions@kogla-tech.com'}?subject=Kogla%20Tech%20Enterprise%20Inquiry`}
+              className="p-6 bg-black border border-amber-500/30 hover:border-amber-500 hover:bg-amber-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
             >
               <div className="space-y-3">
-                <div className="w-12 h-12 mx-auto rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 mx-auto rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
                   <Mail size={22} />
                 </div>
                 <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Direct Email</h3>
@@ -457,14 +476,14 @@ export default function Home() {
                   Send official inquiries, partnership requests, or custom briefs to our support desk.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-gold-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
-                support@koglatech.com <ArrowRight size={12} />
+              <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-amber-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 truncate">
+                {config.contactEmail || 'solutions@kogla-tech.com'} <ArrowRight size={12} className="shrink-0" />
               </div>
             </a>
 
             {/* Telegram Card */}
             <a 
-              href="https://t.me/koglatech" 
+              href={config.telegramLink || 'https://t.me/kogla_tech'} 
               target="_blank" 
               rel="noopener noreferrer"
               className="p-6 bg-black border border-sky-500/30 hover:border-sky-500 hover:bg-sky-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
@@ -479,10 +498,9 @@ export default function Home() {
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-sky-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
-                Open Telegram <ArrowRight size={12} />
+                Join Telegram <ArrowRight size={12} />
               </div>
             </a>
-
           </div>
 
           {/* SECURE INQUIRY FORM */}

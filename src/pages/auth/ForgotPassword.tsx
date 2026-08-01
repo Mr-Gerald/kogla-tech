@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import { formatUserError } from '../../lib/errorUtils';
 import { KeyRound, Mail, Loader2, CheckCircle } from 'lucide-react';
 
 export default function ForgotPassword() {
@@ -29,13 +30,7 @@ export default function ForgotPassword() {
       setLoadingState(false);
     } catch (err: any) {
       console.error(err);
-      let friendlyError = err.message;
-      if (err.code === 'auth/user-not-found') {
-        friendlyError = 'No account found matching that email address.';
-      } else if (err.code === 'auth/invalid-email') {
-        friendlyError = 'Please enter a valid email address format.';
-      }
-      setErrorMsg(friendlyError);
+      setErrorMsg(formatUserError(err));
       setLoadingState(false);
     }
   };

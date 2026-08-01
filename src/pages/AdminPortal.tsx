@@ -1340,11 +1340,61 @@ export default function AdminPortal() {
               {/* GROUP 2: Contact Numbers & Community Links */}
               <div className="p-4 bg-black border border-gray-900 rounded-sm space-y-4">
                 <h3 className="text-xs font-display font-medium text-gold-500 uppercase tracking-widest pb-1 border-b border-gray-900 flex items-center gap-1.5">
-                  <Mail size={12} /> Global Contact Nodes
+                  <Mail size={12} /> Global Contact Nodes & Support Phone Numbers
                 </h3>
-                <div className="grid md:grid-cols-2 gap-4">
+                
+                <div className="p-3 bg-gold-500/10 border border-gold-500/20 text-[11px] text-gold-300 font-mono rounded-sm leading-relaxed">
+                  💡 <b>Contact Controls Note:</b> You can set different or identical numbers for WhatsApp and Call Us Hotline. Any changes here instantly update all WhatsApp buttons, Call Us hotlines, and contact links across the entire platform.
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Inquiry Support Email</label>
+                    <label className="block text-[10px] text-gold-400 font-bold uppercase tracking-wider mb-1 font-mono">
+                      WhatsApp Contact Number
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="+234 912 071 3573"
+                      value={siteForm.whatsappPhone || ''}
+                      onChange={(e) => {
+                        const newPhone = e.target.value;
+                        const cleanDigits = newPhone.replace(/[^0-9]/g, '');
+                        const newLink = cleanDigits ? `https://wa.me/${cleanDigits}` : siteForm.whatsappLink;
+                        setSiteForm({ 
+                          ...siteForm, 
+                          whatsappPhone: newPhone,
+                          whatsappLink: newLink
+                        });
+                      }}
+                      className="w-full p-2.5 bg-gray-950 border border-gold-500/50 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Target WhatsApp number for all chat triggers.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-gold-400 font-bold uppercase tracking-wider mb-1 font-mono">
+                      "Call Us" Hotline Phone Number
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="+234 912 071 3573"
+                      value={siteForm.contactPhone}
+                      onChange={(e) => setSiteForm({ ...siteForm, contactPhone: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gold-500/50 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Direct phone hotline for voice calls (tel:).
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">
+                      Inquiry Support Email
+                    </label>
                     <input 
                       type="email"
                       required
@@ -1352,32 +1402,17 @@ export default function AdminPortal() {
                       onChange={(e) => setSiteForm({ ...siteForm, contactEmail: e.target.value })}
                       className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Phone Support Hotline</label>
-                    <input 
-                      type="text"
-                      required
-                      value={siteForm.contactPhone}
-                      onChange={(e) => setSiteForm({ ...siteForm, contactPhone: e.target.value })}
-                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
-                    />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Main email address for support & inquiries.
+                    </span>
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4 pt-2">
+                <div className="grid md:grid-cols-3 gap-4 pt-2 border-t border-gray-900">
                   <div>
-                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Join WhatsApp Community Link</label>
-                    <input 
-                      type="text"
-                      required
-                      value={siteForm.communityLink}
-                      onChange={(e) => setSiteForm({ ...siteForm, communityLink: e.target.value })}
-                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Direct Chat WhatsApp Link</label>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">
+                      Direct Chat WhatsApp Link
+                    </label>
                     <input 
                       type="text"
                       required
@@ -1385,9 +1420,29 @@ export default function AdminPortal() {
                       onChange={(e) => setSiteForm({ ...siteForm, whatsappLink: e.target.value })}
                       className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
                     />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Auto-generated wa.me link (or custom link).
+                    </span>
                   </div>
                   <div>
-                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Telegram Broadcaster Link</label>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">
+                      Join WhatsApp Community Link
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      value={siteForm.communityLink}
+                      onChange={(e) => setSiteForm({ ...siteForm, communityLink: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Group invite link for WhatsApp Community.
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">
+                      Telegram Channel Link
+                    </label>
                     <input 
                       type="text"
                       required
@@ -1395,6 +1450,9 @@ export default function AdminPortal() {
                       onChange={(e) => setSiteForm({ ...siteForm, telegramLink: e.target.value })}
                       className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
                     />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Telegram channel or group link.
+                    </span>
                   </div>
                 </div>
               </div>

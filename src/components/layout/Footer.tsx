@@ -56,7 +56,9 @@ export default function Footer() {
             {config.contactPhone && (
               <div className="flex items-center gap-2">
                 <Phone size={11} className="text-gold-500/70" />
-                <span>{config.contactPhone}</span>
+                <a href={`tel:${config.contactPhone.replace(/[^0-9+]/g, '')}`} className="hover:text-gold-500 transition-colors">
+                  Call Us: {config.contactPhone}
+                </a>
               </div>
             )}
           </div>

@@ -26,6 +26,7 @@ import LabDetails from './pages/LabDetails';
 import AdminPortal from './pages/AdminPortal';
 import StudyRoom from './pages/StudyRoom';
 import Profile from './pages/Profile';
+import { AiAssistantChat } from './components/AiAssistantChat';
 
 export default function App() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
               </Routes>
             </main>
             <Footer />
+            <AiAssistantChat />
           </div>
         </Router>
       </AuthProvider>

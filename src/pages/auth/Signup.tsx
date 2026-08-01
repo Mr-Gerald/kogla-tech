@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
+import { formatUserError } from '../../lib/errorUtils';
 import { ShieldCheck, Mail, Lock, User, Terminal, Loader2 } from 'lucide-react';
 
 export default function Signup() {
@@ -40,7 +41,7 @@ export default function Signup() {
       }
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'Google Sign-In failed. Please try again.');
+      setErrorMsg(formatUserError(err));
       setGoogleLoading(false);
     }
   };
@@ -109,15 +110,8 @@ export default function Signup() {
         navigate('/academy'); // Redirect to training academy
       }
     } catch (err: any) {
-      let friendlyError = err.message;
-      if (err.code === 'auth/email-already-in-use') {
-        friendlyError = 'This email address is already registered.';
-      } else if (err.code === 'auth/invalid-email') {
-        friendlyError = 'Please enter a valid email address format.';
-      } else if (err.code === 'auth/weak-password') {
-        friendlyError = 'Password must be at least 6 characters.';
-      }
-      setErrorMsg(friendlyError);
+      console.error(err);
+      setErrorMsg(formatUserError(err));
       setLoadingState(false);
     }
   };
