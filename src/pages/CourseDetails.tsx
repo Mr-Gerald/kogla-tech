@@ -2,6 +2,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { BookOpen, ArrowLeft, Send, CheckCircle2, Award, Shield, Cpu, BookOpenCheck, Clock, Layers, Users, Star } from 'lucide-react';
 import React, { useState } from 'react';
 import { addInquiry } from '../utils/storage';
+import { ReviewSection } from '../components/ReviewSection';
 
 interface CourseData {
   title: string;
@@ -463,6 +464,16 @@ export default function CourseDetails() {
             )}
           </div>
 
+        </div>
+
+        {/* COURSE SPECIFIC REVIEWS SECTION */}
+        <div className="mt-16 border-t border-zinc-900 pt-10">
+          <ReviewSection 
+            targetType="course" 
+            targetId={slug || 'general'} 
+            title={`Course Reviews: ${details.title}`} 
+            subtitle="Verified student feedback, questions, and instructor replies for this course."
+          />
         </div>
       </div>
     </div>

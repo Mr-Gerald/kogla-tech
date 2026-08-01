@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { getImageConfig, ImageConfig, addInquiry, DEFAULT_IMAGES } from '../utils/storage';
 import { useSiteConfig } from '../context/SiteConfigContext';
+import { ReviewSection } from '../components/ReviewSection';
 
 const stats = [
     { label: 'Global Students', value: '150+' },
@@ -391,6 +392,9 @@ export default function Home() {
 
         </div>
       </motion.section>
+
+      {/* COMMUNITY REVIEWS SECTION */}
+      <ReviewSection />
 
       {/* PROFESSIONAL INSTANT CONTACT US SECTION */}
       <motion.section 

@@ -15,6 +15,7 @@ import Services from './pages/Services';
 import Contact from './pages/Contact';
 import Academy from './pages/Academy';
 import Projects from './pages/Projects';
+import Reviews from './pages/Reviews';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -24,6 +25,7 @@ import ProjectDetails from './pages/ProjectDetails';
 import LabDetails from './pages/LabDetails';
 import AdminPortal from './pages/AdminPortal';
 import StudyRoom from './pages/StudyRoom';
+import Profile from './pages/Profile';
 
 export default function App() {
   return (
@@ -41,6 +43,8 @@ export default function App() {
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/academy" element={<Academy />} />
                 <Route path="/projects" element={<Projects />} />
+                <Route path="/reviews" element={<Reviews />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/auth/signup" element={<Signup />} />
                 <Route path="/auth/forgot-password" element={<ForgotPassword />} />

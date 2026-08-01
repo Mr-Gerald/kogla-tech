@@ -46,6 +46,29 @@
         "timestamp": { "type": "string", "format": "date-time", "description": "Timestamp when alert launched" }
       },
       "required": ["id", "userId", "title", "body", "read", "timestamp"]
+    },
+    "Review": {
+      "title": "User Review and Community Reply",
+      "description": "Represents interactive course, service, or platform reviews and nested community discussion replies.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique review document identifier" },
+        "userId": { "type": "string", "description": "UID of author user" },
+        "userName": { "type": "string", "description": "Author display name" },
+        "userAvatar": { "type": "string", "description": "Author avatar photo URL" },
+        "userRole": { "type": "string", "description": "Author role badge (e.g. Student, Admin)" },
+        "rating": { "type": "integer", "description": "Star rating out of 5 (1-5)" },
+        "title": { "type": "string", "description": "Review summary title" },
+        "content": { "type": "string", "description": "Body content of the review or reply comment" },
+        "targetType": { "type": "string", "description": "Context area (e.g. platform, course, service)" },
+        "targetId": { "type": "string", "description": "Target ID associated with review" },
+        "parentId": { "type": "string", "description": "Parent review ID if this document is a reply" },
+        "likedBy": { "type": "array", "description": "List of user UIDs who liked this review" },
+        "likeCount": { "type": "integer", "description": "Total count of likes" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation ISO timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update ISO timestamp" }
+      },
+      "required": ["id", "userId", "userName", "content", "targetType", "likedBy", "likeCount", "createdAt"]
     }
   },
   "firestore": {
@@ -60,6 +83,10 @@
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "User notifications for alerts, credentials releases, and progress updates."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Interactive public user reviews and threaded community replies."
     }
   }
 }

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Bell, LogOut, ShieldAlert, Award, Star, CheckSquare, Mail, MessageCircle } from 'lucide-react';
+import { Menu, X, Bell, LogOut, ShieldAlert, Award, Star, CheckSquare, Mail, MessageCircle, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteConfig } from '../../context/SiteConfigContext';
 
@@ -32,6 +32,7 @@ export default function Navbar() {
     { name: 'About', path: '/about' },
     { name: 'Services', path: '/services' },
     { name: 'Projects', path: '/projects' },
+    { name: 'Reviews', path: '/reviews' },
     { name: 'Contact', path: '/contact' },
   ];
   
@@ -150,6 +151,15 @@ export default function Navbar() {
               </AnimatePresence>
             </div>
 
+            {/* Profile Page Link */}
+            <Link 
+              to="/profile"
+              className="p-1.5 hover:bg-gray-900 bg-transparent border border-gray-800 text-gray-300 hover:text-gold-500 transition-colors flex items-center gap-1"
+              title="Manage Profile & Settings"
+            >
+              <User size={14} />
+            </Link>
+
             {/* Admin Command Portal Shortcut if Admin */}
             {profile.role === 'admin' && (
               <Link 
@@ -235,6 +245,13 @@ export default function Navbar() {
                   <span>Academy Profile</span>
                   <span className="text-gold-500 font-bold">{profile.xp || 0} XP accumulated</span>
                 </div>
+                <Link
+                  to="/profile"
+                  onClick={() => setIsOpen(false)}
+                  className="py-2.5 text-center bg-zinc-900 hover:bg-zinc-800 text-gold-400 border border-gold-500/30 text-[10px] uppercase font-bold flex items-center justify-center gap-1.5 rounded-sm"
+                >
+                  <User size={13} /> Manage Profile & Account
+                </Link>
                 {profile.role === 'admin' && (
                   <Link 
                     to="/admin" 

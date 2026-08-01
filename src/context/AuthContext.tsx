@@ -5,7 +5,9 @@ import {
   createUserWithEmailAndPassword, 
   signOut, 
   sendPasswordResetEmail,
-  onAuthStateChanged
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { 
   doc, 
@@ -29,7 +31,9 @@ interface AuthContextType {
   notifications: NotificationRecord[];
   loading: boolean;
   logout: () => Promise<void>;
+  signInWithGoogle: () => Promise<User>;
   resetPassword: (email: string) => Promise<void>;
+  updateProfileData: (data: Partial<UserProfile>) => Promise<void>;
   completeRoom: (roomSlug: string, xpReward: number) => Promise<void>;
   markNotificationRead: (notifId: string) => Promise<void>;
 }
@@ -66,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               role: (currentUser.email && currentUser.email.toLowerCase() === 'emechebegerald@gmail.com') ? 'admin' : 'user',
               xp: 0,
               completedRooms: [],
+              avatarUrl: currentUser.photoURL || '',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString()
             };
@@ -119,8 +124,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth);
   };
 
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const currentUser = userCredential.user;
+
+    const userRef = doc(db, 'users', currentUser.uid);
+    const profileSnap = await getDoc(userRef);
+
+    const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com'];
+    const isSystemAdmin = currentUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(currentUser.email.toLowerCase());
+    const role = isSystemAdmin ? 'admin' : 'user';
+
+    if (!profileSnap.exists()) {
+      const initialProfile: UserProfile = {
+        uid: currentUser.uid,
+        name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Google User',
+        email: currentUser.email || '',
+        role: role,
+        xp: 0,
+        completedRooms: [],
+        avatarUrl: currentUser.photoURL || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      await setDoc(userRef, initialProfile);
+    } else {
+      const data = profileSnap.data();
+      if (isSystemAdmin && data.role !== 'admin') {
+        await updateDoc(userRef, { role: 'admin', updatedAt: new Date().toISOString() });
+      }
+    }
+
+    return currentUser;
+  };
+
   const resetPassword = async (email: string) => {
     await sendPasswordResetEmail(auth, email);
+  };
+
+  const updateProfileData = async (data: Partial<UserProfile>) => {
+    if (!user) return;
+    const userRef = doc(db, 'users', user.uid);
+    try {
+      const payload = {
+        ...data,
+        updatedAt: new Date().toISOString()
+      };
+      await updateDoc(userRef, payload);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
+    }
   };
 
   const completeRoom = async (roomSlug: string, xpReward: number) => {
@@ -157,8 +211,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile, 
       notifications, 
       loading, 
-      logout, 
+      logout,
+      signInWithGoogle,
       resetPassword, 
+      updateProfileData,
       completeRoom,
       markNotificationRead 
     }}>
