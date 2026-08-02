@@ -21,6 +21,8 @@ const services = [
   'Cybersecurity',
   'Digital Marketing',
   'UI/UX Design',
+  'Video Editing & Motion Graphics',
+  'Data Analysis',
   'Social Media Management',
   'Graphic Designs',
   'Business Technology Solutions'
@@ -193,19 +195,104 @@ export default function Home() {
 
       </section>
 
+      {/* GLOBAL STUDENTS & COHORT ADMISSIONS GRID */}
       <motion.section 
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-50px" }}
         transition={{ duration: 0.8 }}
-        className="py-8 px-6 bg-zinc-950 border-y border-zinc-900 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-7xl mx-auto rounded-lg my-6"
+        className="px-6 max-w-7xl mx-auto my-10"
       >
-        {stats.map(s => (
-            <div key={s.label} className="text-center border-r last:border-r-0 border-zinc-800/80 px-2">
-                <div className="text-2xl md:text-3xl font-display font-bold text-gold-500 mb-0.5">{s.value}</div>
-                <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-mono">{s.label}</div>
+        <div className="grid lg:grid-cols-12 gap-8 items-stretch">
+          
+          {/* LEFT COLUMN: Global Students & Key Metrics (Constrained to left side on web) */}
+          <div className="lg:col-span-7 bg-zinc-950 border border-zinc-850 rounded-lg p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold tracking-widest text-gold-500 uppercase flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/20 px-2.5 py-1 rounded">
+                  <Users size={13} /> Global Students & Impact Metrics
+                </span>
+                <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Live Network
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-display font-bold text-white uppercase tracking-wider">
+                  Global Academic Reach & Execution
+                </h3>
+                <p className="text-xs text-zinc-400 font-sans mt-1">
+                  Empowering developers, career switchers, and enterprise engineers with hands-on systems training and production delivery.
+                </p>
+              </div>
+
+              {/* Stat Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                {stats.map(s => (
+                  <div key={s.label} className="bg-zinc-900/80 border border-zinc-800 rounded p-3 text-center hover:border-gold-500/40 transition-colors">
+                    <div className="text-xl sm:text-2xl font-display font-bold text-gold-400">{s.value}</div>
+                    <div className="text-[9px] text-zinc-400 uppercase tracking-wider font-mono mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-        ))}
+
+            <div className="mt-5 pt-3 border-t border-zinc-850 flex items-center justify-between text-[11px] text-zinc-400 font-mono">
+              <span className="flex items-center gap-1.5">
+                <Globe size={13} className="text-gold-500" /> Distributed Cohorts: Nigeria, USA, UK, Canada & Estonia
+              </span>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Cohort Admissions & Verification Hub */}
+          <div className="lg:col-span-5 bg-gradient-to-br from-zinc-950 via-zinc-900/90 to-zinc-950 border border-gold-500/30 rounded-lg p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div className="space-y-4">
+              <span className="text-[10px] font-mono font-bold tracking-widest text-gold-500 uppercase flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/20 px-2.5 py-1 rounded w-fit">
+                <Award size={13} /> Cohort Admissions & Certification
+              </span>
+
+              <div>
+                <h3 className="text-base font-display font-bold text-white uppercase tracking-wider">
+                  CO-2026 Admissions Open
+                </h3>
+                <p className="text-xs text-zinc-300 font-sans mt-1 leading-relaxed">
+                  Join expert-led cohorts in full-stack engineering, cybersecurity, video motion graphics, and data analytics with verified credentials.
+                </p>
+              </div>
+
+              <div className="bg-zinc-950/80 border border-zinc-800 rounded p-3.5 space-y-2 text-xs font-mono">
+                <div className="flex items-center justify-between text-zinc-300">
+                  <span className="flex items-center gap-1.5"><Shield size={13} className="text-gold-400" /> Issued Credentials:</span>
+                  <span className="font-bold text-gold-400">480+ Verified</span>
+                </div>
+                <div className="flex items-center justify-between text-zinc-300">
+                  <span className="flex items-center gap-1.5"><Terminal size={13} className="text-gold-400" /> Interactive Sandboxes:</span>
+                  <span className="font-bold text-emerald-400">100% Practical</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 flex flex-col sm:flex-row gap-2.5 mt-2">
+              <Link 
+                to="/academy" 
+                className="flex-1 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display rounded text-center flex items-center justify-center gap-1.5 transition-all shadow-md"
+              >
+                Explore Syllabuses <ArrowRight size={13} />
+              </Link>
+              <Link 
+                to="/study" 
+                className="py-2.5 px-4 bg-zinc-900 border border-zinc-800 hover:border-gold-500 text-zinc-200 text-xs uppercase font-mono tracking-wider rounded text-center flex items-center justify-center gap-1.5 transition-all"
+              >
+                <Terminal size={13} className="text-gold-500" /> Sandbox
+              </Link>
+            </div>
+          </div>
+
+        </div>
       </motion.section>
 
       <motion.section 

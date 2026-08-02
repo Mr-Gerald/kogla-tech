@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Smartphone, Shield, Cpu, Mail, Globe, Briefcase, BarChart3, Cloud, Layers, Zap, MessageCircle, Send, X, Palette, MessageSquare, Clock, Award } from 'lucide-react';
+import { Smartphone, Shield, Cpu, Mail, Globe, Briefcase, BarChart3, Cloud, Layers, Zap, MessageCircle, Send, X, Palette, MessageSquare, Clock, Award, Video, PieChart } from 'lucide-react';
 import React, { useState } from 'react';
 
 export default function Services() {
@@ -47,6 +47,18 @@ export default function Services() {
             desc: 'Fluid responsive coordinate interfaces, optical grid mathematics, and motion spring physics.', 
             timeline: '4-7 days',
             icon: Layers 
+        },
+        { 
+            title: 'Video Editing & Motion Graphics', 
+            desc: 'Professional cinematic video editing, 2D/3D motion graphics, brand promos, social reels, and VFX animation.', 
+            timeline: '3-5 days turnaround',
+            icon: Video 
+        },
+        { 
+            title: 'Data Analysis', 
+            desc: 'Advanced statistical data analytics, SQL/Python data mining, interactive BI dashboards, and growth insights.', 
+            timeline: '4-7 days turnaround',
+            icon: PieChart 
         },
         { 
             title: 'Social Media Management', 

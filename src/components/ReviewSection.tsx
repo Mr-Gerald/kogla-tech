@@ -224,15 +224,19 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                           key={star}
                           onClick={() => setNewRating(star)}
                           onMouseEnter={() => setHoverRating(star)}
-                          className="p-1.5 focus:outline-none transition-all hover:scale-125 group relative"
+                          className={`p-2 focus:outline-none transition-all active:scale-95 hover:scale-110 group relative rounded-md flex items-center justify-center ${
+                            isGold 
+                              ? 'bg-gold-500/15 border border-gold-500/40 shadow-[0_0_12px_rgba(250,204,21,0.25)]' 
+                              : 'bg-zinc-900/90 border border-zinc-800 hover:border-gold-500/30'
+                          }`}
                           title={`Rate ${star} out of 5 stars`}
                         >
                           <Star
                             size={22}
                             className={`transition-all duration-200 ${
                               isGold
-                                ? 'fill-gold-400 text-gold-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)] scale-110'
-                                : 'text-zinc-600 hover:text-gold-400/50'
+                                ? 'fill-gold-400 text-gold-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.9)] scale-105'
+                                : 'fill-transparent text-zinc-600 hover:text-gold-400/60'
                             }`}
                           />
                         </button>
