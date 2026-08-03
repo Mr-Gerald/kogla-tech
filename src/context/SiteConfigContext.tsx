@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { ImageConfig, DEFAULT_IMAGES } from '../utils/storage';
 
 export interface SiteConfig {
   companyName: string;
@@ -45,6 +46,8 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
 interface SiteConfigContextType {
   config: SiteConfig;
   updateConfig: (newConfig: Partial<SiteConfig>) => Promise<void>;
+  images: ImageConfig;
+  updateImages: (newImages: Partial<ImageConfig>) => Promise<void>;
   loading: boolean;
 }
 
@@ -61,6 +64,17 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
     } catch (_) {}
     return DEFAULT_SITE_CONFIG;
   });
+
+  const [images, setImages] = useState<ImageConfig>(() => {
+    try {
+      const saved = localStorage.getItem('kogla_images');
+      if (saved) {
+        return { ...DEFAULT_IMAGES, ...JSON.parse(saved) };
+      }
+    } catch (_) {}
+    return DEFAULT_IMAGES;
+  });
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -84,7 +98,28 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Sync images from Firestore doc config/images
+    const imagesRef = doc(db, 'config', 'images');
+    const unsubscribeImages = onSnapshot(imagesRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as ImageConfig;
+        const merged = { ...DEFAULT_IMAGES, ...data };
+        setImages(merged);
+        localStorage.setItem('kogla_images', JSON.stringify(merged));
+      } else {
+        // Document does not exist yet. Seed it with default values!
+        setDoc(imagesRef, DEFAULT_IMAGES).catch((err) => {
+          console.warn('[SiteConfig] Auto-seeding images document failed:', err);
+        });
+      }
+    }, (error) => {
+      console.error('[SiteConfig] Firestore images sync failed:', error);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeImages();
+    };
   }, []);
 
   useEffect(() => {
@@ -121,8 +156,20 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
     localStorage.setItem('kogla_site_config', JSON.stringify(updated));
   };
 
+  const updateImages = async (newImages: Partial<ImageConfig>) => {
+    const updated = { ...images, ...newImages };
+    
+    // Save to Firestore
+    const imagesRef = doc(db, 'config', 'images');
+    await setDoc(imagesRef, updated);
+    
+    // Update local state and localStorage
+    setImages(updated);
+    localStorage.setItem('kogla_images', JSON.stringify(updated));
+  };
+
   return (
-    <SiteConfigContext.Provider value={{ config, updateConfig, loading }}>
+    <SiteConfigContext.Provider value={{ config, updateConfig, images, updateImages, loading }}>
       {children}
     </SiteConfigContext.Provider>
   );

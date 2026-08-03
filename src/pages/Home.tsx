@@ -29,17 +29,12 @@ const services = [
 ];
 
 export default function Home() {
-  const { config } = useSiteConfig();
-  const [images, setImages] = useState<ImageConfig>(DEFAULT_IMAGES);
+  const { config, images } = useSiteConfig();
 
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
-
-  useEffect(() => {
-    setImages(getImageConfig());
-  }, []);
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -50,13 +50,16 @@ import {
 export default function AdminPortal() {
   const { user, profile, logout, loading } = useAuth();
   
-  const [images, setImages] = useState<ImageConfig>({
-    hero: '',
-    academy: '',
-    services: '',
-    projects: '',
-    labs: ''
-  });
+  // Site Settings config hooks
+  const { config, updateConfig, images: syncImages, updateImages } = useSiteConfig();
+
+  const [images, setImages] = useState<ImageConfig>(syncImages);
+
+  useEffect(() => {
+    if (syncImages) {
+      setImages(syncImages);
+    }
+  }, [syncImages]);
 
   // Firestore DB states
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -75,8 +78,6 @@ export default function AdminPortal() {
 
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  // Site Settings config hooks
-  const { config, updateConfig } = useSiteConfig();
   const [siteForm, setSiteForm] = useState<SiteConfig>(config);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
@@ -132,8 +133,6 @@ export default function AdminPortal() {
   // Load local state & Firestore Listeners on Auth load
   useEffect(() => {
     if (profile?.role === 'admin') {
-      setImages(getImageConfig());
-
       // 1. Listen to dynamic child inquiries from Firestore
       const inquiriesRef = collection(db, 'inquiries');
       const unsubInquiries = onSnapshot(inquiriesRef, (snapshot) => {
@@ -177,7 +176,9 @@ export default function AdminPortal() {
   const handleUpdateImage = (key: keyof ImageConfig, value: string) => {
     const updated = { ...images, [key]: value };
     setImages(updated);
-    saveImageConfig(updated);
+    updateImages(updated).catch((err) => {
+      console.error('Failed to update image globally:', err);
+    });
     triggerSuccess(`Landing panel image "${key}" updated live!`);
   };
 
@@ -1214,9 +1215,14 @@ export default function AdminPortal() {
 
           <div className="flex justify-end pt-2">
             <button
-              onClick={() => {
-                saveImageConfig(images);
-                triggerSuccess('All website images successfully saved and synchronized!');
+              onClick={async () => {
+                try {
+                  await updateImages(images);
+                  triggerSuccess('All website images successfully saved and synchronized globally!');
+                } catch (err: any) {
+                  setErrorMsg(`Failed synchronizing images: ${err.message}`);
+                  setTimeout(() => setErrorMsg(''), 5000);
+                }
               }}
               className="px-6 py-3 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs font-display uppercase tracking-widest rounded-sm transition-all shadow-lg flex items-center gap-2"
             >
