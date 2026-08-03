@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { LogOut } from 'lucide-react';
 import { 
   User, 
   signInWithEmailAndPassword, 
@@ -45,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
@@ -121,6 +124,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = async () => {
+    setShowSignOutModal(true);
+  };
+
+  const confirmSignOut = async () => {
+    setShowSignOutModal(false);
     await signOut(auth);
   };
 
@@ -219,6 +227,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       markNotificationRead 
     }}>
       {children}
+
+      {/* Confirmation Modal for Sign Out */}
+      <AnimatePresence>
+        {showSignOutModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.15 }}
+              className="bg-zinc-950 border border-gold-500/40 rounded-md p-6 max-w-sm w-full shadow-2xl relative overflow-hidden text-left"
+            >
+              <div className="absolute -top-12 -right-12 w-28 h-28 bg-gold-500/10 rounded-full blur-xl pointer-events-none" />
+              
+              <div className="flex items-start gap-3.5 mb-5">
+                <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-500 rounded-sm shrink-0">
+                  <LogOut size={22} />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-white text-base uppercase tracking-wider">
+                    Confirm Sign Out
+                  </h3>
+                  <p className="text-xs text-gray-300 mt-1.5 leading-relaxed font-sans">
+                    Are you sure you want to sign out of <span className="text-gold-400 font-semibold">{user?.email || 'your account'}</span>?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-zinc-900">
+                <button
+                  type="button"
+                  onClick={() => setShowSignOutModal(false)}
+                  className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-gray-300 hover:text-white font-mono text-xs uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmSignOut}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold font-mono text-xs uppercase tracking-wider rounded-sm transition-all shadow-lg flex items-center gap-1.5 cursor-pointer"
+                >
+                  <LogOut size={13} /> Yes, Sign Out
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AuthContext.Provider>
   );
 }

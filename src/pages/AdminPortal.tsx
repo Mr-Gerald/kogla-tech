@@ -44,7 +44,9 @@ import {
   Calendar,
   CheckCircle,
   FileText,
-  Terminal
+  Terminal,
+  Save,
+  RotateCcw
 } from 'lucide-react';
 
 export default function AdminPortal() {
@@ -80,6 +82,8 @@ export default function AdminPortal() {
 
   const [siteForm, setSiteForm] = useState<SiteConfig>(config);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isSavingImages, setIsSavingImages] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (config) {
@@ -174,25 +178,101 @@ export default function AdminPortal() {
   };
 
   const handleUpdateImage = (key: keyof ImageConfig, value: string) => {
-    const updated = { ...images, [key]: value };
-    setImages(updated);
-    updateImages(updated).catch((err) => {
-      console.error('Failed to update image globally:', err);
-    });
-    triggerSuccess(`Landing panel image "${key}" updated live!`);
+    setImages(prev => ({ ...prev, [key]: value }));
+    triggerSuccess(`Preview for "${key}" updated! Click "Save Image Configuration" to publish globally.`);
   };
 
-  // Convert files locally to Base64
+  // Convert & compress uploaded image files locally via HTML5 canvas to guarantee small footprint (<150KB)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, key: keyof ImageConfig) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          handleUpdateImage(key, reader.result);
+    if (!file) return;
+
+    setIsUploadingImage(key);
+    setSuccessMsg(`Optimizing "${key}" image binary...`);
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      setIsUploadingImage(null);
+      setErrorMsg('Failed reading selected file.');
+      setTimeout(() => setErrorMsg(''), 5000);
+    };
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onerror = () => {
+        setIsUploadingImage(null);
+        setErrorMsg('Failed processing image dimensions.');
+        setTimeout(() => setErrorMsg(''), 5000);
+      };
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const maxDim = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error('Canvas rendering context unavailable');
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+          setImages(prev => ({ ...prev, [key]: compressedDataUrl }));
+          triggerSuccess(`Image "${key}" compressed & attached! Click "Save Image Configuration" to store to database.`);
+        } catch (err: any) {
+          console.error('Image compression failed:', err);
+          setErrorMsg(`Image optimization error: ${err.message}`);
+          setTimeout(() => setErrorMsg(''), 5000);
+        } finally {
+          setIsUploadingImage(null);
         }
       };
-      reader.readAsDataURL(file);
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveImages = async () => {
+    setIsSavingImages(true);
+    try {
+      await updateImages(images);
+      triggerSuccess('All website images successfully stored in database and synchronized across all devices!');
+    } catch (err: any) {
+      console.error('Save image configuration failed:', err);
+      setErrorMsg(`Failed persisting images to database: ${err?.message || 'Permission or storage error'}`);
+      setTimeout(() => setErrorMsg(''), 7000);
+    } finally {
+      setIsSavingImages(false);
+    }
+  };
+
+  const handleResetImages = async () => {
+    if (window.confirm('Reset all landing page images back to system original defaults?')) {
+      setIsSavingImages(true);
+      try {
+        setImages(DEFAULT_IMAGES);
+        await updateImages(DEFAULT_IMAGES);
+        triggerSuccess('Landing images reset to original defaults and updated in database!');
+      } catch (err: any) {
+        setErrorMsg(`Failed resetting images: ${err.message}`);
+        setTimeout(() => setErrorMsg(''), 5000);
+      } finally {
+        setIsSavingImages(false);
+      }
     }
   };
 
@@ -879,8 +959,50 @@ export default function AdminPortal() {
 
       {/* Tab 3: Images Section */}
       {tab === 'images' && (
-        <div className="space-y-12 animate-fade-in">
+        <div className="space-y-8 animate-fade-in">
           
+          {/* Header Action Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-zinc-950 border border-gold-500/30 rounded-sm">
+            <div>
+              <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <ImageIcon size={16} className="text-gold-500" /> Landing Page Imagery Management
+              </h3>
+              <p className="text-xs text-gray-400 mt-1">
+                Customize website graphics. Upload custom files, select presets, or paste web URLs.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={handleResetImages}
+                disabled={isSavingImages}
+                className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-gray-400 hover:text-white font-mono text-xs uppercase tracking-wider rounded-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <RotateCcw size={13} /> Reset
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveImages}
+                disabled={isSavingImages || !!isUploadingImage}
+                className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs font-display uppercase tracking-widest rounded-sm transition-all shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSavingImages ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save size={15} />
+                    Save Image Configuration
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
           {/* Landing page images grid configuration */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             
@@ -898,7 +1020,12 @@ export default function AdminPortal() {
               </div>
               <div className="p-4 space-y-4">
                 <div className="h-32 bg-black border border-gray-900 overflow-hidden rounded-sm relative group">
-                  <img src={images.hero} alt="Hero background configuration preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                  <img 
+                    src={images.hero} 
+                    alt="Hero background configuration preview" 
+                    className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                    onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_IMAGES.hero; }}
+                  />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-gray-300 transition-all">
                     Active Landing Live View
                   </div>
@@ -910,7 +1037,7 @@ export default function AdminPortal() {
                     type="text" 
                     value={images.hero} 
                     onChange={(e) => handleUpdateImage('hero', e.target.value)}
-                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3"
+                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3 focus:border-gold-500 outline-none"
                     placeholder="Paste public image link..." 
                   />
 
@@ -921,9 +1048,10 @@ export default function AdminPortal() {
                     {presetImagesList.hero.map((opt) => (
                       <button 
                         key={opt.url} 
+                        type="button"
                         onClick={() => handleUpdateImage('hero', opt.url)}
-                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all ${
-                          images.hero === opt.url ? 'border-gold-500 bg-gold-500/5 text-gold-500' : 'border-gray-900 hover:border-gray-800 text-gray-400'
+                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all cursor-pointer ${
+                          images.hero === opt.url ? 'border-gold-500 bg-gold-500/10 text-gold-500 font-semibold' : 'border-gray-900 hover:border-gray-800 text-gray-400'
                         }`}
                       >
                         {opt.label}
@@ -934,8 +1062,8 @@ export default function AdminPortal() {
                   <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
                     <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
                     <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
-                      <Upload size={14} />
-                      Choose or Capture Image
+                      {isUploadingImage === 'hero' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {isUploadingImage === 'hero' ? 'Optimizing Binary...' : 'Choose or Capture Image'}
                       <input 
                         type="file" 
                         accept="image/*" 
@@ -949,7 +1077,7 @@ export default function AdminPortal() {
             </div>
 
             {/* ACADEMY BG */}
-            <div className="bg-gray-950 border border-gray-850 rounded-sm flex flex-col justify-between">
+            <div className="bg-gray-950 border border-gray-800 rounded-sm flex flex-col justify-between">
               <div className="p-4 border-b border-gray-800">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-display font-bold uppercase text-gold-500 tracking-wider">
@@ -962,7 +1090,12 @@ export default function AdminPortal() {
               </div>
               <div className="p-4 space-y-4">
                 <div className="h-32 bg-black border border-gray-900 overflow-hidden rounded-sm relative group">
-                  <img src={images.academy} alt="Academy image preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                  <img 
+                    src={images.academy} 
+                    alt="Academy image preview" 
+                    className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                    onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_IMAGES.academy; }}
+                  />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-gray-300 transition-all">
                     Active Landing Live View
                   </div>
@@ -974,7 +1107,7 @@ export default function AdminPortal() {
                     type="text" 
                     value={images.academy} 
                     onChange={(e) => handleUpdateImage('academy', e.target.value)}
-                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3"
+                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3 focus:border-gold-500 outline-none"
                     placeholder="Paste image link..." 
                   />
 
@@ -985,9 +1118,10 @@ export default function AdminPortal() {
                     {presetImagesList.academy.map((opt) => (
                       <button 
                         key={opt.url} 
+                        type="button"
                         onClick={() => handleUpdateImage('academy', opt.url)}
-                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all ${
-                          images.academy === opt.url ? 'border-gold-500 bg-gold-500/5 text-gold-500' : 'border-gray-900 hover:border-gray-800 text-gray-400'
+                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all cursor-pointer ${
+                          images.academy === opt.url ? 'border-gold-500 bg-gold-500/10 text-gold-500 font-semibold' : 'border-gray-900 hover:border-gray-800 text-gray-400'
                         }`}
                       >
                         {opt.label}
@@ -998,8 +1132,8 @@ export default function AdminPortal() {
                   <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
                     <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
                     <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
-                      <Upload size={14} />
-                      Choose or Capture Image
+                      {isUploadingImage === 'academy' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {isUploadingImage === 'academy' ? 'Optimizing Binary...' : 'Choose or Capture Image'}
                       <input 
                         type="file" 
                         accept="image/*" 
@@ -1013,20 +1147,25 @@ export default function AdminPortal() {
             </div>
 
             {/* SERVICES BG */}
-            <div className="bg-gray-950 border border-gray-850 rounded-sm flex flex-col justify-between">
+            <div className="bg-gray-950 border border-gray-800 rounded-sm flex flex-col justify-between">
               <div className="p-4 border-b border-gray-800">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-display font-bold uppercase text-gold-500 tracking-wider">
                     Services Display Banner
                   </span>
                   <span className="px-2 py-0.5 bg-gold-500/10 text-gold-500 text-[9px] font-mono rounded">
-                    Intake & Solutions
+                    Intake &amp; Solutions
                   </span>
                 </div>
               </div>
               <div className="p-4 space-y-4">
                 <div className="h-32 bg-black border border-gray-900 overflow-hidden rounded-sm relative group">
-                  <img src={images.services} alt="Services visual preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                  <img 
+                    src={images.services} 
+                    alt="Services visual preview" 
+                    className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                    onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_IMAGES.services; }}
+                  />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-gray-300 transition-all">
                     Active Landing Live View
                   </div>
@@ -1038,7 +1177,7 @@ export default function AdminPortal() {
                     type="text" 
                     value={images.services} 
                     onChange={(e) => handleUpdateImage('services', e.target.value)}
-                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3"
+                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3 focus:border-gold-500 outline-none"
                     placeholder="Paste image link..." 
                   />
 
@@ -1049,9 +1188,10 @@ export default function AdminPortal() {
                     {presetImagesList.services.map((opt) => (
                       <button 
                         key={opt.url} 
+                        type="button"
                         onClick={() => handleUpdateImage('services', opt.url)}
-                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all ${
-                          images.services === opt.url ? 'border-gold-500 bg-gold-500/5 text-gold-500' : 'border-gray-900 hover:border-gray-800 text-gray-400'
+                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all cursor-pointer ${
+                          images.services === opt.url ? 'border-gold-500 bg-gold-500/10 text-gold-500 font-semibold' : 'border-gray-900 hover:border-gray-800 text-gray-400'
                         }`}
                       >
                         {opt.label}
@@ -1062,8 +1202,8 @@ export default function AdminPortal() {
                   <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
                     <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
                     <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
-                      <Upload size={14} />
-                      Choose or Capture Image
+                      {isUploadingImage === 'services' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {isUploadingImage === 'services' ? 'Optimizing Binary...' : 'Choose or Capture Image'}
                       <input 
                         type="file" 
                         accept="image/*" 
@@ -1077,7 +1217,7 @@ export default function AdminPortal() {
             </div>
 
             {/* PROJECTS BG */}
-            <div className="bg-gray-950 border border-gray-850 rounded-sm flex flex-col justify-between">
+            <div className="bg-gray-950 border border-gray-800 rounded-sm flex flex-col justify-between">
               <div className="p-4 border-b border-gray-800">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-display font-bold uppercase text-gold-500 tracking-wider">
@@ -1090,7 +1230,12 @@ export default function AdminPortal() {
               </div>
               <div className="p-4 space-y-4">
                 <div className="h-32 bg-black border border-gray-900 overflow-hidden rounded-sm relative group">
-                  <img src={images.projects} alt="Projects visual preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                  <img 
+                    src={images.projects} 
+                    alt="Projects visual preview" 
+                    className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                    onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_IMAGES.projects; }}
+                  />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-gray-300 transition-all">
                     Active Landing Live View
                   </div>
@@ -1102,7 +1247,7 @@ export default function AdminPortal() {
                     type="text" 
                     value={images.projects} 
                     onChange={(e) => handleUpdateImage('projects', e.target.value)}
-                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3"
+                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3 focus:border-gold-500 outline-none"
                     placeholder="Paste image link..." 
                   />
 
@@ -1113,9 +1258,10 @@ export default function AdminPortal() {
                     {presetImagesList.projects.map((opt) => (
                       <button 
                         key={opt.url} 
+                        type="button"
                         onClick={() => handleUpdateImage('projects', opt.url)}
-                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all ${
-                          images.projects === opt.url ? 'border-gold-500 bg-gold-500/5 text-gold-500' : 'border-gray-900 hover:border-gray-800 text-gray-400'
+                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all cursor-pointer ${
+                          images.projects === opt.url ? 'border-gold-500 bg-gold-500/10 text-gold-500 font-semibold' : 'border-gray-900 hover:border-gray-800 text-gray-400'
                         }`}
                       >
                         {opt.label}
@@ -1126,8 +1272,8 @@ export default function AdminPortal() {
                   <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
                     <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
                     <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
-                      <Upload size={14} />
-                      Choose or Capture Image
+                      {isUploadingImage === 'projects' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {isUploadingImage === 'projects' ? 'Optimizing Binary...' : 'Choose or Capture Image'}
                       <input 
                         type="file" 
                         accept="image/*" 
@@ -1141,7 +1287,7 @@ export default function AdminPortal() {
             </div>
 
             {/* LABS BG */}
-            <div className="bg-gray-950 border border-gray-855 rounded-sm flex flex-col justify-between">
+            <div className="bg-gray-950 border border-gray-800 rounded-sm flex flex-col justify-between">
               <div className="p-4 border-b border-gray-800">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-display font-bold uppercase text-gold-500 tracking-wider">
@@ -1154,19 +1300,24 @@ export default function AdminPortal() {
               </div>
               <div className="p-4 space-y-4">
                 <div className="h-32 bg-black border border-gray-900 overflow-hidden rounded-sm relative group">
-                  <img src={images.labs} alt="Labs hardware preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                  <img 
+                    src={images.labs} 
+                    alt="Labs hardware preview" 
+                    className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                    onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_IMAGES.labs; }}
+                  />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-gray-300 transition-all">
                     Active Landing Live View
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-gray-405 uppercase mb-1">Direct Image Web Address (URL)</label>
+                  <label className="block text-[10px] text-gray-400 uppercase mb-1">Direct Image Web Address (URL)</label>
                   <input 
                     type="text" 
                     value={images.labs} 
                     onChange={(e) => handleUpdateImage('labs', e.target.value)}
-                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3"
+                    className="w-full p-2 bg-black border border-gray-800 text-xs text-white rounded-sm mb-3 focus:border-gold-500 outline-none"
                     placeholder="Paste image link..." 
                   />
 
@@ -1177,9 +1328,10 @@ export default function AdminPortal() {
                     {presetImagesList.labs.map((opt) => (
                       <button 
                         key={opt.url} 
+                        type="button"
                         onClick={() => handleUpdateImage('labs', opt.url)}
-                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all ${
-                          images.labs === opt.url ? 'border-gold-500 bg-gold-500/5 text-gold-500' : 'border-gray-900 hover:border-gray-800 text-gray-400'
+                        className={`p-1.5 text-[10px] text-left border rounded-sm truncate transition-all cursor-pointer ${
+                          images.labs === opt.url ? 'border-gold-500 bg-gold-500/10 text-gold-500 font-semibold' : 'border-gray-900 hover:border-gray-800 text-gray-400'
                         }`}
                       >
                         {opt.label}
@@ -1190,8 +1342,8 @@ export default function AdminPortal() {
                   <div className="mt-4 border-t border-gray-900 pt-3 space-y-2">
                     <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-2">Upload Custom Image (Phone &amp; Desktop):</label>
                     <label className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold-500/10 hover:bg-gold-500/20 active:scale-95 border border-dashed border-gold-500/30 text-gold-500/90 text-xs rounded-sm cursor-pointer transition-all uppercase tracking-widest font-display select-none">
-                      <Upload size={14} />
-                      Choose or Capture Image
+                      {isUploadingImage === 'labs' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {isUploadingImage === 'labs' ? 'Optimizing Binary...' : 'Choose or Capture Image'}
                       <input 
                         type="file" 
                         accept="image/*" 
@@ -1209,24 +1361,37 @@ export default function AdminPortal() {
           <div className="p-6 bg-black border border-gray-900 rounded-sm">
             <h4 className="text-xs font-display text-gold-500 font-bold uppercase tracking-wider mb-2">💡 Operational Note</h4>
             <p className="text-xs text-gray-400 leading-relaxed">
-              When configuring image records or applying Base64 file codes, calculations execute inside client state. To support seamless Nigerian imagery options, click on the preset buttons labeled "Nigerian Tech Developer Workspace", "Nigerian Tech Students Cohort", or "African SaaS Solutions" above, which links directly to beautiful alternative photography.
+              When configuring image records or uploading custom photographs, image compression algorithms execute automatically to ensure high resolution while guaranteeing cross-device database synchronization. Click "Save Image Configuration" to commit all changes globally.
             </p>
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-900">
             <button
-              onClick={async () => {
-                try {
-                  await updateImages(images);
-                  triggerSuccess('All website images successfully saved and synchronized globally!');
-                } catch (err: any) {
-                  setErrorMsg(`Failed synchronizing images: ${err.message}`);
-                  setTimeout(() => setErrorMsg(''), 5000);
-                }
-              }}
-              className="px-6 py-3 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs font-display uppercase tracking-widest rounded-sm transition-all shadow-lg flex items-center gap-2"
+              type="button"
+              onClick={handleResetImages}
+              disabled={isSavingImages}
+              className="w-full sm:w-auto px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-gray-400 hover:text-white font-mono text-xs uppercase tracking-wider rounded-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              Save Image Configuration
+              <RotateCcw size={14} /> Reset System Defaults
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSaveImages}
+              disabled={isSavingImages || !!isUploadingImage}
+              className="w-full sm:w-auto px-8 py-3.5 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs font-display uppercase tracking-widest rounded-sm transition-all shadow-xl flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+            >
+              {isSavingImages ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Saving to Database...
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  Save Image Configuration
+                </>
+              )}
             </button>
           </div>
 

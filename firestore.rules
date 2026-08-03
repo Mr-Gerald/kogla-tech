@@ -20,10 +20,21 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(uid)).data;
     }
 
+    function isBootstrappedAdmin(emailStr) {
+      return emailStr.lower() in [
+        "emechebegerald@gmail.com", 
+        "admin@kogla-tech.com", 
+        "admin@koglatech.com", 
+        "solutions@koglatech.com", 
+        "solutions@kogla-tech.com"
+      ];
+    }
+
     function isAdmin() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             getUserData(request.auth.uid).role == "admin";
+      return isSignedIn() && (
+        (request.auth.token.email != null && isBootstrappedAdmin(request.auth.token.email)) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == "admin")
+      );
     }
 
     function incoming() {
@@ -95,12 +106,12 @@ service cloud.firestore {
       allow create: if isSignedIn() && 
                     isOwner(userId) && 
                     isValidUserShape(incoming()) && 
-                    (incoming().role == "user" || (incoming().role == "admin" && incoming().email in ["emechebegerald@gmail.com", "Emechebegerald@gmail.com", "admin@kogla-tech.com", "ADMIN@KOGLA-TECH.COM"])); // Prevent privilege escalation except for bootstrapped admin accounts
+                    (incoming().role == "user" || (incoming().role == "admin" && isBootstrappedAdmin(incoming().email))); // Prevent privilege escalation except for bootstrapped admin accounts
                     
       allow update: if (isOwner(userId) || isAdmin()) && 
                     isValidUserShape(incoming()) && (
                       isAdmin() || (
-                        (incoming().role == existing().role || (incoming().role == "admin" && incoming().email in ["emechebegerald@gmail.com", "Emechebegerald@gmail.com", "admin@kogla-tech.com", "ADMIN@KOGLA-TECH.COM"])) && // Prevent normal users changing role unless they are the bootstrapped admin
+                        (incoming().role == existing().role || (incoming().role == "admin" && isBootstrappedAdmin(incoming().email))) && // Prevent normal users changing role unless they are the bootstrapped admin
                         incoming().uid == existing().uid &&
                         incoming().email == existing().email
                       )

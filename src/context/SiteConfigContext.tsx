@@ -164,15 +164,28 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
   };
 
   const updateImages = async (newImages: Partial<ImageConfig>) => {
-    const updated = { ...images, ...newImages };
+    const updated = { ...DEFAULT_IMAGES, ...images, ...newImages };
+    
+    // Ensure clean string values for all keys
+    const cleanImages: ImageConfig = {
+      hero: updated.hero || DEFAULT_IMAGES.hero,
+      academy: updated.academy || DEFAULT_IMAGES.academy,
+      services: updated.services || DEFAULT_IMAGES.services,
+      projects: updated.projects || DEFAULT_IMAGES.projects,
+      labs: updated.labs || DEFAULT_IMAGES.labs,
+    };
     
     // Save to Firestore
     const imagesRef = doc(db, 'config', 'images');
-    await setDoc(imagesRef, updated);
+    await setDoc(imagesRef, cleanImages);
     
     // Update local state and localStorage
-    setImages(updated);
-    localStorage.setItem('kogla_images', JSON.stringify(updated));
+    setImages(cleanImages);
+    try {
+      localStorage.setItem('kogla_images', JSON.stringify(cleanImages));
+    } catch (e) {
+      console.warn('[SiteConfig] localStorage save warning:', e);
+    }
   };
 
   return (
