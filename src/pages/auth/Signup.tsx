@@ -24,7 +24,7 @@ export default function Signup() {
     try {
       const gUser = await signInWithGoogle();
       
-      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com'];
+      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = gUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(gUser.email.toLowerCase());
 
       setGoogleLoading(false);
@@ -73,7 +73,7 @@ export default function Signup() {
 
       // 3. Write profile record securely to Firestore
       const userRef = doc(db, 'users', user.uid);
-      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com'];
+      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase());
       const role = isSystemAdmin ? 'admin' : 'user';
 

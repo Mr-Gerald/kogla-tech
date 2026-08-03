@@ -181,7 +181,7 @@ export default function Services() {
                                 <MessageCircle size={15} /> WhatsApp Contact
                             </a>
                             <a 
-                                href={`mailto:support@koglatech.com?subject=${encodeURIComponent(`Inquiry & Priority Booking: ${selectedService.title} - Kogla Tech`)}`}
+                                href={`mailto:solutions@koglatech.com?subject=${encodeURIComponent(`Inquiry & Priority Booking: ${selectedService.title} - Kogla Tech`)}`}
                                 className="py-3 bg-gold-500 hover:bg-gold-600 text-black font-semibold text-xs uppercase tracking-widest font-display rounded-sm transition-colors flex items-center justify-center gap-2"
                             >
                                 <Mail size={15} /> Send Email

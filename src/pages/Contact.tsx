@@ -39,9 +39,9 @@ export default function Contact() {
   };
 
   const channels = [
-    { label: "Enterprise Solutions", email: "solutions@kogla-tech.com", desc: "For private, sovereign automation & defense systems contracts." },
-    { label: "Elite Academy", email: "academy@kogla-tech.com", desc: "For admissions, cohorts, corporate educational training audits." },
-    { label: "Security & Operations Desk", email: "sec-ops@kogla-tech.com", desc: "For direct threat-isolation telemetry logs or vulnerability reports." }
+    { label: "Enterprise Solutions", email: "solutions@koglatech.com", desc: "For private, sovereign automation & defense systems contracts." },
+    { label: "Elite Academy", email: "solutions@koglatech.com", desc: "For admissions, cohorts, corporate educational training audits." },
+    { label: "Security & Operations Desk", email: "solutions@koglatech.com", desc: "For direct threat-isolation telemetry logs or vulnerability reports." }
   ];
 
   const offices = [

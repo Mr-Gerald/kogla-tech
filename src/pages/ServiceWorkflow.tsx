@@ -377,7 +377,7 @@ export default function ServiceWorkflow() {
                 <span className="text-[10px] uppercase font-mono text-gray-400 block tracking-wider">Instant Direct Contact</span>
                 <div className="grid grid-cols-2 gap-2">
                   <a 
-                    href={`mailto:support@koglatech.com?subject=${encodeURIComponent(`Inquiry & Priority Booking: ${details.title} - Kogla Tech`)}`}
+                    href={`mailto:solutions@koglatech.com?subject=${encodeURIComponent(`Inquiry & Priority Booking: ${details.title} - Kogla Tech`)}`}
                     className="py-2 px-3 bg-gold-500 hover:bg-gold-600 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded-sm transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Mail size={13} /> Send Email

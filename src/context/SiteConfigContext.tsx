@@ -27,7 +27,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   companyName: 'Kogla Tech',
   logoUrl: 'https://scontent.xx.fbcdn.net/v/t1.15752-9/679033424_1340416481327917_3114449704387631566_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=9f807c&_nc_ohc=QTFzuqvVyEwQ7kNvwEQ3HkO&_nc_oc=Adq0Aps1oCzdcFqAZAUORHxlDuik930FWgR7q_bG6Rrw_VSh-1RqFtChA7cCqPbZbATlZ4M_Wu3uMuKpC9WlPuHY&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.xx&oh=03_Q7cD5QFiQMxoovDD8V-pDwIuGMWsjPDrhbJXde89ezXPA-rM5w&oe=6A39344C',
   logoText: 'KOGLA TECH',
-  contactEmail: 'solutions@kogla-tech.com',
+  contactEmail: 'solutions@koglatech.com',
   contactPhone: '+234 912 071 3573',
   whatsappPhone: '+234 912 071 3573',
   communityLink: 'https://chat.whatsapp.com/KoglaTechCommunity',
@@ -59,7 +59,11 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
     try {
       const saved = localStorage.getItem('kogla_site_config');
       if (saved) {
-        return { ...DEFAULT_SITE_CONFIG, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        if (parsed.contactEmail === 'solutions@kogla-tech.com') {
+          parsed.contactEmail = 'solutions@koglatech.com';
+        }
+        return { ...DEFAULT_SITE_CONFIG, ...parsed };
       }
     } catch (_) {}
     return DEFAULT_SITE_CONFIG;
@@ -84,6 +88,9 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
       if (docSnap.exists()) {
         const data = docSnap.data() as SiteConfig;
         const merged = { ...DEFAULT_SITE_CONFIG, ...data };
+        if (merged.contactEmail === 'solutions@kogla-tech.com') {
+          merged.contactEmail = 'solutions@koglatech.com';
+        }
         setConfig(merged);
         localStorage.setItem('kogla_site_config', JSON.stringify(merged));
       } else {

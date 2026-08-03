@@ -25,7 +25,7 @@ export default function Login() {
       const gUser = await signInWithGoogle();
       setSuccessMsg('Google Authentication successful!');
       
-      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com'];
+      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = gUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(gUser.email.toLowerCase());
 
       setTimeout(() => {
@@ -71,7 +71,7 @@ export default function Login() {
       const profileSnap = await getDoc(userRef);
 
       // Bootstrapped Admin: If the email matches the user email or admin@kogla-tech.com, bootstrap role to admin
-      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com'];
+      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase());
       const role = isSystemAdmin ? 'admin' : 'user';
 

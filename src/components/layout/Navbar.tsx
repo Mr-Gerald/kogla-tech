@@ -222,7 +222,7 @@ export default function Navbar() {
             {/* Instant Contact Options in Mobile Menu Dropdown */}
             <div className="pt-3 border-t border-gray-900 grid grid-cols-3 gap-1.5">
               <a 
-                href={`mailto:${config.contactEmail || 'solutions@kogla-tech.com'}?subject=Inquiry%20-%20Kogla%20Tech`}
+                href={`mailto:${config.contactEmail || 'solutions@koglatech.com'}?subject=Inquiry%20-%20Kogla%20Tech`}
                 onClick={() => setIsOpen(false)}
                 className="py-2 px-1.5 bg-gray-900 border border-gray-800 hover:border-gold-500 text-white font-bold text-[9px] uppercase tracking-wider font-display rounded-sm flex items-center justify-center gap-1"
               >

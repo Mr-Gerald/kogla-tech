@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               uid: currentUser.uid,
               name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Sovereign Developer',
               email: currentUser.email || '',
-              role: (currentUser.email && currentUser.email.toLowerCase() === 'emechebegerald@gmail.com') ? 'admin' : 'user',
+              role: (currentUser.email && ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'].includes(currentUser.email.toLowerCase())) ? 'admin' : 'user',
               xp: 0,
               completedRooms: [],
               avatarUrl: currentUser.photoURL || '',
@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userRef = doc(db, 'users', currentUser.uid);
     const profileSnap = await getDoc(userRef);
 
-    const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com'];
+    const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
     const isSystemAdmin = currentUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(currentUser.email.toLowerCase());
     const role = isSystemAdmin ? 'admin' : 'user';
 

@@ -680,7 +680,7 @@ export default function Home() {
 
             {/* Email Card */}
             <a 
-              href={`mailto:${config.contactEmail || 'solutions@kogla-tech.com'}?subject=Kogla%20Tech%20Enterprise%20Inquiry`}
+              href={`mailto:${config.contactEmail || 'solutions@koglatech.com'}?subject=Kogla%20Tech%20Enterprise%20Inquiry`}
               className="p-6 bg-black border border-amber-500/30 hover:border-amber-500 hover:bg-amber-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
             >
               <div className="space-y-3">
@@ -693,7 +693,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-amber-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 truncate">
-                {config.contactEmail || 'solutions@kogla-tech.com'} <ArrowRight size={12} className="shrink-0" />
+                {config.contactEmail || 'solutions@koglatech.com'} <ArrowRight size={12} className="shrink-0" />
               </div>
             </a>
 
