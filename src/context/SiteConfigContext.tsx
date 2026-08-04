@@ -94,14 +94,12 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
         setConfig(merged);
         localStorage.setItem('kogla_site_config', JSON.stringify(merged));
       } else {
-        // Document does not exist yet. Seed it with default values!
-        setDoc(configRef, DEFAULT_SITE_CONFIG).catch((err) => {
-          console.warn('[SiteConfig] Auto-seeding config document failed:', err);
-        });
+        // Document does not exist yet. Use default config.
+        setConfig(DEFAULT_SITE_CONFIG);
       }
       setLoading(false);
     }, (error) => {
-      console.error('[SiteConfig] Firestore sync failed, using localStorage fallback:', error);
+      console.warn('[SiteConfig] Firestore sync notice, using local config fallback:', error?.message);
       setLoading(false);
     });
 
@@ -114,13 +112,11 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
         setImages(merged);
         localStorage.setItem('kogla_images', JSON.stringify(merged));
       } else {
-        // Document does not exist yet. Seed it with default values!
-        setDoc(imagesRef, DEFAULT_IMAGES).catch((err) => {
-          console.warn('[SiteConfig] Auto-seeding images document failed:', err);
-        });
+        // Document does not exist yet. Use default images.
+        setImages(DEFAULT_IMAGES);
       }
     }, (error) => {
-      console.error('[SiteConfig] Firestore images sync failed:', error);
+      console.warn('[SiteConfig] Firestore images sync notice:', error?.message);
     });
 
     return () => {

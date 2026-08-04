@@ -66,33 +66,35 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Ensure Profile document exists in Firestore and check Admin status
+      // 2. Ensure Profile document exists in Firestore and check Admin status with resilient fallback
       const userRef = doc(db, 'users', user.uid);
-      const profileSnap = await getDoc(userRef);
-
-      // Bootstrapped Admin: If the email matches the user email or admin@kogla-tech.com, bootstrap role to admin
       const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase());
       const role = isSystemAdmin ? 'admin' : 'user';
 
-      if (!profileSnap.exists()) {
-        const initialProfile = {
-          uid: user.uid,
-          name: user.displayName || email.split('@')[0] || 'User',
-          email: email,
-          role: role,
-          xp: 0,
-          completedRooms: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        await setDoc(userRef, initialProfile);
-      } else {
-        // If profile exists and they are marked as system admin email but don't have role=admin, upgrade them securely
-        const data = profileSnap.data();
-        if (isSystemAdmin && data.role !== 'admin') {
-          await updateDoc(userRef, { role: 'admin', updatedAt: new Date().toISOString() });
+      try {
+        const profileSnap = await getDoc(userRef);
+        if (!profileSnap.exists()) {
+          const initialProfile = {
+            uid: user.uid,
+            name: user.displayName || email.split('@')[0] || 'User',
+            email: email,
+            role: role,
+            xp: 0,
+            completedRooms: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          await setDoc(userRef, initialProfile);
+        } else {
+          // If profile exists and they are marked as system admin email but don't have role=admin, upgrade them securely
+          const data = profileSnap.data();
+          if (isSystemAdmin && data.role !== 'admin') {
+            await updateDoc(userRef, { role: 'admin', updatedAt: new Date().toISOString() });
+          }
         }
+      } catch (docErr) {
+        console.warn('[Login] Database check note (running in resilient session):', docErr);
       }
 
       setSuccessMsg('Login successful. Redirecting...');

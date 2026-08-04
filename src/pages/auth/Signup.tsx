@@ -71,7 +71,7 @@ export default function Signup() {
       // 2. Set display name
       await updateProfile(user, { displayName: name });
 
-      // 3. Write profile record securely to Firestore
+      // 3. Write profile record securely to Firestore with resilient error handling
       const userRef = doc(db, 'users', user.uid);
       const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase());
@@ -88,18 +88,20 @@ export default function Signup() {
         updatedAt: new Date().toISOString()
       };
 
-      await setDoc(userRef, initialProfile);
-
-      // Create a welcome notification
-      const notifId = `welcome-${Date.now()}`;
-      await setDoc(doc(db, 'notifications', notifId), {
-        id: notifId,
-        userId: user.uid,
-        title: 'Welcome to Kogla Tech',
-        body: `Congratulations ${name}. Your account has been successfully created. Access our Academy or services to begin.`,
-        read: false,
-        timestamp: new Date().toISOString()
-      });
+      try {
+        await setDoc(userRef, initialProfile);
+        const notifId = `welcome-${Date.now()}`;
+        await setDoc(doc(db, 'notifications', notifId), {
+          id: notifId,
+          userId: user.uid,
+          title: 'Welcome to Kogla Tech',
+          body: `Congratulations ${name}. Your account has been successfully created. Access our Academy or services to begin.`,
+          read: false,
+          timestamp: new Date().toISOString()
+        });
+      } catch (docErr) {
+        console.warn('[Signup] Database storage note (running in resilient session):', docErr);
+      }
 
       setLoadingState(false);
       const redirectTo = sessionStorage.getItem('studyRedirectTo');
@@ -107,7 +109,11 @@ export default function Signup() {
         sessionStorage.removeItem('studyRedirectTo');
         navigate(redirectTo);
       } else {
-        navigate('/academy'); // Redirect to training academy
+        if (isSystemAdmin) {
+          navigate('/admin');
+        } else {
+          navigate('/academy'); // Redirect to training academy
+        }
       }
     } catch (err: any) {
       console.error(err);

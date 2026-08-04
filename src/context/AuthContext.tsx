@@ -77,16 +77,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString()
             };
+            setProfile(newProfile);
+            setLoading(false);
+            
+            // Try saving to database silently
             try {
               await setDoc(userRef, newProfile);
-              setProfile(newProfile);
             } catch (err) {
-              handleFirestoreError(err, OperationType.WRITE, `users/${currentUser.uid}`);
+              console.warn('[AuthContext] Silent profile persistence note:', err);
             }
-            setLoading(false);
           }
         }, (error) => {
-          handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
+          console.warn('[AuthContext] Firestore profile listener warning:', error?.message);
+          // Fallback profile if Firestore is rate limited or unavailable
+          const fallbackProfile: UserProfile = {
+            uid: currentUser.uid,
+            name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Sovereign Developer',
+            email: currentUser.email || '',
+            role: (currentUser.email && ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'].includes(currentUser.email.toLowerCase())) ? 'admin' : 'user',
+            xp: 0,
+            completedRooms: [],
+            avatarUrl: currentUser.photoURL || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          setProfile(fallbackProfile);
           setLoading(false);
         });
 
@@ -106,7 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           loadedNotifs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           setNotifications(loadedNotifs);
         }, (error) => {
-          handleFirestoreError(error, OperationType.GET, 'notifications');
+          console.warn('[AuthContext] Notifications listener warning:', error?.message);
+          setNotifications([]);
         });
 
       } else {

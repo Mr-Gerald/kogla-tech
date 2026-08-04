@@ -63,6 +63,12 @@ export function formatUserError(err: unknown): string {
   if (code === 'auth/network-request-failed' || rawMessage.includes('network-request-failed')) {
     return 'Network connection error. Please verify your internet connection and retry.';
   }
+  if (code === 'resource-exhausted' || rawMessage.includes('resource-exhausted') || rawMessage.includes('Quota limit exceeded')) {
+    return 'Database daily free tier quota limit reached. System is operating in resilient local session mode.';
+  }
+  if (code === 'permission-denied' || rawMessage.includes('Missing or insufficient permissions')) {
+    return 'Access permission note. Please log in with an authorized account.';
+  }
 
   // General Sanitize regex for any leftover technical terms
   let sanitized = rawMessage
