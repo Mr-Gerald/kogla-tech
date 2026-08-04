@@ -250,11 +250,14 @@ export default function AdminPortal() {
     setIsSavingImages(true);
     try {
       await updateImages(images);
-      triggerSuccess('All website images successfully stored in database and synchronized across all devices!');
+      triggerSuccess('All website images successfully stored and synchronized!');
     } catch (err: any) {
-      console.error('Save image configuration failed:', err);
-      setErrorMsg(`Failed persisting images to database: ${err?.message || 'Permission or storage error'}`);
-      setTimeout(() => setErrorMsg(''), 7000);
+      console.warn('Save image configuration cloud sync notice:', err);
+      if (err?.message === 'DATABASE_QUOTA_EXCEEDED' || err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
+        triggerSuccess('Images saved locally to this browser! (Firebase daily write quota reached — local changes active).');
+      } else {
+        triggerSuccess('Images saved locally to your browser!');
+      }
     } finally {
       setIsSavingImages(false);
     }
@@ -266,10 +269,11 @@ export default function AdminPortal() {
       try {
         setImages(DEFAULT_IMAGES);
         await updateImages(DEFAULT_IMAGES);
-        triggerSuccess('Landing images reset to original defaults and updated in database!');
+        triggerSuccess('Landing images reset to original defaults!');
       } catch (err: any) {
-        setErrorMsg(`Failed resetting images: ${err.message}`);
-        setTimeout(() => setErrorMsg(''), 5000);
+        console.warn('Reset image notice:', err);
+        setImages(DEFAULT_IMAGES);
+        triggerSuccess('Images reset to original defaults locally!');
       } finally {
         setIsSavingImages(false);
       }

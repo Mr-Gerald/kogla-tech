@@ -150,13 +150,25 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
   const updateConfig = async (newConfig: Partial<SiteConfig>) => {
     const updated = { ...config, ...newConfig };
     
-    // Save to Firestore
-    const configRef = doc(db, 'config', 'site');
-    await setDoc(configRef, updated);
-    
-    // Update local state instantly too
+    // Update local state instantly and save to localStorage
     setConfig(updated);
-    localStorage.setItem('kogla_site_config', JSON.stringify(updated));
+    try {
+      localStorage.setItem('kogla_site_config', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('[SiteConfig] localStorage config save warning:', e);
+    }
+
+    // Save to Firestore with quota error protection
+    try {
+      const configRef = doc(db, 'config', 'site');
+      await setDoc(configRef, updated);
+    } catch (err: any) {
+      console.warn('[SiteConfig] Firestore site config setDoc notice:', err?.message);
+      if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
+        throw new Error('DATABASE_QUOTA_EXCEEDED');
+      }
+      throw err;
+    }
   };
 
   const updateImages = async (newImages: Partial<ImageConfig>) => {
@@ -171,16 +183,24 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
       labs: updated.labs || DEFAULT_IMAGES.labs,
     };
     
-    // Save to Firestore
-    const imagesRef = doc(db, 'config', 'images');
-    await setDoc(imagesRef, cleanImages);
-    
-    // Update local state and localStorage
+    // Update local state and localStorage immediately FIRST
     setImages(cleanImages);
     try {
       localStorage.setItem('kogla_images', JSON.stringify(cleanImages));
     } catch (e) {
       console.warn('[SiteConfig] localStorage save warning:', e);
+    }
+
+    // Attempt cloud save to Firestore
+    try {
+      const imagesRef = doc(db, 'config', 'images');
+      await setDoc(imagesRef, cleanImages);
+    } catch (err: any) {
+      console.warn('[SiteConfig] Firestore images setDoc notice (local storage active):', err?.message);
+      if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
+        throw new Error('DATABASE_QUOTA_EXCEEDED');
+      }
+      throw err;
     }
   };
 

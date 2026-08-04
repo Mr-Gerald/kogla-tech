@@ -61,7 +61,12 @@ export default function Home() {
         
         {/* Dynamic Live Banner Background with Deep Contrast */}
         <div className="absolute inset-0 z-0">
-          <img src={images.hero} alt="Programming workspace" className="w-full h-full object-cover scale-105 animate-pulse duration-[15000ms]" />
+          <img 
+            src={images.hero} 
+            alt="Programming workspace" 
+            onError={(e) => { e.currentTarget.src = DEFAULT_IMAGES.hero; }}
+            className="w-full h-full object-cover scale-105 animate-pulse duration-[15000ms]" 
+          />
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-black/75"></div>
         </div>
 
@@ -143,6 +148,7 @@ export default function Home() {
               <img 
                 src={images.hero} 
                 alt="Kogla Tech Professional Workspace" 
+                onError={(e) => { e.currentTarget.src = DEFAULT_IMAGES.hero; }}
                 className="w-full h-[360px] md:h-[420px] object-cover group-hover:scale-105 transition-transform duration-700 filter contrast-110"
               />
               <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent z-20 flex items-center justify-between">
@@ -317,6 +323,7 @@ export default function Home() {
             <img 
               src={images.academy} 
               alt="Kogla Academy Learning Environment" 
+              onError={(e) => { e.currentTarget.src = DEFAULT_IMAGES.academy; }}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
             />
             <div className="absolute bottom-4 left-4 z-20">
@@ -401,6 +408,7 @@ export default function Home() {
             <img 
               src={images.services} 
               alt="Kogla Services Platform Display" 
+              onError={(e) => { e.currentTarget.src = DEFAULT_IMAGES.services; }}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
             />
             <div className="absolute bottom-4 left-4 z-20">
@@ -427,6 +435,7 @@ export default function Home() {
             <img 
               src={images.projects} 
               alt="Projects Portfolio Showcase" 
+              onError={(e) => { e.currentTarget.src = DEFAULT_IMAGES.projects; }}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
             />
             <div className="absolute bottom-4 left-4 z-20">
@@ -528,6 +537,7 @@ export default function Home() {
             <img 
               src={images.labs} 
               alt="AI Research labs Hardware" 
+              onError={(e) => { e.currentTarget.src = DEFAULT_IMAGES.labs; }}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
             />
             <div className="absolute bottom-4 left-4 z-20">
