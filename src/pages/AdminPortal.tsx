@@ -59,7 +59,17 @@ import {
   Tag,
   ExternalLink
 } from 'lucide-react';
-import { getAllAffiliates, getAllReferrals, approveReferralPayment, markReferralPaidOut, saveAffiliatePartner } from '../lib/affiliates';
+import { 
+  getAllAffiliates, 
+  getAllReferrals, 
+  approveReferralPayment, 
+  markReferralPaidOut, 
+  saveAffiliatePartner,
+  deleteReferralLead,
+  deleteAffiliatePartner,
+  purgeAllTestReferralsAndAffiliates
+} from '../lib/affiliates';
+import { generateAmbassadorAgreementPdf } from '../lib/agreementPdfGenerator';
 import { getAllCertificates, issueCertificate, FOUNDER_NAME, FOUNDER_TITLE, getFounderSignature, saveFounderSignature } from '../lib/certificates';
 import { ACADEMY_COURSES, formatNaira, getCustomPricingMap, saveCustomPricingMap, getAllCourses } from '../data/coursesPricing';
 import { OfficialCertificate } from '../components/OfficialCertificate';
@@ -169,6 +179,16 @@ export default function AdminPortal() {
   const [newAffName, setNewAffName] = useState('');
   const [newAffEmail, setNewAffEmail] = useState('');
   const [newAffPhone, setNewAffPhone] = useState('');
+
+  // Agreement PDF Generator State (for generating contracts for incoming ambassadors)
+  const [agreeAmbName, setAgreeAmbName] = useState('');
+  const [agreePromoCode, setAgreePromoCode] = useState('');
+  const [agreeEmail, setAgreeEmail] = useState('');
+  const [agreeHandle, setAgreeHandle] = useState('');
+  const [agreeTier1Rate, setAgreeTier1Rate] = useState(6);
+  const [agreeTier2Rate, setAgreeTier2Rate] = useState(10);
+  const [agreeDiscountRate, setAgreeDiscountRate] = useState(5);
+  const [isGeneratingAgreement, setIsGeneratingAgreement] = useState(false);
 
   // Certificates State
   const [certificates, setCertificates] = useState<CertificateRecord[]>([]);
@@ -388,6 +408,71 @@ export default function AdminPortal() {
       setErrorMsg(`Failed marking payout: ${err.message}`);
     }
   };
+
+  const handleDeleteSingleReferral = async (referralId: string, studentName: string) => {
+    if (!window.confirm(`Delete referral record for "${studentName}"? This cannot be undone.`)) return;
+    try {
+      await deleteReferralLead(referralId);
+      triggerSuccess('Referral record deleted successfully.');
+      await loadAffiliatesData();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed deleting referral: ${err.message}`);
+    }
+  };
+
+  const handleDeleteSingleAffiliate = async (code: string, name: string) => {
+    if (!window.confirm(`Delete ambassador "${name}" (${code})? Their promo code will no longer be recognized.`)) return;
+    try {
+      await deleteAffiliatePartner(code);
+      triggerSuccess(`Ambassador "${code}" removed from roster.`);
+      await loadAffiliatesData();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed deleting ambassador: ${err.message}`);
+    }
+  };
+
+  const handlePurgeAllTestData = async () => {
+    if (!window.confirm('Wipe and clear all test referral inquiries and test ambassador entries from database and storage?')) return;
+    try {
+      await purgeAllTestReferralsAndAffiliates();
+      triggerSuccess('All test referrals & mock ambassador accounts purged successfully!');
+      await loadAffiliatesData();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed purging test data: ${err.message}`);
+    }
+  };
+
+  const handleGenerateAgreementCustom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agreeAmbName.trim() || !agreePromoCode.trim()) {
+      setErrorMsg('Please enter both the Ambassador Full Name and Assigned Promo Code.');
+      return;
+    }
+
+    setIsGeneratingAgreement(true);
+    try {
+      await generateAmbassadorAgreementPdf({
+        ambassadorName: agreeAmbName.trim(),
+        promoCode: agreePromoCode.trim().toUpperCase(),
+        email: agreeEmail.trim(),
+        instagramHandle: agreeHandle.trim(),
+        tier1Rate: Number(agreeTier1Rate) || 6,
+        tier2Rate: Number(agreeTier2Rate) || 10,
+        discountRate: Number(agreeDiscountRate) || 5,
+        logoUrl: config.logoUrl
+      });
+      triggerSuccess(`Official Legal Agreement PDF generated for ${agreeAmbName}!`);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed generating agreement PDF: ${err.message}`);
+    } finally {
+      setIsGeneratingAgreement(false);
+    }
+  };
+
 
   const handleCreateNewAffiliate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1139,7 +1224,7 @@ export default function AdminPortal() {
         <div className="space-y-8">
           
           {/* Header Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-zinc-950 border border-zinc-850 rounded-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 bg-zinc-950 border border-zinc-850 rounded-lg">
             <div>
               <span className="text-[10px] font-mono uppercase text-gold-400 font-bold block mb-1">
                 AMBASSADOR & CREATOR PARTNERSHIPS
@@ -1148,16 +1233,23 @@ export default function AdminPortal() {
                 Referrals & Payouts Engine
               </h2>
               <p className="text-xs text-zinc-400 font-sans mt-0.5">
-                Manage partner promo codes (Phena Nwachukwu, Shirley @ 6% &rarr; 10%), verify student payments, and authorize bank settlements.
+                Generate official legal contracts with Kogla logo, track student referrals, approve verified payments, and authorize commissions.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
               <button
                 onClick={() => setShowNewAffiliateModal(true)}
                 className="px-4 py-2.5 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs uppercase tracking-wider font-display rounded-sm flex items-center gap-1.5 transition-all shadow"
               >
                 <Plus size={14} /> Add Ambassador
+              </button>
+              <button
+                onClick={handlePurgeAllTestData}
+                className="px-3.5 py-2.5 bg-red-950/40 hover:bg-red-950 text-red-300 border border-red-800/50 text-xs font-mono uppercase rounded-sm flex items-center gap-1.5 transition-all"
+                title="Purge test referrals & mock ambassador accounts"
+              >
+                <Trash2 size={13} /> Purge Test Data
               </button>
               <Link
                 to="/affiliate-portal"
@@ -1197,6 +1289,109 @@ export default function AdminPortal() {
                 )}
               </span>
             </div>
+          </div>
+
+          {/* INCOMING AMBASSADOR LEGAL AGREEMENT GENERATOR (PDF WITH LOGO) */}
+          <div className="p-6 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-gold-500/40 rounded-lg shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-3 gap-2">
+              <div>
+                <span className="text-[10px] font-mono uppercase text-gold-400 font-bold block">
+                  OFFICIAL CONTRACT ISSUANCE INSTRUMENT
+                </span>
+                <h3 className="text-base font-display font-bold text-white uppercase flex items-center gap-2">
+                  <FileText className="text-gold-400" size={17} /> Generate Incoming Ambassador Legal Agreement (PDF)
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-zinc-400 bg-black/60 px-2.5 py-1 rounded border border-zinc-800">
+                Contains Official Kogla Crest & Executive Seal
+              </span>
+            </div>
+
+            <p className="text-xs text-zinc-400 font-sans">
+              Fill in the incoming creator's full details below to automatically generate an official, signed PDF legal memorandum ready to download and send to them.
+            </p>
+
+            <form onSubmit={handleGenerateAgreementCustom} className="space-y-4 font-mono text-xs">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">Ambassador Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={agreeAmbName}
+                    onChange={(e) => setAgreeAmbName(e.target.value)}
+                    placeholder="e.g. Joy Okafor"
+                    className="w-full p-2.5 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">Assigned Promo Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={agreePromoCode}
+                    onChange={(e) => setAgreePromoCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. JOYTECH"
+                    className="w-full p-2.5 bg-black border border-zinc-800 rounded text-gold-400 font-bold uppercase focus:border-gold-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={agreeEmail}
+                    onChange={(e) => setAgreeEmail(e.target.value)}
+                    placeholder="ambassador@gmail.com"
+                    className="w-full p-2.5 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">Instagram / Social Handle</label>
+                  <input
+                    type="text"
+                    value={agreeHandle}
+                    onChange={(e) => setAgreeHandle(e.target.value)}
+                    placeholder="@joy_codes"
+                    className="w-full p-2.5 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 pt-1">
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">Tier 1 Rate (1st 3 Students)</label>
+                  <div className="p-2.5 bg-black border border-zinc-800 rounded text-white text-center font-bold">
+                    6% Commission
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">Tier 2 Escalator (4th+ Student)</label>
+                  <div className="p-2.5 bg-black border border-zinc-800 rounded text-gold-400 text-center font-bold">
+                    10% Lifetime Rate
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">Student Discount</label>
+                  <div className="p-2.5 bg-black border border-zinc-800 rounded text-emerald-400 text-center font-bold">
+                    5% Off Tuition
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                <span className="text-[11px] text-zinc-400 font-sans">
+                  The agreement incorporates strict legal indemnification, payment settlement clauses, and independent contractor terms.
+                </span>
+                <button
+                  type="submit"
+                  disabled={isGeneratingAgreement}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs uppercase tracking-wider font-display rounded flex items-center justify-center gap-2 transition-all shadow-lg shrink-0 cursor-pointer"
+                >
+                  <FileText size={15} />
+                  {isGeneratingAgreement ? 'Generating PDF...' : 'Download Official Agreement (PDF)'}
+                </button>
+              </div>
+            </form>
           </div>
 
           {/* APPROVAL PROMPT / MODAL (WHEN ADMIN CLICKS APPROVE) */}
@@ -1268,7 +1463,7 @@ export default function AdminPortal() {
 
             {referrals.length === 0 ? (
               <div className="p-10 text-center text-zinc-500 font-mono text-xs">
-                No student referrals logged yet. Share promo code "PHENA" or link with students to test.
+                No student referrals logged yet. Share an active promo code or tracking link with prospective students.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1337,7 +1532,7 @@ export default function AdminPortal() {
                                   setActiveApprovalLead(r);
                                   setApprovalNote('');
                                 }}
-                                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all shadow"
+                                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all shadow cursor-pointer"
                               >
                                 Approve Payment
                               </button>
@@ -1345,7 +1540,7 @@ export default function AdminPortal() {
                             {r.status === 'confirmed' && (
                               <button
                                 onClick={() => handleMarkPaidOutAction(r.id)}
-                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all"
+                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all cursor-pointer"
                               >
                                 Mark Paid Out
                               </button>
@@ -1355,6 +1550,13 @@ export default function AdminPortal() {
                                 Completed
                               </span>
                             )}
+                            <button
+                              onClick={() => handleDeleteSingleReferral(r.id, r.studentName)}
+                              className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-950/40 rounded transition-colors cursor-pointer"
+                              title="Delete referral lead"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1364,135 +1566,6 @@ export default function AdminPortal() {
               </div>
             )}
           </div>
-
-          {/* REGISTERED AFFILIATE PARTNERS ROSTER */}
-          <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-850 pb-3 font-mono">
-              <span className="text-xs font-display font-semibold text-white uppercase tracking-wider">
-                Ambassador Partners Roster & Settlement Accounts
-              </span>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              {affiliates.map((p) => {
-                const isTier2 = (p.confirmedCount || 0) >= 3 || p.tier === 2;
-                return (
-                  <div key={p.code} className="p-5 bg-black/60 border border-zinc-800 rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 bg-gold-500/15 border border-gold-500 text-gold-400 font-mono font-bold text-xs uppercase rounded">
-                          {p.code}
-                        </span>
-                        <h4 className="text-sm font-display font-bold text-white">{p.name}</h4>
-                      </div>
-                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase ${
-                        isTier2 ? 'bg-gold-500 text-black' : 'bg-zinc-800 text-zinc-300'
-                      }`}>
-                        {isTier2 ? 'Tier 2 (10%)' : 'Tier 1 (6%)'}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-zinc-400">
-                      <div>
-                        <span className="text-zinc-500 block text-[9px] uppercase">Confirmed Referrals</span>
-                        <b className="text-white">{p.confirmedCount || 0} Students</b>
-                      </div>
-                      <div>
-                        <span className="text-zinc-500 block text-[9px] uppercase">Email Contact</span>
-                        <span className="text-zinc-300 truncate block">{p.email || 'N/A'}</span>
-                      </div>
-                    </div>
-
-                    {/* Bank Settlement Info */}
-                    <div className="p-3 bg-zinc-900/60 border border-zinc-850 rounded text-[11px] font-mono space-y-1">
-                      <span className="text-[9px] text-gold-400 uppercase font-bold block">Settlement Bank:</span>
-                      {p.bankDetails ? (
-                        <p className="text-zinc-300">
-                          {p.bankDetails.bankName} • <b>{p.bankDetails.accountNumber}</b> ({p.bankDetails.accountName})
-                        </p>
-                      ) : (
-                        <p className="text-zinc-500 italic">No bank account submitted yet.</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* NEW AFFILIATE CREATION MODAL */}
-          {showNewAffiliateModal && (
-            <div className="p-6 bg-zinc-950 border-2 border-gold-500 rounded-lg shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 className="text-base font-display font-bold text-white uppercase">
-                  Register New Ambassador Partner
-                </h3>
-                <button
-                  onClick={() => setShowNewAffiliateModal(false)}
-                  className="text-xs text-zinc-400 hover:text-white font-mono uppercase"
-                >
-                  Close
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateNewAffiliate} className="space-y-4 font-mono text-xs">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] uppercase text-zinc-400 mb-1">Promo Code *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newAffCode}
-                      onChange={(e) => setNewAffCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. SHIRLEY or TECHGIRL"
-                      className="w-full p-2 bg-black border border-zinc-800 rounded text-gold-400 font-bold uppercase focus:border-gold-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase text-zinc-400 mb-1">Creator / Brand Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newAffName}
-                      onChange={(e) => setNewAffName(e.target.value)}
-                      placeholder="e.g. Shirley Okon"
-                      className="w-full p-2 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] uppercase text-zinc-400 mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      value={newAffEmail}
-                      onChange={(e) => setNewAffEmail(e.target.value)}
-                      placeholder="creator@gmail.com"
-                      className="w-full p-2 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase text-zinc-400 mb-1">Phone / WhatsApp</label>
-                    <input
-                      type="tel"
-                      value={newAffPhone}
-                      onChange={(e) => setNewAffPhone(e.target.value)}
-                      placeholder="+234..."
-                      className="w-full p-2 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display rounded shadow"
-                >
-                  Create Ambassador Account
-                </button>
-              </form>
-            </div>
-          )}
 
         </div>
       )}

@@ -26,9 +26,12 @@ import { AffiliatePartner, ReferralLead } from '../types';
 import { getAffiliateByCode, getReferralsByCode, saveAffiliatePartner } from '../lib/affiliates';
 import { formatNaira } from '../data/coursesPricing';
 import { useAuth } from '../context/AuthContext';
+import { useSiteConfig } from '../context/SiteConfigContext';
+import { generateAmbassadorAgreementPdf } from '../lib/agreementPdfGenerator';
 
 export default function AffiliatePortal() {
   const { user } = useAuth();
+  const { config } = useSiteConfig();
   const [partnerCode, setPartnerCode] = useState('AMBASSADOR');
   const [partner, setPartner] = useState<AffiliatePartner | null>(null);
   const [referrals, setReferrals] = useState<ReferralLead[]>([]);
@@ -71,128 +74,22 @@ export default function AffiliatePortal() {
 
   const referralUrl = `${window.location.origin}/?ref=${partnerCode}`;
 
-  const handleDownloadAgreement = () => {
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-
-    // Header banner
-    doc.setFillColor(15, 15, 18);
-    doc.rect(0, 0, 210, 32, 'F');
-
-    doc.setTextColor(212, 175, 55);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('KOGLA TECH GLOBAL', 14, 14);
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(180, 180, 180);
-    doc.text('CREATOR & BRAND AMBASSADOR LEGAL AGREEMENT', 14, 22);
-
-    doc.setTextColor(212, 175, 55);
-    doc.text(`CODE: ${partnerCode}`, 196, 14, { align: 'right' });
-    doc.setTextColor(180, 180, 180);
-    doc.text(`DATE: ${new Date().toLocaleDateString()}`, 196, 22, { align: 'right' });
-
-    let y = 44;
-    doc.setTextColor(20, 20, 20);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PARTIES & PURPOSE', 14, y);
-
-    y += 6;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    const p1 = `This Brand Ambassador Partnership Legal Agreement is entered into between Kogla Tech Global (the "Academy") and ${partner?.name || 'Ambassador Partner'} (the "Ambassador").`;
-    const splitP1 = doc.splitTextToSize(p1, 182);
-    doc.text(splitP1, 14, y);
-    y += splitP1.length * 4.5 + 4;
-
-    // Clause 1
-    doc.setFont('helvetica', 'bold');
-    doc.text('1. COMMISSION STRUCTURE & ESCALATOR CLAUSE', 14, y);
-    y += 5;
-    doc.setFont('helvetica', 'normal');
-    const c1 = [
-      '• Tier 1 (Base Rate): Ambassador earns 6% commission on the net tuition of the first 3 verified students.',
-      '• Tier 2 (Elevated Lifetime Rate): Beginning with the 4th student and indefinitely thereafter, commission elevates to 10%.',
-      `• Student Discount: Every student registering with promo code ${partnerCode} receives a 5% direct discount on tuition.`
-    ];
-    c1.forEach(line => {
-      const split = doc.splitTextToSize(line, 182);
-      doc.text(split, 14, y);
-      y += split.length * 4 + 1.5;
-    });
-    y += 3;
-
-    // Clause 2
-    doc.setFont('helvetica', 'bold');
-    doc.text('2. PAYMENT VERIFICATION & PAYOUT TIMELINE', 14, y);
-    y += 5;
-    doc.setFont('helvetica', 'normal');
-    const c2 = [
-      '• Commission status begins as "Pending Payment" upon student registration.',
-      '• Upon tuition confirmation by the Academy, commission moves to "Confirmed & Earned".',
-      '• All earned commissions are disbursed directly to Ambassador\'s registered bank account within 3 to 5 business days.'
-    ];
-    c2.forEach(line => {
-      const split = doc.splitTextToSize(line, 182);
-      doc.text(split, 14, y);
-      y += split.length * 4 + 1.5;
-    });
-    y += 3;
-
-    // Clause 3
-    doc.setFont('helvetica', 'bold');
-    doc.text('3. AMBASSADOR ONBOARDING & ACTIVATION', 14, y);
-    y += 5;
-    doc.setFont('helvetica', 'normal');
-    const p3 = `Ambassadors must maintain a verified account on Kogla Tech, share their assigned promo code (${partnerCode}) and attribution tracking link, and provide valid bank account details for automated settlement.`;
-    const splitP3 = doc.splitTextToSize(p3, 182);
-    doc.text(splitP3, 14, y);
-    y += splitP3.length * 4.5 + 4;
-
-    // Clause 4
-    doc.setFont('helvetica', 'bold');
-    doc.text('4. LIABILITY, INDEMNIFICATION & LEGAL PROTECTION', 14, y);
-    y += 5;
-    doc.setFont('helvetica', 'normal');
-    const c4 = [
-      '• Independent Contractor: The Ambassador operates strictly as an independent contractor and not an employee or agent.',
-      '• Indemnification: Ambassador agrees to indemnify, defend, and hold harmless Kogla Tech Global, its founder, officers, and employees from any claims arising out of promotional practices or misrepresentations.',
-      '• Limitation of Liability: Kogla Tech Global\'s aggregate liability shall never exceed total commissions paid in the preceding 6 months.',
-      '• Intellectual Property: All curriculum materials, trademarks, and branding remain the exclusive property of Kogla Tech Global.'
-    ];
-    c4.forEach(line => {
-      const split = doc.splitTextToSize(line, 182);
-      doc.text(split, 14, y);
-      y += split.length * 4 + 1.5;
-    });
-    y += 6;
-
-    // Signatures
-    doc.setDrawColor(212, 175, 55);
-    doc.line(14, y, 196, y);
-    y += 8;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('SIGNED ON BEHALF OF KOGLA TECH GLOBAL:', 14, y);
-    doc.text('AMBASSADOR ACKNOWLEDGEMENT:', 115, y);
-    y += 5;
-
-    doc.setFont('helvetica', 'normal');
-    doc.text('Gerald Emechebe', 14, y);
-    doc.text(partner?.name || 'Ambassador Partner', 115, y);
-    y += 4;
-    doc.setFontSize(7.5);
-    doc.setTextColor(100, 100, 100);
-    doc.text('Founder & CEO, Kogla Tech Global', 14, y);
-    doc.text(`Assigned Code: ${partnerCode}`, 115, y);
-
-    doc.save(`Kogla_Tech_Ambassador_Agreement_${partnerCode}.pdf`);
+  const handleDownloadAgreement = async () => {
+    try {
+      await generateAmbassadorAgreementPdf({
+        ambassadorName: partner?.name || 'Ambassador Partner',
+        promoCode: partnerCode,
+        email: partner?.email || '',
+        tier1Rate: 6,
+        tier2Rate: 10,
+        discountRate: 5,
+        bankName: bankName || partner?.bankDetails?.bankName,
+        accountNumber: accountNumber || partner?.bankDetails?.accountNumber,
+        logoUrl: config.logoUrl
+      });
+    } catch (err) {
+      console.error('Failed generating PDF:', err);
+    }
   };
 
   const copyToClipboard = (text: string, isCode = false) => {

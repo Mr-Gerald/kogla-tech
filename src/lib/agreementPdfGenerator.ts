@@ -1,0 +1,239 @@
+import jsPDF from 'jspdf';
+
+export interface AmbassadorAgreementData {
+  ambassadorName: string;
+  promoCode: string;
+  email?: string;
+  instagramHandle?: string;
+  tier1Rate?: number; // default 6
+  tier2Rate?: number; // default 10
+  discountRate?: number; // default 5
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
+  agreementDate?: string;
+  logoUrl?: string;
+}
+
+/**
+ * Generates and downloads an official Ambassador & Creator Legal Partnership PDF with Kogla Tech Logo
+ */
+export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementData): Promise<void> {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const name = data.ambassadorName?.trim() || 'Ambassador Partner';
+  const code = (data.promoCode?.trim() || 'CREATOR').toUpperCase();
+  const dateStr = data.agreementDate || new Date().toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  const t1 = data.tier1Rate || 6;
+  const t2 = data.tier2Rate || 10;
+  const disc = data.discountRate || 5;
+
+  // 1. TOP HEADER BANNER (Deep Luxury Dark with Gold Accent Lines)
+  doc.setFillColor(10, 10, 12);
+  doc.rect(0, 0, 210, 36, 'F');
+
+  doc.setFillColor(212, 175, 55);
+  doc.rect(0, 35, 210, 1.2, 'F');
+
+  // Draw Vector Kogla Tech Brand Logo / Emblem
+  // Background Box
+  doc.setFillColor(20, 20, 24);
+  doc.setDrawColor(212, 175, 55);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(12, 6, 22, 22, 2, 2, 'FD');
+
+  // Inner Stylized Gold "KT" Crest Monogram
+  doc.setTextColor(212, 175, 55);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('KT', 23, 19, { align: 'center' });
+  doc.setFontSize(4.5);
+  doc.text('GLOBAL', 23, 24, { align: 'center' });
+
+  // Company Name and Legal Document Title
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('KOGLA TECH GLOBAL', 38, 15);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(212, 175, 55);
+  doc.text('CREATOR & BRAND AMBASSADOR LEGAL MEMORANDUM', 38, 21);
+
+  doc.setFontSize(6.5);
+  doc.setTextColor(160, 160, 165);
+  doc.text('ACCREDITED DIGITAL ACADEMY & TECHNOLOGY SOLUTIONS • RC-REGISTERED', 38, 27);
+
+  // Right Header Metadata
+  doc.setTextColor(212, 175, 55);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text(`PROMO CODE: ${code}`, 198, 14, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(180, 180, 185);
+  doc.text(`EFFECTIVE DATE: ${dateStr}`, 198, 20, { align: 'right' });
+  doc.text(`STATUS: ACTIVE BINDING CONTRACT`, 198, 26, { align: 'right' });
+
+  let y = 46;
+
+  // 2. PARTIES SUMMARY BOX
+  doc.setFillColor(248, 249, 250);
+  doc.setDrawColor(220, 220, 225);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(12, y, 186, 22, 1.5, 1.5, 'FD');
+
+  doc.setTextColor(15, 15, 18);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('CONTRACTING PARTIES:', 16, y + 6);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(`Party 1 (The Academy): Kogla Tech Global (Ikeja Hub, Lagos / Online Global Cohorts)`, 16, y + 12);
+  doc.text(`Party 2 (The Ambassador): ${name}${data.instagramHandle ? ` (${data.instagramHandle})` : ''}${data.email ? ` • ${data.email}` : ''}`, 16, y + 17);
+
+  y += 28;
+
+  // 3. SECTION 1: COMMISSION ESCALATOR
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(10, 10, 12);
+  doc.text('1. COMMISSION STRUCTURE & TWO-TIER ESCALATOR CLAUSE', 12, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(50, 50, 55);
+
+  const c1Lines = [
+    `• Tier 1 (Base Commission): Ambassador earns ${t1}% commission on the net tuition fee of the first 3 verified student enrollments.`,
+    `• Tier 2 (Elevated Lifetime Escalator): Beginning from the 4th confirmed student and permanently thereafter, commission unlocks at ${t2}% on all future enrollments.`,
+    `• Student Tuition Benefit: Every student registering via promo code "${code}" or the ambassador's tracking link receives a direct ${disc}% discount off their tuition fee.`,
+    `• Multi-Format Scope: Commissions apply equally to both Physical Hub (Ikeja, Lagos) and Online Cohort registrations.`
+  ];
+
+  c1Lines.forEach(line => {
+    const split = doc.splitTextToSize(line, 186);
+    doc.text(split, 12, y);
+    y += split.length * 3.8 + 1.2;
+  });
+  y += 2.5;
+
+  // 4. SECTION 2: VERIFICATION & SETTLEMENT
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(10, 10, 12);
+  doc.text('2. PAYMENT VERIFICATION & SETTLEMENT TIMELINE', 12, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(50, 50, 55);
+
+  const c2Lines = [
+    `• Initial Attribution: When a student submits registration with code "${code}", the inquiry is recorded in real time as "Pending Payment".`,
+    `• Clearance: Upon tuition payment verification by the Academy accounts office, status automatically transitions to "Confirmed & Earned".`,
+    `• Settlement Window: Earned commissions are disbursed directly to the Ambassador's registered bank account within 3 to 5 business days following payment clearance.`
+  ];
+
+  c2Lines.forEach(line => {
+    const split = doc.splitTextToSize(line, 186);
+    doc.text(split, 12, y);
+    y += split.length * 3.8 + 1.2;
+  });
+  y += 2.5;
+
+  // 5. SECTION 3: AMBASSADOR ONBOARDING & SELF-RECORDING PORTAL
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(10, 10, 12);
+  doc.text('3. AMBASSADOR ACTIVATION & DEDICATED TRACKING PORTAL', 12, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(50, 50, 55);
+
+  const c3Lines = [
+    `• Independent Account: Ambassador creates a user account on koglatech.com to access their private Ambassador Portal at /affiliate-portal.`,
+    `• Real-Time Tracking: The Ambassador Portal displays live student attributions, confirmed enrollments, commission totals, and payout histories.`,
+    `• Settlement Details: Ambassador maintains their preferred bank account details directly within their portal profile for swift automated processing.`
+  ];
+
+  c3Lines.forEach(line => {
+    const split = doc.splitTextToSize(line, 186);
+    doc.text(split, 12, y);
+    y += split.length * 3.8 + 1.2;
+  });
+  y += 2.5;
+
+  // 6. SECTION 4: LEGAL INDEMNIFICATION & IP
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(10, 10, 12);
+  doc.text('4. INDEPENDENT CONTRACTOR, INDEMNIFICATION & LEGAL PROTECTION', 12, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(50, 50, 55);
+
+  const c4Lines = [
+    `• Independent Contractor: The Ambassador operates strictly as an independent marketing partner and is not an employee, agent, or joint venturer.`,
+    `• Indemnification: Ambassador agrees to defend, indemnify, and hold harmless Kogla Tech Global, its founder, officers, and employees against any claims or liabilities arising out of Ambassador's unauthorized claims, misleading advertising, or breach of this agreement.`,
+    `• Intellectual Property: All course curriculum, brand assets, logos, trademarks, and software remain the exclusive property of Kogla Tech Global.`
+  ];
+
+  c4Lines.forEach(line => {
+    const split = doc.splitTextToSize(line, 186);
+    doc.text(split, 12, y);
+    y += split.length * 3.8 + 1.2;
+  });
+  y += 5;
+
+  // 7. SIGNATURE BLOCK
+  doc.setDrawColor(212, 175, 55);
+  doc.setLineWidth(0.8);
+  doc.line(12, y, 198, y);
+  y += 7;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(15, 15, 18);
+  doc.text('FOR: KOGLA TECH GLOBAL', 12, y);
+  doc.text('FOR: BRAND AMBASSADOR PARTNER', 115, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.text('Gerald Emechebe', 12, y);
+  doc.text(name, 115, y);
+  y += 4;
+
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 100, 105);
+  doc.text('Founder & CEO, Kogla Tech Global', 12, y);
+  doc.text(`Authorized Creator Partner (Code: ${code})`, 115, y);
+
+  // Bottom Footer
+  doc.setFillColor(15, 15, 18);
+  doc.rect(0, 287, 210, 10, 'F');
+  doc.setTextColor(212, 175, 55);
+  doc.setFontSize(6.5);
+  doc.text('KOGLA TECH GLOBAL • OFFICIAL PARTNERSHIP CONTRACT • SECURE LEGAL INSTRUMENT', 105, 293, { align: 'center' });
+
+  // Download filename
+  const cleanCode = code.replace(/[^A-Z0-9_-]/gi, '_');
+  doc.save(`Kogla_Tech_Ambassador_Agreement_${cleanCode}.pdf`);
+}

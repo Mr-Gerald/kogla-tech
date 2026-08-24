@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, ThumbsUp, MessageSquare, Trash2, LogIn, Send, CornerDownRight, CheckCircle2, UserCheck } from 'lucide-react';
+import { Star, ThumbsUp, MessageSquare, Trash2, LogIn, Send, CornerDownRight, CheckCircle2, UserCheck, ShieldCheck, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ReviewRecord } from '../types';
 import { subscribeToReviews, createReview, toggleLikeReview, deleteReview } from '../lib/reviews';
@@ -23,7 +23,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   const { user, profile } = useAuth();
   const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [filterRating, setFilterRating] = useState<number | null>(null);
 
   // New review form state
   const [newRating, setNewRating] = useState<number>(5);
@@ -33,7 +33,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Reply target state (which review ID is actively being replied to)
+  // Reply target state
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
@@ -44,7 +44,6 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   useEffect(() => {
     setLoading(true);
     const unsubscribe = subscribeToReviews((allReviews) => {
-      // Filter by targetType & targetId if specified
       const filtered = allReviews.filter((r) => {
         if (!targetType || targetType === 'platform') {
           return true;
@@ -119,7 +118,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         userName: profile?.name || user.displayName || 'Kogla Developer',
         userAvatar: user.photoURL || '',
         userRole: profile?.role === 'admin' ? 'Kogla Admin' : 'Member',
-        rating: 0, // Replies don't require rating
+        rating: 0,
         title: '',
         content: replyContent.trim(),
         targetType,
@@ -168,8 +167,13 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   const topLevelReviews = reviews.filter((r) => !r.parentId);
   const getReplies = (parentId: string) => reviews.filter((r) => r.parentId === parentId);
 
+  // Filtered reviews
+  const displayedReviews = filterRating 
+    ? topLevelReviews.filter(r => (r.rating || 5) === filterRating)
+    : topLevelReviews;
+
   // Calculate average rating
-  const reviewsWithRating = reviews.filter((r) => !r.parentId && r.rating && r.rating > 0);
+  const reviewsWithRating = topLevelReviews.filter((r) => r.rating && r.rating > 0);
   const avgRating =
     reviewsWithRating.length > 0
       ? (reviewsWithRating.reduce((acc, r) => acc + (r.rating || 5), 0) / reviewsWithRating.length).toFixed(1)
@@ -186,57 +190,106 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   });
 
   return (
-    <section id="reviews" className="py-12 px-4 sm:px-6 max-w-6xl mx-auto font-sans text-gray-100">
+    <section id="reviews" className="py-8 px-4 sm:px-6 max-w-7xl mx-auto font-sans text-gray-100">
       
-      {/* SECTION HEADER */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-6 border-b border-zinc-850 gap-4">
+      {/* SECTION HEADER (COMPACT) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 mb-6 border-b border-zinc-850 gap-4">
         <div>
-          <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold block mb-1">
+          <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold block mb-0.5">
             VERIFIED COMMUNITY FEEDBACK
           </span>
-          <h2 className="text-2xl sm:text-3xl font-display font-bold text-white uppercase tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-display font-bold text-white uppercase tracking-tight">
             {title}
           </h2>
-          <p className="text-xs text-zinc-400 max-w-2xl mt-1">
+          <p className="text-xs text-zinc-400 max-w-xl">
             {subtitle}
           </p>
         </div>
 
-        {/* AGGREGATE STATS BADGE */}
-        <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 px-4 py-2.5 rounded-lg shadow-lg self-start md:self-auto">
+        {/* COMPACT OVERALL BADGE */}
+        <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 px-3.5 py-2 rounded shadow shrink-0 self-start sm:self-auto">
           <div className="text-2xl font-bold font-display text-gold-400 leading-none">{avgRating}</div>
           <div className="space-y-0.5">
             <div className="flex items-center text-gold-400 gap-0.5">
               {[1, 2, 3, 4, 5].map((s) => (
-                <Star key={s} size={12} className="fill-gold-400 text-gold-400" />
+                <Star key={s} size={11} className="fill-gold-400 text-gold-400" />
               ))}
             </div>
-            <div className="text-[10px] text-zinc-400 font-mono">
-              {reviewsWithRating.length} {reviewsWithRating.length === 1 ? 'Review' : 'Reviews'} • Real-time
+            <div className="text-[9px] text-zinc-400 font-mono">
+              {topLevelReviews.length} Reviews • Verified
             </div>
           </div>
         </div>
       </div>
 
-      {/* NEW REVIEW SUBMISSION & STATS GRID */}
-      <div className="grid lg:grid-cols-12 gap-8 mb-10 items-stretch">
+      {/* 2-COLUMN SIDE-BY-SIDE HIGH-DENSITY LAYOUT */}
+      <div className="grid lg:grid-cols-12 gap-6 items-start">
         
-        {/* LEFT COLUMN: Share Your Experience Form */}
-        <div className="lg:col-span-7 bg-zinc-950/90 border border-zinc-850 rounded-lg p-5 sm:p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl pointer-events-none"></div>
+        {/* ================= LEFT COLUMN: SUMMARY & REVIEW FORM (COMPACT) ================= */}
+        <div className="lg:col-span-5 space-y-4">
           
-          <div>
-            <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <MessageSquare size={16} className="text-gold-500" /> Share Your Experience
+          {/* RATING BREAKDOWN CARD */}
+          <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold text-gold-400 uppercase tracking-wider">
+                Rating Breakdown
+              </span>
+              {filterRating && (
+                <button
+                  onClick={() => setFilterRating(null)}
+                  className="text-[10px] text-zinc-400 hover:text-gold-400 font-mono underline"
+                >
+                  Clear Filter ({filterRating}★)
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              {[5, 4, 3, 2, 1].map((stars) => {
+                const count = ratingCounts[stars as 5 | 4 | 3 | 2 | 1] || 0;
+                const percentage = totalWithRating > 0 ? (count / totalWithRating) * 100 : 0;
+                const isSelected = filterRating === stars;
+
+                return (
+                  <button
+                    key={stars}
+                    type="button"
+                    onClick={() => setFilterRating(filterRating === stars ? null : stars)}
+                    className={`w-full flex items-center gap-2.5 text-xs py-1 px-2 rounded transition-colors text-left cursor-pointer ${
+                      isSelected ? 'bg-gold-500/10 border border-gold-500/30' : 'hover:bg-zinc-900'
+                    }`}
+                  >
+                    <span className="w-8 text-right text-zinc-300 font-mono text-[11px] font-medium shrink-0 flex items-center gap-1 justify-end">
+                      {stars} <Star size={10} className="fill-gold-400 text-gold-400 shrink-0" />
+                    </span>
+                    <div className="flex-1 h-1.5 bg-zinc-900 border border-zinc-800 rounded overflow-hidden">
+                      <div 
+                        className="h-full bg-gold-400 rounded transition-all duration-300"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                    <span className="w-6 text-zinc-500 text-right font-mono text-[10px] shrink-0">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* COMPACT SUBMISSION FORM */}
+          <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-4 space-y-3">
+            <h3 className="text-xs font-display font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <MessageSquare size={13} className="text-gold-500" /> Share Feedback / Review
             </h3>
 
             {user ? (
-              <form onSubmit={handlePostReview} className="space-y-4">
-                {/* Rating Stars Selection */}
-                <div className="flex flex-wrap items-center gap-3 bg-zinc-900/80 p-3.5 rounded-md border border-zinc-800 shadow-inner">
-                  <span className="text-xs text-zinc-300 font-mono font-semibold">Your Rating:</span>
+              <form onSubmit={handlePostReview} className="space-y-3">
+                {/* Star Picker */}
+                <div className="flex items-center justify-between bg-zinc-900/80 p-2.5 rounded border border-zinc-800">
+                  <span className="text-[11px] text-zinc-300 font-mono">Rating:</span>
                   <div 
-                    className="flex items-center gap-1.5"
+                    className="flex items-center gap-1"
                     onMouseLeave={() => setHoverRating(null)}
                   >
                     {[1, 2, 3, 4, 5].map((star) => {
@@ -249,408 +302,305 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                           key={star}
                           onClick={() => setNewRating(star)}
                           onMouseEnter={() => setHoverRating(star)}
-                          className={`p-2 focus:outline-none transition-all active:scale-95 hover:scale-110 group relative rounded-md flex items-center justify-center ${
-                            isGold 
-                              ? 'bg-gold-500/15 border border-gold-500/40 shadow-[0_0_12px_rgba(250,204,21,0.25)]' 
-                              : 'bg-zinc-900/90 border border-zinc-800 hover:border-gold-500/30'
-                          }`}
-                          title={`Rate ${star} out of 5 stars`}
+                          className="p-1 focus:outline-none transition-transform hover:scale-110 cursor-pointer"
                         >
                           <Star
-                            size={22}
-                            className={`transition-all duration-200 ${
-                              isGold
-                                ? 'fill-gold-400 text-gold-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.9)] scale-105'
-                                : 'fill-transparent text-zinc-600 hover:text-gold-400/60'
-                            }`}
+                            size={16}
+                            className={isGold ? 'fill-gold-400 text-gold-400' : 'text-zinc-700 hover:text-gold-400/50'}
                           />
                         </button>
                       );
                     })}
                   </div>
-                  <span className="text-xs font-mono text-gold-400 font-bold ml-2 px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 rounded">
-                    {hoverRating !== null ? hoverRating : newRating} / 5 Stars {
-                      (hoverRating !== null ? hoverRating : newRating) === 5 ? '★ Exceptional' :
-                      (hoverRating !== null ? hoverRating : newRating) === 4 ? '★ Very Good' :
-                      (hoverRating !== null ? hoverRating : newRating) === 3 ? '★ Good' :
-                      (hoverRating !== null ? hoverRating : newRating) === 2 ? '★ Fair' : '★ Needs Improvement'
-                    }
+                  <span className="text-[10px] font-mono text-gold-400 font-bold">
+                    {hoverRating !== null ? hoverRating : newRating} / 5★
                   </span>
                 </div>
 
-                {/* Title & Content Fields */}
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Review Title (e.g. Exceptional Full-Stack Academy & Services)"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    className="w-full bg-zinc-900/90 border border-zinc-800 rounded px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 transition-colors"
-                  />
-                  <textarea
-                    rows={3}
-                    placeholder="Write your review or feedback here... (Publicly posted to Kogla Tech community)"
-                    value={newContent}
-                    onChange={(e) => setNewContent(e.target.value)}
-                    required
-                    className="w-full bg-zinc-900/90 border border-zinc-800 rounded p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 transition-colors resize-y"
-                  />
-                </div>
+                {/* Title & Content */}
+                <input
+                  type="text"
+                  placeholder="Summary title (e.g. Exceptional instructor support)"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500"
+                />
+                
+                <textarea
+                  rows={2}
+                  placeholder="Your review or question for Kogla Tech community..."
+                  value={newContent}
+                  onChange={(e) => setNewContent(e.target.value)}
+                  required
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded p-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 resize-none"
+                />
 
                 <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono">
-                    <UserCheck size={14} className="text-emerald-400" />
-                    Posting as <span className="text-white font-semibold">{user.displayName || user.email}</span>
-                  </div>
+                  <span className="text-[10px] text-zinc-400 font-mono truncate max-w-[150px]">
+                    As: <b>{user.displayName || user.email?.split('@')[0]}</b>
+                  </span>
 
                   <button
                     type="submit"
                     disabled={isSubmitting || !newContent.trim()}
-                    className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-black font-bold rounded text-xs uppercase tracking-wider font-display flex items-center gap-2 transition-all shadow-md"
+                    className="px-3.5 py-1.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-black font-bold rounded text-xs uppercase tracking-wider font-display flex items-center gap-1.5 transition-all cursor-pointer shadow"
                   >
-                    {isSubmitting ? 'Posting...' : 'Submit Review'} <Send size={14} />
+                    {isSubmitting ? 'Posting...' : 'Post Review'} <Send size={11} />
                   </button>
                 </div>
 
                 {submitSuccess && (
                   <motion.div
-                    initial={{ opacity: 0, y: 5 }}
+                    initial={{ opacity: 0, y: 3 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-2.5 bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs rounded flex items-center gap-2"
+                    className="p-2 bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-[10px] font-mono rounded flex items-center gap-1.5"
                   >
-                    <CheckCircle2 size={14} /> Review published successfully!
+                    <CheckCircle2 size={12} /> Review published live!
                   </motion.div>
                 )}
               </form>
             ) : (
-              <div className="bg-zinc-900/70 border border-zinc-800 rounded p-4 text-center space-y-3">
-                <p className="text-xs text-zinc-300">
-                  Join our verified ecosystem to share feedback, ask questions, and connect directly with instructors and alumni.
+              <div className="bg-zinc-900/60 border border-zinc-800 rounded p-3 text-center space-y-2">
+                <p className="text-[11px] text-zinc-400">
+                  Sign in with Google to post your feedback and engage in student discussions.
                 </p>
                 <button
                   onClick={() => navigate('/auth/login')}
-                  className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded font-display inline-flex items-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+                  className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded font-display inline-flex items-center gap-1.5 cursor-pointer shadow"
                 >
-                  <LogIn size={14} /> Sign In or Create Account to Review
+                  <LogIn size={13} /> Sign In to Review
                 </button>
               </div>
             )}
           </div>
+
+          {/* TRUST BADGE */}
+          <div className="p-3 bg-zinc-950 border border-zinc-850 rounded text-[10px] font-mono text-zinc-400 flex items-center gap-2">
+            <ShieldCheck size={14} className="text-gold-400 shrink-0" />
+            <span>Verified student & client submissions with direct instructor replies.</span>
+          </div>
+
         </div>
 
-        {/* RIGHT COLUMN: Community Ratings Breakdown & Trust */}
-        <div className="lg:col-span-5 bg-zinc-950/40 border border-zinc-850/80 rounded-lg p-5 sm:p-6 shadow-xl flex flex-col justify-between space-y-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
+        {/* ================= RIGHT COLUMN: COMPACT REVIEWS FEED ================= */}
+        <div className="lg:col-span-7 space-y-3">
           
-          <div className="space-y-4">
-            <h3 className="text-xs font-mono font-bold text-gold-500 uppercase tracking-widest">
-              Community Stats & Breakdown
-            </h3>
-            
-            {/* Visual breakdown of ratings */}
+          <div className="flex items-center justify-between pb-1 border-b border-zinc-850">
+            <span className="text-[11px] font-mono text-zinc-400">
+              Showing <b>{displayedReviews.length}</b> {filterRating ? `${filterRating}-star` : ''} review{displayedReviews.length === 1 ? '' : 's'}
+            </span>
+            {filterRating && (
+              <button
+                onClick={() => setFilterRating(null)}
+                className="text-[10px] font-mono text-gold-400 hover:underline"
+              >
+                View all reviews
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="text-center py-12 text-zinc-500 text-xs font-mono">
+              Loading reviews feed...
+            </div>
+          ) : displayedReviews.length === 0 ? (
+            <div className="text-center py-10 bg-zinc-950 border border-zinc-850 rounded p-6">
+              <MessageSquare size={24} className="mx-auto text-zinc-600 mb-2" />
+              <h4 className="text-xs text-zinc-300 font-semibold mb-1">No Reviews Found</h4>
+              <p className="text-[11px] text-zinc-500">
+                {filterRating ? `No ${filterRating}-star reviews yet.` : 'Be the first user to submit a review!'}
+              </p>
+            </div>
+          ) : (
             <div className="space-y-2.5">
-              {[5, 4, 3, 2, 1].map((stars) => {
-                const count = ratingCounts[stars as 5 | 4 | 3 | 2 | 1] || 0;
-                const percentage = totalWithRating > 0 ? (count / totalWithRating) * 100 : 0;
+              {displayedReviews.map((review) => {
+                const replies = getReplies(review.id);
+                const isLikedByMe = user ? review.likedBy?.includes(user.uid) : false;
+                const isReplying = replyingToId === review.id;
+                const isAuthorOrAdmin = user && (user.uid === review.userId || profile?.role === 'admin');
+
                 return (
-                  <div key={stars} className="flex items-center gap-3 text-xs">
-                    <span className="w-10 text-right text-zinc-400 font-mono font-medium shrink-0 flex items-center gap-1 justify-end">
-                      {stars} <Star size={11} className="fill-gold-400 text-gold-400 shrink-0" />
-                    </span>
-                    <div className="flex-1 h-2 bg-zinc-900 border border-zinc-850 rounded overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-gold-500 to-gold-400 rounded transition-all duration-500"
-                        style={{ width: `${percentage}%` }}
-                      />
+                  <div
+                    key={review.id}
+                    className="bg-zinc-950 border border-zinc-850 hover:border-zinc-800 rounded p-3 space-y-2 transition-all shadow-sm"
+                  >
+                    {/* TOP LINE: USER, ROLE, DATE, STARS */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {review.userAvatar ? (
+                          <img
+                            src={review.userAvatar}
+                            alt={review.userName}
+                            className="w-6 h-6 rounded-full object-cover border border-gold-500/40 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-gold-500/20 border border-gold-500/40 flex items-center justify-center font-bold text-gold-400 text-[10px] shrink-0">
+                            {review.userName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-white font-display leading-none">
+                              {review.userName}
+                            </span>
+                            <span className="text-[8px] font-mono px-1.5 py-0.2 bg-zinc-900 text-gold-400 border border-gold-500/30 rounded uppercase font-semibold">
+                              {review.userRole || 'Student'}
+                            </span>
+                          </div>
+                          <span className="text-[9px] text-zinc-500 font-mono block mt-0.5">
+                            {new Date(review.createdAt).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stars */}
+                      {review.rating && review.rating > 0 && (
+                        <div className="flex items-center gap-0.5 text-gold-400 shrink-0">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              size={10}
+                              className={s <= (review.rating || 5) ? 'fill-gold-400' : 'text-zinc-700'}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <span className="w-8 text-zinc-500 text-left font-mono text-[11px] shrink-0">
-                      {count}
-                    </span>
+
+                    {/* TITLE & CONTENT */}
+                    {review.title && (
+                      <h4 className="text-xs font-bold text-gold-300 leading-tight">
+                        {review.title}
+                      </h4>
+                    )}
+                    <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                      {review.content}
+                    </p>
+
+                    {/* COMPACT ACTION BAR */}
+                    <div className="flex items-center justify-between pt-1 border-t border-zinc-900/80 text-[11px] font-mono">
+                      <div className="flex items-center gap-3">
+                        {/* Like */}
+                        <button
+                          onClick={() => handleLike(review)}
+                          disabled={likingIds[review.id]}
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded transition-colors text-[10px] cursor-pointer ${
+                            isLikedByMe
+                              ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40 font-bold'
+                              : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                          }`}
+                        >
+                          <ThumbsUp size={10} className={isLikedByMe ? 'fill-gold-400' : ''} />
+                          <span>{review.likeCount || 0}</span>
+                        </button>
+
+                        {/* Reply Toggle */}
+                        <button
+                          onClick={() => {
+                            setReplyingToId(isReplying ? null : review.id);
+                            setReplyContent('');
+                          }}
+                          className="text-zinc-400 hover:text-gold-400 flex items-center gap-1 text-[10px] cursor-pointer"
+                        >
+                          <CornerDownRight size={10} />
+                          <span>Reply {replies.length > 0 ? `(${replies.length})` : ''}</span>
+                        </button>
+                      </div>
+
+                      {/* Delete */}
+                      {isAuthorOrAdmin && (
+                        <button
+                          onClick={() => handleDelete(review.id)}
+                          className="text-zinc-500 hover:text-red-400 text-[10px] p-1 transition-colors cursor-pointer"
+                          title="Delete review"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* NESTED REPLIES */}
+                    {replies.length > 0 && (
+                      <div className="pl-3 border-l-2 border-gold-500/30 space-y-2 mt-2 pt-1">
+                        {replies.map((reply) => {
+                          const isReplyAuthorOrAdmin = user && (user.uid === reply.userId || profile?.role === 'admin');
+                          return (
+                            <div key={reply.id} className="bg-zinc-900/50 p-2 rounded text-[11px] space-y-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-white font-display text-[11px]">
+                                    {reply.userName}
+                                  </span>
+                                  <span className="text-[8px] font-mono px-1 py-0.2 bg-black text-gold-400 border border-gold-500/20 rounded uppercase">
+                                    {reply.userRole}
+                                  </span>
+                                </div>
+                                <span className="text-[8px] text-zinc-500 font-mono">
+                                  {new Date(reply.createdAt).toLocaleDateString(undefined, {
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </span>
+                              </div>
+                              <p className="text-zinc-300 font-sans text-[11px] leading-snug">
+                                {reply.content}
+                              </p>
+                              {isReplyAuthorOrAdmin && (
+                                <div className="text-right">
+                                  <button
+                                    onClick={() => handleDelete(reply.id)}
+                                    className="text-[9px] text-zinc-500 hover:text-red-400 font-mono cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* REPLY INPUT FIELD */}
+                    {isReplying && (
+                      <div className="pl-3 border-l-2 border-gold-500/40 pt-2 space-y-2">
+                        <textarea
+                          rows={2}
+                          placeholder={`Reply to ${review.userName}...`}
+                          value={replyContent}
+                          onChange={(e) => setReplyContent(e.target.value)}
+                          className="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500"
+                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setReplyingToId(null)}
+                            className="px-2.5 py-1 text-zinc-400 hover:text-white text-[10px] font-mono uppercase cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSubmittingReply || !replyContent.trim()}
+                            onClick={() => handlePostReply(review.id)}
+                            className="px-3 py-1 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all cursor-pointer shadow"
+                          >
+                            {isSubmittingReply ? 'Sending...' : 'Send Reply'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
-          </div>
-
-          {/* Guidelines / Trust assurance bullets */}
-          <div className="pt-4 border-t border-zinc-850/60 space-y-3">
-            <div className="flex items-start gap-2.5">
-              <CheckCircle2 size={14} className="text-gold-500 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-white uppercase tracking-wide">Verified Submissions</h4>
-                <p className="text-[10px] text-zinc-400 font-sans leading-relaxed">
-                  Every feedback and rating is securely bound to verified Google accounts to eliminate artificial manipulation.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2.5">
-              <CheckCircle2 size={14} className="text-gold-500 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-white uppercase tracking-wide">Direct Response Loop</h4>
-                <p className="text-[10px] text-zinc-400 font-sans leading-relaxed">
-                  Our engineering lead, academy instructors, and operations team monitor threads directly for prompt responses.
-                </p>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
-      </div>
-
-      {/* REVIEWS & THREADED REPLIES LIST */}
-      <div className="space-y-6">
-        {loading ? (
-          <div className="text-center py-12 text-zinc-500 text-xs font-mono">
-            Loading community feedback...
-          </div>
-        ) : topLevelReviews.length === 0 ? (
-          <div className="text-center py-12 bg-zinc-950/40 border border-zinc-900 rounded p-6">
-            <MessageSquare size={32} className="mx-auto text-zinc-600 mb-2" />
-            <h4 className="text-sm text-zinc-300 font-semibold mb-1">No Reviews Yet</h4>
-            <p className="text-xs text-zinc-500 max-w-md mx-auto">
-              Be the first logged-in user to share your review or question with Kogla Tech!
-            </p>
-          </div>
-        ) : (
-          <>
-            {topLevelReviews.slice(0, showAllReviews ? undefined : 5).map((review) => {
-              const replies = getReplies(review.id);
-              const isLikedByMe = user ? review.likedBy.includes(user.uid) : false;
-
-              return (
-                <motion.div
-                  key={review.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-zinc-950 border border-zinc-850 rounded p-2.5 sm:p-3 shadow-sm space-y-1.5 text-[11px] font-normal"
-                >
-                {/* TOP-LEVEL REVIEW HEADER */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    {review.userAvatar ? (
-                      <img
-                        src={review.userAvatar}
-                        alt={review.userName}
-                        className="w-7 h-7 rounded-full object-cover border border-gold-500/40"
-                      />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-gold-500/20 border border-gold-500/40 flex items-center justify-center font-semibold text-gold-400 text-[11px]">
-                        {review.userName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold text-white font-display">
-                          {review.userName}
-                        </span>
-                        <span className="text-[8px] font-mono px-1.5 py-0.5 bg-zinc-900 text-gold-400 border border-gold-500/30 rounded uppercase">
-                          {review.userRole}
-                        </span>
-                      </div>
-                      <span className="text-[9px] text-zinc-500 font-mono block">
-                        {new Date(review.createdAt).toLocaleDateString(undefined, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Rating Stars */}
-                  {review.rating && review.rating > 0 && (
-                    <div className="flex items-center gap-0.5 text-gold-400">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star
-                          key={s}
-                          size={11}
-                          className={s <= (review.rating || 5) ? 'fill-gold-400' : 'text-zinc-700'}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* REVIEW TITLE & CONTENT */}
-                {review.title && (
-                  <h4 className="text-[11px] font-semibold text-gold-300">
-                    {review.title}
-                  </h4>
-                )}
-                <p className="text-[11px] text-zinc-300 leading-snug whitespace-pre-line font-sans">
-                  {review.content}
-                </p>
-
-                {/* ACTION BAR (LIKE, REPLY, DELETE) */}
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-900 text-xs font-mono">
-                  <div className="flex items-center gap-4">
-                    {/* LIKE BUTTON */}
-                    <button
-                      onClick={() => handleLike(review)}
-                      disabled={likingIds[review.id]}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors text-xs ${
-                        isLikedByMe
-                          ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40 font-bold'
-                          : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent'
-                      }`}
-                    >
-                      <ThumbsUp size={13} className={isLikedByMe ? 'fill-gold-400' : ''} />
-                      <span>{review.likeCount}</span>
-                      <span className="text-[10px] uppercase hidden sm:inline">
-                        {isLikedByMe ? 'Liked' : 'Like'}
-                      </span>
-                    </button>
-
-                    {/* REPLY BUTTON */}
-                    <button
-                      onClick={() => {
-                        if (!user) {
-                          navigate('/auth/login');
-                        } else {
-                          setReplyingToId(replyingToId === review.id ? null : review.id);
-                        }
-                      }}
-                      className="flex items-center gap-1.5 text-zinc-400 hover:text-gold-400 transition-colors text-xs cursor-pointer"
-                    >
-                      <MessageSquare size={13} />
-                      <span>Reply ({replies.length})</span>
-                    </button>
-                  </div>
-
-                  {/* DELETE BUTTON (IF AUTHOR OR ADMIN) */}
-                  {user && (user.uid === review.userId || profile?.role === 'admin') && (
-                    <button
-                      onClick={() => handleDelete(review.id)}
-                      className="text-zinc-500 hover:text-red-400 transition-colors p-1"
-                      title="Delete review"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-
-                {/* INLINE REPLY FORM */}
-                <AnimatePresence>
-                  {replyingToId === review.id && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="pt-3 pl-4 border-l-2 border-gold-500/40 space-y-2"
-                    >
-                      <textarea
-                        rows={2}
-                        placeholder={`Replying to ${review.userName}...`}
-                        value={replyContent}
-                        onChange={(e) => setReplyContent(e.target.value)}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500"
-                      />
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setReplyingToId(null)}
-                          className="px-3 py-1 text-xs text-zinc-400 hover:text-white"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handlePostReply(review.id)}
-                          disabled={isSubmittingReply || !replyContent.trim()}
-                          className="px-4 py-1.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-black font-bold text-xs rounded font-display uppercase tracking-wider flex items-center gap-1"
-                        >
-                          Post Reply <Send size={12} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* THREADED NESTED REPLIES */}
-                {replies.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-zinc-900/80 space-y-3 pl-4 sm:pl-6 border-l-2 border-zinc-850">
-                    {replies.map((reply) => {
-                      const isReplyLikedByMe = user ? reply.likedBy.includes(user.uid) : false;
-
-                      return (
-                        <div
-                          key={reply.id}
-                          className="bg-zinc-900/60 border border-zinc-850/80 rounded p-3 space-y-2 relative"
-                        >
-                          <CornerDownRight size={14} className="absolute -left-5 top-3 text-gold-500/50" />
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {reply.userAvatar ? (
-                                <img
-                                  src={reply.userAvatar}
-                                  alt={reply.userName}
-                                  className="w-6 h-6 rounded-full object-cover border border-gold-500/30"
-                                />
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-gold-500/20 border border-gold-500/30 flex items-center justify-center font-bold text-gold-400 text-[10px]">
-                                  {reply.userName.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <span className="text-xs font-bold text-white">{reply.userName}</span>
-                              <span className="text-[9px] font-mono px-1.5 py-0.2 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded">
-                                {reply.userRole}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-zinc-500 font-mono">
-                              {new Date(reply.createdAt).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                              })}
-                            </span>
-                          </div>
-
-                          <p className="text-xs text-zinc-300 whitespace-pre-line">{reply.content}</p>
-
-                          <div className="flex items-center justify-between pt-1 text-xs font-mono">
-                            <button
-                              onClick={() => handleLike(reply)}
-                              disabled={likingIds[reply.id]}
-                              className={`flex items-center gap-1 px-2 py-0.5 rounded transition-colors text-[11px] ${
-                                isReplyLikedByMe
-                                  ? 'text-gold-400 font-bold'
-                                  : 'text-zinc-400 hover:text-white'
-                              }`}
-                            >
-                              <ThumbsUp size={11} className={isReplyLikedByMe ? 'fill-gold-400' : ''} />
-                              <span>{reply.likeCount}</span>
-                            </button>
-
-                            {user && (user.uid === reply.userId || profile?.role === 'admin') && (
-                              <button
-                                onClick={() => handleDelete(reply.id)}
-                                className="text-zinc-500 hover:text-red-400 transition-colors p-0.5"
-                                title="Delete reply"
-                              >
-                                <Trash2 size={11} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
-
-          {!showAllReviews && topLevelReviews.length > 5 && (
-            <div className="text-center pt-3">
-              <button
-                onClick={() => setShowAllReviews(true)}
-                className="px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-gold-400 font-mono text-xs uppercase tracking-wider rounded-md shadow transition-all cursor-pointer"
-              >
-                See More Reviews ({topLevelReviews.length - 5} more available)
-              </button>
-            </div>
-          )}
-        </>
-        )}
       </div>
     </section>
   );

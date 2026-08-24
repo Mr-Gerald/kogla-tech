@@ -8,6 +8,7 @@ import {
   query, 
   setDoc, 
   updateDoc, 
+  deleteDoc,
   where, 
   orderBy,
   onSnapshot 
@@ -25,8 +26,8 @@ function getCachedAffiliates(): AffiliatePartner[] {
     const raw = localStorage.getItem(LOCAL_AFFILIATES_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Filter out any stale mock Shirley data
-      const cleaned = parsed.filter((a: any) => a.code !== 'SHIRLEY');
+      // Filter out any stale mock data
+      const cleaned = parsed.filter((a: any) => a.code !== 'SHIRLEY' && a.code !== 'PHENA' && a.id !== 'aff-shirley');
       return cleaned;
     }
   } catch (_) {}
@@ -44,7 +45,12 @@ function getCachedReferrals(): ReferralLead[] {
     const raw = localStorage.getItem(LOCAL_REFERRALS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      const cleaned = parsed.filter((r: any) => r.affiliateCode !== 'SHIRLEY' && !r.id?.startsWith('ref-demo-'));
+      const cleaned = parsed.filter((r: any) => 
+        r.affiliateCode !== 'SHIRLEY' && 
+        r.affiliateCode !== 'PHENA' && 
+        !r.id?.startsWith('ref-demo-') &&
+        r.studentEmail !== 'eechebegerald@gmail.com'
+      );
       return cleaned;
     }
   } catch (_) {}
@@ -58,7 +64,7 @@ function saveCachedReferrals(referrals: ReferralLead[]) {
 }
 
 /**
- * Get an affiliate partner by their unique code (e.g., 'PHENA')
+ * Get an affiliate partner by their unique code
  */
 export async function getAffiliateByCode(code: string): Promise<AffiliatePartner | null> {
   const normCode = code.trim().toUpperCase();
@@ -85,7 +91,13 @@ export async function getAllAffiliates(): Promise<AffiliatePartner[]> {
     const snap = await getDocs(collection(db, 'affiliates'));
     if (!snap.empty) {
       const list: AffiliatePartner[] = [];
-      snap.forEach(d => list.push(d.data() as AffiliatePartner));
+      snap.forEach(d => {
+        const data = d.data() as AffiliatePartner;
+        // Purge test PHENA / SHIRLEY docs
+        if (data.code !== 'PHENA' && data.code !== 'SHIRLEY' && data.id !== 'aff-shirley') {
+          list.push(data);
+        }
+      });
       saveCachedAffiliates(list);
       return list;
     }
@@ -109,7 +121,6 @@ export async function getReferralsByCode(code: string): Promise<ReferralLead[]> 
     if (!snap.empty) {
       const list: ReferralLead[] = [];
       snap.forEach(d => list.push(d.data() as ReferralLead));
-      // Sort newest first
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       return list;
     }
@@ -127,7 +138,18 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
     const snap = await getDocs(collection(db, 'referrals'));
     if (!snap.empty) {
       const list: ReferralLead[] = [];
-      snap.forEach(d => list.push(d.data() as ReferralLead));
+      snap.forEach(d => {
+        const data = d.data() as ReferralLead;
+        // Exclude test referrals
+        if (
+          data.affiliateCode !== 'PHENA' && 
+          data.affiliateCode !== 'SHIRLEY' && 
+          !data.id?.startsWith('ref-demo-') &&
+          data.studentEmail !== 'eechebegerald@gmail.com'
+        ) {
+          list.push(data);
+        }
+      });
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       saveCachedReferrals(list);
       return list;
@@ -316,6 +338,65 @@ export async function markReferralPaidOut(leadId: string): Promise<boolean> {
 }
 
 /**
+ * Delete a single referral lead (Admin action)
+ */
+export async function deleteReferralLead(leadId: string): Promise<boolean> {
+  const referrals = getCachedReferrals().filter(r => r.id !== leadId);
+  saveCachedReferrals(referrals);
+
+  return safeFirestoreWrite(async () => {
+    await deleteDoc(doc(db, 'referrals', leadId));
+  }, 2000);
+}
+
+/**
+ * Delete an affiliate partner by promo code (Admin action)
+ */
+export async function deleteAffiliatePartner(code: string): Promise<boolean> {
+  const normCode = code.trim().toUpperCase();
+  const affiliates = getCachedAffiliates().filter(a => a.code.toUpperCase() !== normCode);
+  saveCachedAffiliates(affiliates);
+
+  return safeFirestoreWrite(async () => {
+    await deleteDoc(doc(db, 'affiliates', normCode));
+  }, 2000);
+}
+
+/**
+ * Purge all mock/test referral leads and test affiliates from local cache and Firestore
+ */
+export async function purgeAllTestReferralsAndAffiliates(): Promise<boolean> {
+  // Clear local storage
+  localStorage.removeItem(LOCAL_AFFILIATES_KEY);
+  localStorage.removeItem(LOCAL_REFERRALS_KEY);
+
+  return safeFirestoreWrite(async () => {
+    // Delete PHENA and SHIRLEY docs if present
+    try {
+      await deleteDoc(doc(db, 'affiliates', 'PHENA'));
+      await deleteDoc(doc(db, 'affiliates', 'SHIRLEY'));
+      await deleteDoc(doc(db, 'affiliates', 'aff-shirley'));
+    } catch (_) {}
+
+    // Find and delete any referrals with PHENA or test email
+    try {
+      const snap = await getDocs(collection(db, 'referrals'));
+      snap.forEach(async (d) => {
+        const data = d.data() as ReferralLead;
+        if (
+          data.affiliateCode === 'PHENA' || 
+          data.affiliateCode === 'SHIRLEY' || 
+          data.id?.startsWith('ref-demo-') ||
+          data.studentEmail === 'eechebegerald@gmail.com'
+        ) {
+          await deleteDoc(doc(db, 'referrals', d.id));
+        }
+      });
+    } catch (_) {}
+  }, 2500);
+}
+
+/**
  * Create or update an Affiliate Partner profile
  */
 export async function saveAffiliatePartner(partner: AffiliatePartner): Promise<boolean> {
@@ -334,3 +415,4 @@ export async function saveAffiliatePartner(partner: AffiliatePartner): Promise<b
     await setDoc(doc(db, 'affiliates', normCode), partner);
   }, 2500);
 }
+
