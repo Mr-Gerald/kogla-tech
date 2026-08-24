@@ -26,6 +26,9 @@ import LabDetails from './pages/LabDetails';
 import AdminPortal from './pages/AdminPortal';
 import StudyRoom from './pages/StudyRoom';
 import Profile from './pages/Profile';
+import AffiliatePortal from './pages/AffiliatePortal';
+import VerifyCertificate from './pages/VerifyCertificate';
+import NotFound from './pages/NotFound';
 import { AiAssistantChat } from './components/AiAssistantChat';
 
 export default function App() {
@@ -54,9 +57,13 @@ export default function App() {
                 <Route path="/projects/:slug" element={<ProjectDetails />} />
                 <Route path="/labs/:slug" element={<LabDetails />} />
                 <Route path="/admin" element={<AdminPortal />} />
+                <Route path="/affiliate-portal" element={<AffiliatePortal />} />
+                <Route path="/verify-certificate" element={<VerifyCertificate />} />
+                <Route path="/verify-certificate/:certId" element={<VerifyCertificate />} />
                 <Route path="/study" element={<StudyRoom />} />
                 <Route path="/study/:slug" element={<StudyRoom />} />
                 <Route path="/study/:slug/room/:roomId" element={<StudyRoom />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
             <Footer />
