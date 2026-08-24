@@ -18,8 +18,10 @@ import {
   Building,
   HelpCircle,
   Percent,
-  Printer
+  Printer,
+  Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { AffiliatePartner, ReferralLead } from '../types';
 import { getAffiliateByCode, getReferralsByCode, saveAffiliatePartner } from '../lib/affiliates';
 import { formatNaira } from '../data/coursesPricing';
@@ -27,7 +29,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function AffiliatePortal() {
   const { user } = useAuth();
-  const [partnerCode, setPartnerCode] = useState('SHIRLEY');
+  const [partnerCode, setPartnerCode] = useState('AMBASSADOR');
   const [partner, setPartner] = useState<AffiliatePartner | null>(null);
   const [referrals, setReferrals] = useState<ReferralLead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,17 +72,127 @@ export default function AffiliatePortal() {
   const referralUrl = `${window.location.origin}/?ref=${partnerCode}`;
 
   const handleDownloadAgreement = () => {
-    const agreementText = `KOGLA TECH GLOBAL - CREATOR BRAND AMBASSADOR LEGAL MEMORANDUM\n\nAmbassador Partner: ${partner?.name || 'Phena Nwachukwu'}\nAssigned Code: ${partnerCode}\nDate: ${new Date().toLocaleDateString()}\n\n1. COMMISSION STRUCTURE & ESCALATOR:\n- Tier 1: 6% commission on the first 3 verified student enrollments.\n- Tier 2: 10% lifetime commission permanently unlocked from the 4th student onwards.\n- Student Benefit: 5% direct discount on tuition for students using code ${partnerCode}.\n\n2. SETTLEMENT & PAYOUT TIMELINE:\n- Earned commissions are disbursed within 3-5 business days upon tuition clearance to the Ambassador's registered bank account.\n\n3. ONBOARDING & ACTIVATION STEPS FOR AMBASSADORS (e.g. PHENA):\n- Step 1: Create an active user account on Kogla Tech with your email address.\n- Step 2: Access your Ambassador Portal / Profile to copy your unique promo code (${partnerCode}) and attribution link.\n- Step 3: Share your link and code. Every student registering with your code receives 5% off tuition.\n\n4. LIABILITY, INDEMNIFICATION & LEGAL PROTECTION:\n- Independent Contractor: The Ambassador is an independent contractor and not an employee, partner, or legal representative of Kogla Tech Global.\n- Indemnification: Ambassador agrees to indemnify, defend, and hold harmless Kogla Tech Global, its founder, officers, directors, and agents from and against any and all claims, liabilities, damages, losses, or expenses (including reasonable attorney fees) arising out of Ambassador's marketing practices, misleading representations, or breach of this agreement.\n- Limitation of Liability: In no event shall Kogla Tech Global's total aggregate liability exceed the total commissions paid or payable to Ambassador under this agreement in the preceding 6 months.\n- Intellectual Property: All Kogla Tech trademarks, curriculum materials, logos, and digital assets remain the exclusive intellectual property of Kogla Tech Global.\n\n5. TERMINATION:\n- Either party may terminate this agreement with 7 days written notice. All earned, verified commissions prior to termination date shall be paid out in full.\n\nACCEPTED & AGREED:\nKogla Tech Global (Gerald Emechebe, CEO)\nAmbassador Partner (${partner?.name || 'Phena Nwachukwu'})`;
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
 
-    const blob = new Blob([agreementText], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Kogla_Tech_Ambassador_Legal_Contract_${partnerCode}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Header banner
+    doc.setFillColor(15, 15, 18);
+    doc.rect(0, 0, 210, 32, 'F');
+
+    doc.setTextColor(212, 175, 55);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('KOGLA TECH GLOBAL', 14, 14);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(180, 180, 180);
+    doc.text('CREATOR & BRAND AMBASSADOR LEGAL AGREEMENT', 14, 22);
+
+    doc.setTextColor(212, 175, 55);
+    doc.text(`CODE: ${partnerCode}`, 196, 14, { align: 'right' });
+    doc.setTextColor(180, 180, 180);
+    doc.text(`DATE: ${new Date().toLocaleDateString()}`, 196, 22, { align: 'right' });
+
+    let y = 44;
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PARTIES & PURPOSE', 14, y);
+
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    const p1 = `This Brand Ambassador Partnership Legal Agreement is entered into between Kogla Tech Global (the "Academy") and ${partner?.name || 'Ambassador Partner'} (the "Ambassador").`;
+    const splitP1 = doc.splitTextToSize(p1, 182);
+    doc.text(splitP1, 14, y);
+    y += splitP1.length * 4.5 + 4;
+
+    // Clause 1
+    doc.setFont('helvetica', 'bold');
+    doc.text('1. COMMISSION STRUCTURE & ESCALATOR CLAUSE', 14, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    const c1 = [
+      '• Tier 1 (Base Rate): Ambassador earns 6% commission on the net tuition of the first 3 verified students.',
+      '• Tier 2 (Elevated Lifetime Rate): Beginning with the 4th student and indefinitely thereafter, commission elevates to 10%.',
+      `• Student Discount: Every student registering with promo code ${partnerCode} receives a 5% direct discount on tuition.`
+    ];
+    c1.forEach(line => {
+      const split = doc.splitTextToSize(line, 182);
+      doc.text(split, 14, y);
+      y += split.length * 4 + 1.5;
+    });
+    y += 3;
+
+    // Clause 2
+    doc.setFont('helvetica', 'bold');
+    doc.text('2. PAYMENT VERIFICATION & PAYOUT TIMELINE', 14, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    const c2 = [
+      '• Commission status begins as "Pending Payment" upon student registration.',
+      '• Upon tuition confirmation by the Academy, commission moves to "Confirmed & Earned".',
+      '• All earned commissions are disbursed directly to Ambassador\'s registered bank account within 3 to 5 business days.'
+    ];
+    c2.forEach(line => {
+      const split = doc.splitTextToSize(line, 182);
+      doc.text(split, 14, y);
+      y += split.length * 4 + 1.5;
+    });
+    y += 3;
+
+    // Clause 3
+    doc.setFont('helvetica', 'bold');
+    doc.text('3. AMBASSADOR ONBOARDING & ACTIVATION', 14, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    const p3 = `Ambassadors must maintain a verified account on Kogla Tech, share their assigned promo code (${partnerCode}) and attribution tracking link, and provide valid bank account details for automated settlement.`;
+    const splitP3 = doc.splitTextToSize(p3, 182);
+    doc.text(splitP3, 14, y);
+    y += splitP3.length * 4.5 + 4;
+
+    // Clause 4
+    doc.setFont('helvetica', 'bold');
+    doc.text('4. LIABILITY, INDEMNIFICATION & LEGAL PROTECTION', 14, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    const c4 = [
+      '• Independent Contractor: The Ambassador operates strictly as an independent contractor and not an employee or agent.',
+      '• Indemnification: Ambassador agrees to indemnify, defend, and hold harmless Kogla Tech Global, its founder, officers, and employees from any claims arising out of promotional practices or misrepresentations.',
+      '• Limitation of Liability: Kogla Tech Global\'s aggregate liability shall never exceed total commissions paid in the preceding 6 months.',
+      '• Intellectual Property: All curriculum materials, trademarks, and branding remain the exclusive property of Kogla Tech Global.'
+    ];
+    c4.forEach(line => {
+      const split = doc.splitTextToSize(line, 182);
+      doc.text(split, 14, y);
+      y += split.length * 4 + 1.5;
+    });
+    y += 6;
+
+    // Signatures
+    doc.setDrawColor(212, 175, 55);
+    doc.line(14, y, 196, y);
+    y += 8;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('SIGNED ON BEHALF OF KOGLA TECH GLOBAL:', 14, y);
+    doc.text('AMBASSADOR ACKNOWLEDGEMENT:', 115, y);
+    y += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.text('Gerald Emechebe', 14, y);
+    doc.text(partner?.name || 'Ambassador Partner', 115, y);
+    y += 4;
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Founder & CEO, Kogla Tech Global', 14, y);
+    doc.text(`Assigned Code: ${partnerCode}`, 115, y);
+
+    doc.save(`Kogla_Tech_Ambassador_Agreement_${partnerCode}.pdf`);
   };
 
   const copyToClipboard = (text: string, isCode = false) => {
@@ -112,7 +224,7 @@ export default function AffiliatePortal() {
       setBankSavedSuccess(true);
       setTimeout(() => setBankSavedSuccess(false), 4000);
     } catch (err) {
-      console.error(err);
+      console.error('Error saving bank details:', err);
     } finally {
       setIsSavingBank(false);
     }
@@ -144,7 +256,7 @@ export default function AffiliatePortal() {
             Partner <span className="text-gold-500">Dashboard</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl font-sans">
-            Real-time attribution engine for <b>{partner?.name || 'Shirley Johnson'}</b>. Track your enrolled students, commission lifecycle, and instant payouts.
+            Real-time attribution engine for <b>{partner?.name || 'Creator Partner'}</b>. Track your enrolled students, commission lifecycle, and instant payouts.
           </p>
         </div>
 
@@ -157,8 +269,8 @@ export default function AffiliatePortal() {
                 type="text"
                 value={partnerCode}
                 onChange={(e) => setPartnerCode(e.target.value.toUpperCase())}
-                placeholder="e.g. SHIRLEY"
-                className="w-28 bg-zinc-900 border border-zinc-700 px-2 py-1 text-xs text-gold-400 font-mono uppercase rounded focus:outline-none focus:border-gold-500"
+                placeholder="e.g. AMBASSADOR"
+                className="w-32 bg-zinc-900 border border-zinc-700 px-2 py-1 text-xs text-gold-400 font-mono uppercase rounded focus:outline-none focus:border-gold-500"
               />
             </div>
           )}
@@ -190,13 +302,13 @@ export default function AffiliatePortal() {
               onClick={handleDownloadAgreement}
               className="px-3.5 py-1.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display rounded-sm flex items-center gap-1.5 cursor-pointer shadow"
             >
-              <FileText size={13} /> Download Contract (.TXT)
+              <Download size={13} /> Download Contract (PDF)
             </button>
           </div>
 
           <div className="space-y-4 text-xs sm:text-sm leading-relaxed font-sans text-zinc-300">
             <p>
-              This Brand Ambassador & Creator Partnership Legal Agreement is entered into between <b>Kogla Tech Global</b> (hereinafter referred to as the <i>"Academy"</i>) and <b>{partner?.name || 'Phena Nwachukwu'}</b> (hereinafter referred to as the <i>"Ambassador"</i>).
+              This Brand Ambassador & Creator Partnership Legal Agreement is entered into between <b>Kogla Tech Global</b> (hereinafter referred to as the <i>"Academy"</i>) and <b>{partner?.name || 'Ambassador Partner'}</b> (hereinafter referred to as the <i>"Ambassador"</i>).
             </p>
 
             <div className="bg-black/50 border border-zinc-800 p-4 rounded space-y-3 font-mono text-xs">
@@ -218,9 +330,9 @@ export default function AffiliatePortal() {
             </div>
 
             <div className="bg-black/50 border border-zinc-800 p-4 rounded space-y-3 font-mono text-xs">
-              <h4 className="text-gold-400 font-bold uppercase tracking-wider">3. Ambassador Activation & Onboarding (e.g. Phena)</h4>
+              <h4 className="text-gold-400 font-bold uppercase tracking-wider">3. Ambassador Activation & Onboarding</h4>
               <p className="text-zinc-300">
-                Ambassadors (including Phena Nwachukwu) must create a verified user account on Kogla Tech, copy their unique tracking code and shareable link from their profile / ambassador portal, and provide valid Opay / bank account details for automated settlement.
+                Ambassadors must create a verified user account on Kogla Tech, copy their unique tracking code and shareable link from their profile / ambassador portal, and provide valid bank account details for automated settlement.
               </p>
             </div>
 
@@ -243,8 +355,8 @@ export default function AffiliatePortal() {
             </div>
             <div>
               <span className="text-zinc-500 uppercase block">Ambassador Entity</span>
-              <span className="text-gold-400 font-bold text-sm">{partner?.name || 'Phena Nwachukwu'}</span>
-              <span className="text-zinc-400 block text-[10px]">{partner?.instagramHandle || '@phena_designs'}</span>
+              <span className="text-gold-400 font-bold text-sm">{partner?.name || 'Ambassador Partner'}</span>
+              <span className="text-zinc-400 block text-[10px]">{partner?.instagramHandle || '@creator'}</span>
             </div>
           </div>
         </motion.div>

@@ -423,32 +423,32 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                   key={review.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-zinc-950 border border-zinc-850 rounded-lg p-3.5 sm:p-4 shadow-md space-y-2.5 text-xs font-normal"
+                  className="bg-zinc-950 border border-zinc-850 rounded p-2.5 sm:p-3 shadow-sm space-y-1.5 text-[11px] font-normal"
                 >
                 {/* TOP-LEVEL REVIEW HEADER */}
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     {review.userAvatar ? (
                       <img
                         src={review.userAvatar}
                         alt={review.userName}
-                        className="w-9 h-9 rounded-full object-cover border border-gold-500/40"
+                        className="w-7 h-7 rounded-full object-cover border border-gold-500/40"
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-gold-500/20 border border-gold-500/40 flex items-center justify-center font-bold text-gold-400 text-xs">
+                      <div className="w-7 h-7 rounded-full bg-gold-500/20 border border-gold-500/40 flex items-center justify-center font-semibold text-gold-400 text-[11px]">
                         {review.userName.charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white font-display">
+                        <span className="text-[11px] font-semibold text-white font-display">
                           {review.userName}
                         </span>
-                        <span className="text-[9px] font-mono px-2 py-0.5 bg-zinc-900 text-gold-400 border border-gold-500/30 rounded uppercase">
+                        <span className="text-[8px] font-mono px-1.5 py-0.5 bg-zinc-900 text-gold-400 border border-gold-500/30 rounded uppercase">
                           {review.userRole}
                         </span>
                       </div>
-                      <span className="text-[10px] text-zinc-500 font-mono block">
+                      <span className="text-[9px] text-zinc-500 font-mono block">
                         {new Date(review.createdAt).toLocaleDateString(undefined, {
                           year: 'numeric',
                           month: 'short',
@@ -464,7 +464,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                       {[1, 2, 3, 4, 5].map((s) => (
                         <Star
                           key={s}
-                          size={12}
+                          size={11}
                           className={s <= (review.rating || 5) ? 'fill-gold-400' : 'text-zinc-700'}
                         />
                       ))}
@@ -474,11 +474,11 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
 
                 {/* REVIEW TITLE & CONTENT */}
                 {review.title && (
-                  <h4 className="text-xs font-bold text-gold-300 uppercase tracking-wide">
+                  <h4 className="text-[11px] font-semibold text-gold-300">
                     {review.title}
                   </h4>
                 )}
-                <p className="text-xs text-zinc-200 leading-relaxed whitespace-pre-line">
+                <p className="text-[11px] text-zinc-300 leading-snug whitespace-pre-line font-sans">
                   {review.content}
                 </p>
 

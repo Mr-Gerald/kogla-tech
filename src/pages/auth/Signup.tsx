@@ -311,7 +311,7 @@ export default function Signup() {
               disabled={loadingState}
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="e.g. SHIRLEY" 
+              placeholder="e.g. AMBASSADOR" 
               className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-gold-400 font-mono uppercase placeholder:text-gray-700" 
             />
             {promoCode && (

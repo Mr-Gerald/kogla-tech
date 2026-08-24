@@ -78,6 +78,29 @@ export function saveFounderSignature(sig: string) {
   try {
     localStorage.setItem('kogla_founder_signature', sig);
   } catch (_) {}
+
+  // Sync to Firestore for persistence
+  safeFirestoreWrite(async () => {
+    await setDoc(doc(db, 'config', 'founder_signature'), {
+      signature: sig,
+      updatedAt: new Date().toISOString()
+    });
+  }, 2000);
+}
+
+export async function fetchFounderSignatureCloud(): Promise<string> {
+  const local = getFounderSignature();
+  return safeFirestoreRead(async () => {
+    const snap = await getDoc(doc(db, 'config', 'founder_signature'));
+    if (snap.exists() && snap.data()?.signature) {
+      const cloudSig = snap.data().signature as string;
+      try {
+        localStorage.setItem('kogla_founder_signature', cloudSig);
+      } catch (_) {}
+      return cloudSig;
+    }
+    return local;
+  }, local, 1500);
 }
 
 /**

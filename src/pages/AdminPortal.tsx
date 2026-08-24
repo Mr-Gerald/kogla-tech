@@ -628,6 +628,47 @@ export default function AdminPortal() {
     }
   };
 
+  const handleDeleteUserById = async (targetUser: any) => {
+    if (!targetUser) return;
+    if (confirm(`CRITICAL WARNING: Permanently delete user account "${targetUser.name}" (${targetUser.email})? This action will purge their profile data and allow this email to be registered afresh.`)) {
+      try {
+        const userRef = doc(db, 'users', targetUser.uid);
+        await deleteDoc(userRef);
+        
+        // Remove from localStorage cache as well
+        try {
+          const rawUsers = localStorage.getItem('kogla_users_cache');
+          if (rawUsers) {
+            const parsed = JSON.parse(rawUsers);
+            const filtered = parsed.filter((u: any) => u.uid !== targetUser.uid && u.email !== targetUser.email);
+            localStorage.setItem('kogla_users_cache', JSON.stringify(filtered));
+          }
+        } catch (_) {}
+
+        const deletedEmails = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
+        if (targetUser.email) {
+          deletedEmails.push(targetUser.email.toLowerCase());
+          localStorage.setItem('kogla_deleted_emails', JSON.stringify(deletedEmails));
+        }
+        setUsers(prev => prev.filter(u => u.uid !== targetUser.uid));
+        if (selectedUser?.uid === targetUser.uid) {
+          setSelectedUser(null);
+        }
+        triggerSuccess(`User account "${targetUser.email}" permanently purged successfully. The user can now recreate an account.`);
+      } catch (err: any) {
+        console.error(err);
+        setErrorMsg(`Failed to delete user account: ${err.message}`);
+        setTimeout(() => setErrorMsg(''), 5000);
+      }
+    }
+  };
+
+  const handleDeleteUserPermanently = async () => {
+    if (selectedUser) {
+      await handleDeleteUserById(selectedUser);
+    }
+  };
+
   // Transmit customized system notification
   const handleSendNotification = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1962,12 +2003,12 @@ export default function AdminPortal() {
                   Registered developer accounts roster
                 </span>
                 <span className="text-[9px] text-gray-500 uppercase">
-                  Sort: High-to-low XP metrics
+                  {users.length} Registered Accounts
                 </span>
               </div>
 
               {users.length === 0 ? (
-                <div className="p-16 text-center text-gray-650 text-xs font-mono">
+                <div className="p-16 text-center text-gray-500 text-xs font-mono">
                   [EMPTY DATABASE]: No developer registry profiles discovered.
                 </div>
               ) : (
@@ -1979,20 +2020,20 @@ export default function AdminPortal() {
                         <th className="p-4">Status &amp; Role</th>
                         <th className="p-4 text-center">Completed</th>
                         <th className="p-4 text-right">Metrics (XP)</th>
+                        <th className="p-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-900">
                       {users.map((item) => (
                         <tr 
                           key={item.uid}
-                          onClick={() => setSelectedUser(item)}
-                          className={`hover:bg-gray-900/40 transition-all cursor-pointer ${
+                          className={`hover:bg-gray-900/40 transition-all ${
                             selectedUser?.uid === item.uid ? 'bg-gold-500/5' : ''
                           }`}
                         >
-                          <td className="p-4">
+                          <td className="p-4 cursor-pointer" onClick={() => setSelectedUser(item)}>
                             <div className="font-semibold text-white uppercase tracking-wide">{item.name}</div>
-                            <div className="text-gray-500 font-mono text-[10px]">{item.email}</div>
+                            <div className="text-gray-400 font-mono text-[10px]">{item.email}</div>
                           </td>
                           <td className="p-4 font-mono text-[10px]">
                             <span className={`px-2 py-0.5 rounded-sm uppercase tracking-wider font-semibold ${
@@ -2008,6 +2049,28 @@ export default function AdminPortal() {
                           </td>
                           <td className="p-4 text-right font-display font-bold text-gold-500">
                             {item.xp || 0} XP
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedUser(item)}
+                                className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-mono uppercase rounded flex items-center gap-1 cursor-pointer"
+                              >
+                                <Eye size={11} /> Inspect
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteUserById(item);
+                                }}
+                                className="px-2.5 py-1 bg-red-950/80 hover:bg-red-800 border border-red-800 text-red-300 hover:text-white text-[10px] font-mono uppercase font-bold rounded flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                                title="Permanently delete user and allow recreation"
+                              >
+                                <Trash2 size={11} /> Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2063,7 +2126,7 @@ export default function AdminPortal() {
                   </div>
                   <button 
                     onClick={() => handleTogglePaid(selectedUser.uid, selectedUser.isPaid)}
-                    className={`w-full py-2.5 uppercase tracking-widest font-bold rounded-sm border transition-all ${
+                    className={`w-full py-2.5 uppercase tracking-widest font-bold rounded-sm border transition-all cursor-pointer ${
                       selectedUser.isPaid 
                         ? 'bg-red-950/40 border-red-900/60 text-red-400 hover:bg-red-900 hover:text-white' 
                         : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-black'
@@ -2071,6 +2134,23 @@ export default function AdminPortal() {
                   >
                     {selectedUser.isPaid ? 'Revoke Paid Clearance' : 'Approve & Grant Paid Clearance'}
                   </button>
+
+                  {/* DANGER ZONE: PERMANENT DELETE */}
+                  <div className="p-3 bg-red-950/30 border border-red-900/50 rounded-sm space-y-2 mt-3">
+                    <span className="text-[9px] text-red-400 font-mono uppercase font-bold block">
+                      Danger Zone • Permanent Deletion
+                    </span>
+                    <p className="text-[10px] text-zinc-400 leading-tight">
+                      Permanently wipes this user's profile and unlocks this email so it can be registered again.
+                    </p>
+                    <button 
+                      type="button"
+                      onClick={() => handleDeleteUserById(selectedUser)}
+                      className="w-full py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-mono uppercase tracking-wider font-bold text-xs rounded-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                    >
+                      <Trash2 size={13} /> Delete Account Permanently
+                    </button>
+                  </div>
                 </div>
 
                 {/* Direct notifications dispatch form */}

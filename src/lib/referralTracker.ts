@@ -6,28 +6,8 @@ const REF_STORAGE_KEY = 'kogla_referral_code';
 const REF_TIMESTAMP_KEY = 'kogla_referral_timestamp';
 const ATTRIBUTION_DAYS = 30;
 
-// Default pre-seeded affiliate partners (Shirley, etc.)
-export const DEFAULT_AFFILIATES: AffiliatePartner[] = [
-  {
-    id: 'aff-shirley',
-    code: 'SHIRLEY',
-    name: 'Shirley Johnson',
-    email: 'shirley@kogla-creator.com',
-    instagramHandle: '@shirley_tech',
-    tier: 1,
-    baseRate: 6,
-    boostedRate: 10,
-    discountOffered: 5,
-    totalReferrals: 2,
-    confirmedCount: 2,
-    totalEarned: 39900,
-    totalPaidOut: 0,
-    pendingPayout: 39900,
-    contractSigned: true,
-    contractSignedDate: '2026-08-23',
-    createdAt: new Date().toISOString()
-  }
-];
+// Default affiliate partners (empty until real creators register)
+export const DEFAULT_AFFILIATES: AffiliatePartner[] = [];
 
 /**
  * Captures ?ref=... or ?promo=... from current URL query parameters and persists in localStorage.

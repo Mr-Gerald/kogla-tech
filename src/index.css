@@ -118,34 +118,29 @@ html.theme-mixed {
 
 /* Dedicated Clean Print Styles */
 @media print {
-  html, body {
+  body * {
+    visibility: hidden !important;
+  }
+  .official-certificate-container, .official-certificate-container * {
+    visibility: visible !important;
+  }
+  .official-certificate-container {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 2rem !important;
+    z-index: 99999 !important;
     background: #050505 !important;
     color: #ffffff !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Hide website layout chrome */
-  nav, footer, header, #navbar, .ai-assistant-widget, .print\\:hidden, [role="dialog"], button:not(.print-allow) {
-    display: none !important;
-  }
-
-  .official-certificate-container {
     box-shadow: none !important;
-    margin: 0 auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
     border: 4px double #d4af37 !important;
-    background-color: #050505 !important;
-    color: #ffffff !important;
   }
 
   @page {
     size: landscape;
-    margin: 0.4cm;
+    margin: 0;
   }
 }

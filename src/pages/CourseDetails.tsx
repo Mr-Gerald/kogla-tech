@@ -446,7 +446,7 @@ export default function CourseDetails() {
                       setPromoCode(e.target.value.toUpperCase());
                       setPromoApplied(false);
                     }}
-                    placeholder="e.g. SHIRLEY"
+                    placeholder="e.g. AMBASSADOR"
                     className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-gold-400 font-mono uppercase"
                   />
                   <button

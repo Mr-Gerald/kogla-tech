@@ -1,7 +1,10 @@
-import React, { useRef } from 'react';
-import { Award, ShieldCheck, QrCode, Download, Printer, CheckCircle2, ExternalLink } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Award, ShieldCheck, QrCode, Download, Printer, CheckCircle2, ExternalLink, Loader2 } from 'lucide-react';
 import { CertificateRecord } from '../types';
 import { useSiteConfig } from '../context/SiteConfigContext';
+import { getFounderSignature } from '../lib/certificates';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface OfficialCertificateProps {
   certificate: CertificateRecord;
@@ -14,10 +17,43 @@ export const OfficialCertificate: React.FC<OfficialCertificateProps> = ({
 }) => {
   const { config } = useSiteConfig();
   const certRef = useRef<HTMLDivElement>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const handlePrint = () => {
     window.print();
   };
+
+  const handleDownloadPdf = async () => {
+    if (!certRef.current) return;
+    setDownloadingPdf(true);
+    try {
+      const element = certRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#09090b',
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`Kogla_Certificate_${certificate.id}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+      // Fallback to print
+      window.print();
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const currentSignature = certificate.signatureImage || getFounderSignature();
 
   return (
     <div className="space-y-6">
@@ -30,18 +66,33 @@ export const OfficialCertificate: React.FC<OfficialCertificateProps> = ({
               Verified Credential: <b className="text-gold-400">{certificate.id}</b>
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              className="px-4 py-2 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs uppercase tracking-wider font-display rounded-sm flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+            >
+              {downloadingPdf ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Generating PDF...
+                </>
+              ) : (
+                <>
+                  <Download size={14} /> Download Certificate (PDF)
+                </>
+              )}
+            </button>
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs uppercase tracking-wider font-display rounded-sm flex items-center gap-2 transition-all shadow-md"
+              className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 hover:text-white text-xs uppercase font-mono tracking-wider rounded-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
-              <Printer size={14} /> Print / Save as PDF
+              <Printer size={14} /> Print
             </button>
             <a
               href={`/verify-certificate/${certificate.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-xs uppercase font-mono tracking-wider rounded-sm flex items-center gap-1.5 transition-all"
+              className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-755 text-zinc-400 hover:text-zinc-200 text-xs uppercase font-mono tracking-wider rounded-sm flex items-center gap-1.5 transition-all"
             >
               <ExternalLink size={13} /> Public Link
             </a>
@@ -170,11 +221,11 @@ export const OfficialCertificate: React.FC<OfficialCertificateProps> = ({
           <div className="flex flex-col items-center sm:items-end text-center sm:text-right space-y-1">
             {/* Signature rendering */}
             <div className="h-16 flex items-end justify-center sm:justify-end pb-1">
-              {certificate.signatureImage ? (
+              {currentSignature ? (
                 <img 
-                  src={certificate.signatureImage} 
+                  src={currentSignature} 
                   alt="Gerald Emechebe Signature" 
-                  className="max-h-14 object-contain filter invert opacity-95" 
+                  className="max-h-14 max-w-[180px] object-contain drop-shadow" 
                 />
               ) : (
                 <div 

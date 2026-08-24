@@ -17,52 +17,20 @@ import { DEFAULT_AFFILIATES } from './referralTracker';
 const LOCAL_AFFILIATES_KEY = 'kogla_affiliates_cache';
 const LOCAL_REFERRALS_KEY = 'kogla_referrals_cache';
 
-// Seed initial realistic referrals for demo/testing if empty
-const INITIAL_DEMO_REFERRALS: ReferralLead[] = [
-  {
-    id: 'ref-demo-1',
-    affiliateCode: 'SHIRLEY',
-    studentName: 'Chidimma O.',
-    studentEmail: 'chidimma.o@gmail.com',
-    studentPhone: '+2348031234567',
-    courseTitle: 'Full-Stack Web Development',
-    mode: 'online',
-    tuitionAmount: 350000,
-    discountApplied: 17500, // 5% discount
-    discountedAmount: 332500,
-    commissionRate: 6,
-    commissionAmount: 19950,
-    status: 'confirmed',
-    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-    confirmedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    paymentProofNote: 'Tuition transfer verified via Zenith Bank'
-  },
-  {
-    id: 'ref-demo-2',
-    affiliateCode: 'SHIRLEY',
-    studentName: 'Tunde Bakare',
-    studentEmail: 'tunde.b@yahoo.com',
-    studentPhone: '+2348129876543',
-    courseTitle: 'Data Analysis & Business Intelligence',
-    mode: 'physical',
-    tuitionAmount: 350000,
-    discountApplied: 17500,
-    discountedAmount: 332500,
-    commissionRate: 6,
-    commissionAmount: 19950,
-    status: 'confirmed',
-    createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
-    confirmedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
-    paymentProofNote: 'Direct POS payment at Ikeja Physical Hub'
-  }
-];
+// Default referrals (empty until real student signups occur)
+const INITIAL_DEMO_REFERRALS: ReferralLead[] = [];
 
 function getCachedAffiliates(): AffiliatePartner[] {
   try {
     const raw = localStorage.getItem(LOCAL_AFFILIATES_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Filter out any stale mock Shirley data
+      const cleaned = parsed.filter((a: any) => a.code !== 'SHIRLEY');
+      return cleaned;
+    }
   } catch (_) {}
-  return DEFAULT_AFFILIATES;
+  return [];
 }
 
 function saveCachedAffiliates(affiliates: AffiliatePartner[]) {
@@ -74,9 +42,13 @@ function saveCachedAffiliates(affiliates: AffiliatePartner[]) {
 function getCachedReferrals(): ReferralLead[] {
   try {
     const raw = localStorage.getItem(LOCAL_REFERRALS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const cleaned = parsed.filter((r: any) => r.affiliateCode !== 'SHIRLEY' && !r.id?.startsWith('ref-demo-'));
+      return cleaned;
+    }
   } catch (_) {}
-  return INITIAL_DEMO_REFERRALS;
+  return [];
 }
 
 function saveCachedReferrals(referrals: ReferralLead[]) {
