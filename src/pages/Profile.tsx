@@ -38,6 +38,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, ReviewRecord } from '../types';
 import { subscribeToReviews, deleteReview } from '../lib/reviews';
+import { makeSignatureTransparent } from '../lib/signatureProcessor';
 
 type TabType = 'personal' | 'referrals' | 'security' | 'display' | 'notifications' | 'academy' | 'reviews' | 'bookmarks' | 'connected';
 
@@ -120,7 +121,7 @@ export default function Profile() {
     reader.readAsDataURL(file);
   };
 
-  const handleDeviceSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDeviceSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -135,44 +136,20 @@ export default function Profile() {
     }
 
     setUploadingSig(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_DIM = 500;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_DIM) {
-            height *= MAX_DIM / width;
-            width = MAX_DIM;
-          }
-        } else {
-          if (height > MAX_DIM) {
-            width *= MAX_DIM / height;
-            height = MAX_DIM;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/png', 0.92);
-          setSignatureUrl(dataUrl);
-        }
-        setUploadingSig(false);
-      };
-      img.onerror = () => {
-        setUploadingSig(false);
-        alert('Failed to read signature image.');
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    try {
+      // Automatically eliminate black or white backgrounds to create 100% transparent PNG
+      const transparentSig = await makeSignatureTransparent(file, {
+        mode: 'gold',
+        autoCrop: true,
+        threshold: 0.28
+      });
+      setSignatureUrl(transparentSig);
+    } catch (err) {
+      console.error('Failed to process signature:', err);
+      alert('Failed to process signature image.');
+    } finally {
+      setUploadingSig(false);
+    }
   };
 
   // Form State for Security
@@ -618,12 +595,19 @@ export default function Profile() {
 
                   <div className="flex flex-col sm:flex-row items-center gap-4">
                     {/* Signature Preview Box */}
-                    <div className="relative shrink-0 w-32 h-16 bg-zinc-950 border border-zinc-800 rounded flex items-center justify-center p-1">
+                    <div 
+                      className="relative shrink-0 w-36 h-16 border border-zinc-800 rounded flex items-center justify-center p-2 overflow-hidden shadow-inner"
+                      style={{
+                        backgroundColor: '#09090b',
+                        backgroundImage: 'radial-gradient(#27272a 1px, transparent 1px)',
+                        backgroundSize: '10px 10px'
+                      }}
+                    >
                       {signatureUrl ? (
                         <img 
                           src={signatureUrl} 
                           alt="Signature Preview" 
-                          className="max-h-full max-w-full object-contain filter invert contrast-200"
+                          className="max-h-full max-w-full object-contain drop-shadow"
                         />
                       ) : (
                         <span className="text-[10px] text-zinc-500 font-mono italic">No signature uploaded</span>
@@ -632,16 +616,16 @@ export default function Profile() {
 
                     {/* Upload button & URL input */}
                     <div className="flex-1 w-full space-y-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <button
                           type="button"
                           onClick={() => signatureInputRef.current?.click()}
                           disabled={uploadingSig}
-                          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-gold-400 font-bold text-xs uppercase font-mono rounded inline-flex items-center gap-2 transition-all border border-gold-500/30 shadow"
+                          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-gold-400 font-bold text-xs uppercase font-mono rounded inline-flex items-center gap-2 transition-all border border-gold-500/30 shadow cursor-pointer"
                         >
                           {uploadingSig ? (
                             <>
-                              <Loader2 size={13} className="animate-spin" /> Processing Signature...
+                              <Loader2 size={13} className="animate-spin" /> Processing Transparent Signature...
                             </>
                           ) : (
                             <>
@@ -651,14 +635,31 @@ export default function Profile() {
                         </button>
 
                         {signatureUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setSignatureUrl('')}
-                            className="px-2.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-mono rounded"
-                            title="Remove Signature"
-                          >
-                            Remove
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                setUploadingSig(true);
+                                try {
+                                  const cleaned = await makeSignatureTransparent(signatureUrl, { mode: 'gold', autoCrop: true });
+                                  setSignatureUrl(cleaned);
+                                } catch (_) {}
+                                setUploadingSig(false);
+                              }}
+                              className="px-2.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-gold-400 border border-gold-500/30 text-xs font-mono rounded flex items-center gap-1 cursor-pointer"
+                              title="Make 100% Transparent"
+                            >
+                              <Sparkles size={11} /> Clean Background
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSignatureUrl('')}
+                              className="px-2.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-mono rounded cursor-pointer"
+                              title="Remove Signature"
+                            >
+                              Remove
+                            </button>
+                          </>
                         )}
                       </div>
 

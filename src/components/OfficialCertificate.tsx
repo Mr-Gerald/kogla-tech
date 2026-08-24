@@ -225,7 +225,10 @@ export const OfficialCertificate: React.FC<OfficialCertificateProps> = ({
                 <img 
                   src={currentSignature} 
                   alt="Gerald Emechebe Signature" 
-                  className="max-h-14 max-w-[180px] object-contain drop-shadow" 
+                  className="max-h-14 max-w-[180px] object-contain drop-shadow-[0_2px_8px_rgba(234,179,8,0.25)]"
+                  style={{
+                    mixBlendMode: currentSignature.startsWith('data:image') ? 'normal' : 'screen'
+                  }}
                 />
               ) : (
                 <div 

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, safeFirestoreWrite } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
-import { ShieldCheck, Mail, Lock, User, Loader2, Tag, CheckCircle2, Check } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, User, Loader2, Tag, CheckCircle2, Check, ArrowRight, KeyRound } from 'lucide-react';
 import { captureUrlReferral, getActiveReferralCode, setManualReferralCode } from '../../lib/referralTracker';
 
 export default function Signup() {
@@ -21,6 +21,7 @@ export default function Signup() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [existingAccountDetected, setExistingAccountDetected] = useState(false);
 
   useEffect(() => {
     const urlRef = captureUrlReferral();
@@ -71,6 +72,7 @@ export default function Signup() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setExistingAccountDetected(false);
     setLoadingState(true);
 
     if (!name || !email || !password) {
@@ -92,51 +94,77 @@ export default function Signup() {
       return;
     }
 
+    const trimmedEmail = email.trim();
+    const cleanPromo = promoCode.trim().toUpperCase();
+    const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
+    const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(trimmedEmail.toLowerCase());
+    const role = isSystemAdmin ? 'admin' : 'user';
+
     try {
-      // 1. Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      let activeUser: any = null;
 
-      // 2. Set display name
-      await updateProfile(user, { displayName: name });
-
-      // 3. Send 100% Real Email Verification Link
       try {
-        await sendEmailVerification(user);
-        setVerificationSent(true);
-        setRegisteredEmail(email);
-      } catch (verifErr) {
-        console.warn('Email verification send note:', verifErr);
+        // 1. Attempt to create user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+        activeUser = userCredential.user;
+        await updateProfile(activeUser, { displayName: name });
+
+        try {
+          await sendEmailVerification(activeUser);
+          setVerificationSent(true);
+          setRegisteredEmail(trimmedEmail);
+        } catch (verifErr) {
+          console.warn('Email verification send note:', verifErr);
+        }
+      } catch (authErr: any) {
+        // If email already exists in Firebase Auth (e.g., deleted from Firestore earlier or previously created),
+        // attempt seamless sign-in with the provided password
+        if (authErr?.code === 'auth/email-already-in-use') {
+          try {
+            const loginCred = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+            activeUser = loginCred.user;
+            if (name && !activeUser.displayName) {
+              await updateProfile(activeUser, { displayName: name });
+            }
+          } catch (loginErr: any) {
+            // Password did not match existing Auth credential
+            setExistingAccountDetected(true);
+            setErrorMsg('An account with this email address already exists. Please log in with your password or reset your credentials.');
+            setLoadingState(false);
+            return;
+          }
+        } else {
+          throw authErr;
+        }
       }
 
-      // 4. Write profile record securely to Firestore
-      const userRef = doc(db, 'users', user.uid);
-      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
-      const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase());
-      const role = isSystemAdmin ? 'admin' : 'user';
-      const cleanPromo = promoCode.trim().toUpperCase();
+      if (!activeUser) {
+        throw new Error('Authentication could not be initialized.');
+      }
 
+      // 2. Write/Restore profile record in Firestore
+      const userRef = doc(db, 'users', activeUser.uid);
       const initialProfile = {
-        uid: user.uid,
-        name: name,
-        email: email,
+        uid: activeUser.uid,
+        name: name || activeUser.displayName || trimmedEmail.split('@')[0],
+        email: trimmedEmail,
         role: role,
         xp: 0,
         completedRooms: [],
         referredBy: cleanPromo || null,
-        emailVerified: false,
+        emailVerified: activeUser.emailVerified || false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
       await safeFirestoreWrite(async () => {
-        await setDoc(userRef, initialProfile);
+        await setDoc(userRef, initialProfile, { merge: true });
         const notifId = `welcome-${Date.now()}`;
         await setDoc(doc(db, 'notifications', notifId), {
           id: notifId,
-          userId: user.uid,
+          userId: activeUser.uid,
           title: 'Welcome to Kogla Tech',
-          body: `Congratulations ${name}. Your account has been registered. Please check your email to verify your address.`,
+          body: `Congratulations ${name || 'Student'}. Your account has been initialized and synchronized.`,
           read: false,
           timestamp: new Date().toISOString()
         });
@@ -160,7 +188,7 @@ export default function Signup() {
             navigate('/academy');
           }
         }
-      }, 3000);
+      }, 1200);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(formatUserError(err));
@@ -201,9 +229,27 @@ export default function Signup() {
         )}
 
         {errorMsg && (
-          <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-400 text-xs rounded-sm mb-6 flex items-start gap-2 max-h-48 overflow-y-auto">
-            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">Error:</span>
-            <p className="text-[11px] leading-relaxed font-sans">{errorMsg}</p>
+          <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-400 text-xs rounded-sm mb-6 space-y-2.5">
+            <div className="flex items-start gap-2 max-h-48 overflow-y-auto">
+              <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">Notice:</span>
+              <p className="text-[11px] leading-relaxed font-sans">{errorMsg}</p>
+            </div>
+            {existingAccountDetected && (
+              <div className="pt-2 border-t border-red-500/20 flex flex-wrap gap-2">
+                <Link
+                  to="/auth/login"
+                  className="px-3 py-1.5 bg-red-900/60 hover:bg-gold-500 hover:text-black border border-red-500/30 text-white font-mono text-[11px] rounded flex items-center gap-1.5 transition-all font-bold"
+                >
+                  <KeyRound size={12} /> Go to Log In <ArrowRight size={11} />
+                </Link>
+                <Link
+                  to="/auth/forgot-password"
+                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono text-[11px] rounded transition-all"
+                >
+                  Reset Password
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

@@ -71,6 +71,7 @@ import {
 } from '../lib/affiliates';
 import { generateAmbassadorAgreementPdf } from '../lib/agreementPdfGenerator';
 import { getAllCertificates, issueCertificate, FOUNDER_NAME, FOUNDER_TITLE, getFounderSignature, saveFounderSignature } from '../lib/certificates';
+import { makeSignatureTransparent } from '../lib/signatureProcessor';
 import { ACADEMY_COURSES, formatNaira, getCustomPricingMap, saveCustomPricingMap, getAllCourses } from '../data/coursesPricing';
 import { OfficialCertificate } from '../components/OfficialCertificate';
 
@@ -198,9 +199,11 @@ export default function AdminPortal() {
   // Founder Signature State
   const [founderSig, setFounderSig] = useState(getFounderSignature());
   const [uploadingFounderSig, setUploadingFounderSig] = useState(false);
+  const [processingSigEffect, setProcessingSigEffect] = useState(false);
+  const [sigColorMode, setSigColorMode] = useState<'gold' | 'white' | 'original'>('gold');
   const founderSigInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleFounderSigUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFounderSigUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
@@ -208,37 +211,41 @@ export default function AdminPortal() {
       return;
     }
     setUploadingFounderSig(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_DIM = 400;
-        let w = img.width;
-        let h = img.height;
-        if (w > h) {
-          if (w > MAX_DIM) { h *= MAX_DIM / w; w = MAX_DIM; }
-        } else {
-          if (h > MAX_DIM) { w *= MAX_DIM / h; h = MAX_DIM; }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, w, h);
-          const dataUrl = canvas.toDataURL('image/png', 0.95);
-          setFounderSig(dataUrl);
-          saveFounderSignature(dataUrl);
-        }
-        setUploadingFounderSig(false);
-      };
-      img.onerror = () => {
-        setUploadingFounderSig(false);
-        alert('Failed to process signature image.');
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    try {
+      // Automatically extract pure transparent signature
+      const transparentDataUrl = await makeSignatureTransparent(file, {
+        mode: sigColorMode,
+        autoCrop: true,
+        threshold: 0.28
+      });
+      setFounderSig(transparentDataUrl);
+      saveFounderSignature(transparentDataUrl);
+    } catch (err) {
+      console.error('Failed to process signature:', err);
+      alert('Failed to process signature image.');
+    } finally {
+      setUploadingFounderSig(false);
+    }
+  };
+
+  const handleCleanSignature = async (modeToApply: 'gold' | 'white' | 'original' = sigColorMode) => {
+    if (!founderSig) return;
+    setProcessingSigEffect(true);
+    try {
+      const cleanTransparent = await makeSignatureTransparent(founderSig, {
+        mode: modeToApply,
+        autoCrop: true,
+        threshold: 0.28
+      });
+      setFounderSig(cleanTransparent);
+      saveFounderSignature(cleanTransparent);
+      setSigColorMode(modeToApply);
+    } catch (err) {
+      console.error('Failed to apply transparency:', err);
+      alert('Could not strip background. Please check the image source.');
+    } finally {
+      setProcessingSigEffect(false);
+    }
   };
   
   // Issue Certificate Form State
@@ -1828,41 +1835,131 @@ export default function AdminPortal() {
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-6 items-center">
-              <div className="p-4 bg-black border border-zinc-850 rounded flex items-center justify-center h-24">
-                {founderSig ? (
-                  <img
-                    src={founderSig}
-                    alt="Founder Signature Stamp"
-                    className="max-h-full max-w-full object-contain filter invert contrast-200"
-                  />
-                ) : (
-                  <span className="text-[11px] text-zinc-500 font-mono italic text-center">
-                    No signature uploaded yet. Default digital seal active.
-                  </span>
+            <div className="grid sm:grid-cols-3 gap-6 items-start">
+              {/* High-Contrast Transparent Preview Box */}
+              <div className="space-y-2">
+                <div 
+                  className="relative p-4 border border-zinc-800 rounded-lg flex items-center justify-center h-28 overflow-hidden shadow-inner"
+                  style={{
+                    backgroundColor: '#0a0a0c',
+                    backgroundImage: 'radial-gradient(#27272a 1px, transparent 1px)',
+                    backgroundSize: '12px 12px'
+                  }}
+                >
+                  {founderSig ? (
+                    <img
+                      src={founderSig}
+                      alt="Founder Signature Stamp"
+                      className="max-h-full max-w-full object-contain drop-shadow-md"
+                    />
+                  ) : (
+                    <span className="text-[11px] text-zinc-500 font-mono italic text-center">
+                      No signature uploaded yet. Default digital seal active.
+                    </span>
+                  )}
+                  {founderSig && (
+                    <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/80 border border-gold-500/30 rounded text-[9px] font-mono text-gold-400">
+                      Transparent Alpha
+                    </span>
+                  )}
+                </div>
+
+                {/* Instant Background Stripping & Tint Controls */}
+                {founderSig && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      disabled={processingSigEffect}
+                      onClick={() => handleCleanSignature('gold')}
+                      className={`px-2.5 py-1.5 text-[10px] font-mono uppercase rounded flex items-center gap-1 border transition-all cursor-pointer ${
+                        sigColorMode === 'gold' 
+                          ? 'bg-gold-500 text-black border-gold-400 font-bold' 
+                          : 'bg-zinc-900 text-gold-400 hover:bg-zinc-800 border-gold-500/30'
+                      }`}
+                      title="Make transparent with metallic Gold strokes"
+                    >
+                      {processingSigEffect ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                      Gold
+                    </button>
+                    <button
+                      type="button"
+                      disabled={processingSigEffect}
+                      onClick={() => handleCleanSignature('white')}
+                      className={`px-2.5 py-1.5 text-[10px] font-mono uppercase rounded flex items-center gap-1 border transition-all cursor-pointer ${
+                        sigColorMode === 'white' 
+                          ? 'bg-white text-black border-white font-bold' 
+                          : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800 border-zinc-700'
+                      }`}
+                      title="Make transparent with crisp White strokes"
+                    >
+                      White
+                    </button>
+                    <button
+                      type="button"
+                      disabled={processingSigEffect}
+                      onClick={() => handleCleanSignature('original')}
+                      className={`px-2.5 py-1.5 text-[10px] font-mono uppercase rounded flex items-center gap-1 border transition-all cursor-pointer ${
+                        sigColorMode === 'original' 
+                          ? 'bg-zinc-700 text-white border-zinc-500 font-bold' 
+                          : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 border-zinc-800'
+                      }`}
+                      title="Preserve original stroke colors with 100% transparent background"
+                    >
+                      Original
+                    </button>
+                  </div>
                 )}
               </div>
-              <div className="sm:col-span-2 space-y-2">
-                <label className="block text-[10px] text-zinc-400 uppercase font-mono">
-                  Or Paste Signature Image URL (PNG / Transparent)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    placeholder="https://example.com/gerald-signature.png"
-                    value={founderSig}
-                    onChange={(e) => {
-                      setFounderSig(e.target.value);
-                      saveFounderSignature(e.target.value);
-                    }}
-                    className="flex-1 p-2.5 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 focus:outline-none"
-                  />
-                  <span className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded text-[11px] font-mono text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 size={12} /> Auto-Saved
-                  </span>
+
+              <div className="sm:col-span-2 space-y-3">
+                <div>
+                  <label className="block text-[10px] text-zinc-400 uppercase font-mono mb-1">
+                    Or Paste Signature Image URL (PNG / Transparent)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      placeholder="https://example.com/gerald-signature.png"
+                      value={founderSig}
+                      onChange={(e) => {
+                        setFounderSig(e.target.value);
+                        saveFounderSignature(e.target.value);
+                      }}
+                      className="flex-1 p-2.5 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 focus:outline-none"
+                    />
+                    <span className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded text-[11px] font-mono text-emerald-400 flex items-center gap-1 shrink-0">
+                      <CheckCircle2 size={12} /> Auto-Saved
+                    </span>
+                  </div>
                 </div>
+
+                {founderSig && (
+                  <div className="p-3 bg-zinc-900/70 border border-zinc-800 rounded flex items-center justify-between gap-3">
+                    <div className="text-[11px] font-mono text-zinc-300">
+                      <span className="text-gold-400 font-bold block text-[10px] uppercase">Background Removal Status</span>
+                      Background auto-stripped into 100% transparent alpha PNG for certificates & agreements.
+                    </div>
+                    <button
+                      type="button"
+                      disabled={processingSigEffect}
+                      onClick={() => handleCleanSignature(sigColorMode)}
+                      className="px-3 py-1.5 bg-zinc-800 hover:bg-gold-500 hover:text-black border border-gold-500/40 text-gold-300 text-xs font-mono rounded flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                    >
+                      {processingSigEffect ? (
+                        <>
+                          <Loader2 size={11} className="animate-spin" /> Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={11} /> Re-clean Background
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
                 <p className="text-[10px] text-zinc-500 font-mono">
-                  Tip: Use a high-contrast black signature on a transparent background for professional certification output.
+                  Tip: Any uploaded photo, scanned drawing, or inverted signature will automatically have its black or white background stripped out completely.
                 </p>
               </div>
             </div>

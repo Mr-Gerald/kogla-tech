@@ -26,8 +26,12 @@ function getCachedAffiliates(): AffiliatePartner[] {
     const raw = localStorage.getItem(LOCAL_AFFILIATES_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Filter out any stale mock data
-      const cleaned = parsed.filter((a: any) => a.code !== 'SHIRLEY' && a.code !== 'PHENA' && a.id !== 'aff-shirley');
+      // Filter out any stale mock/test data
+      const cleaned = parsed.filter((a: any) => 
+        a.code !== 'SHIRLEY' && 
+        a.id !== 'aff-shirley' &&
+        !(a.code === 'PHENA' && (a.email?.includes('instagram.com') || a.name?.includes('Her Tech')))
+      );
       return cleaned;
     }
   } catch (_) {}
@@ -47,9 +51,10 @@ function getCachedReferrals(): ReferralLead[] {
       const parsed = JSON.parse(raw);
       const cleaned = parsed.filter((r: any) => 
         r.affiliateCode !== 'SHIRLEY' && 
-        r.affiliateCode !== 'PHENA' && 
         !r.id?.startsWith('ref-demo-') &&
-        r.studentEmail !== 'eechebegerald@gmail.com'
+        r.studentEmail !== 'eechebegerald@gmail.com' &&
+        r.studentName !== 'DGS' &&
+        !(r.affiliateCode === 'PHENA' && r.studentName === 'DGS')
       );
       return cleaned;
     }
@@ -75,7 +80,13 @@ export async function getAffiliateByCode(code: string): Promise<AffiliatePartner
     const docRef = doc(db, 'affiliates', normCode);
     const snap = await getDoc(docRef);
     if (snap.exists()) {
-      return snap.data() as AffiliatePartner;
+      const data = snap.data() as AffiliatePartner;
+      // If it's the old test mock doc, delete it
+      if (data.code === 'PHENA' && (data.email?.includes('instagram.com') || data.name?.includes('Her Tech'))) {
+        deleteDoc(docRef).catch(() => {});
+        return null;
+      }
+      return data;
     }
     return foundInCache || null;
   }, foundInCache || null, 1500);
@@ -93,8 +104,14 @@ export async function getAllAffiliates(): Promise<AffiliatePartner[]> {
       const list: AffiliatePartner[] = [];
       snap.forEach(d => {
         const data = d.data() as AffiliatePartner;
-        // Purge test PHENA / SHIRLEY docs
-        if (data.code !== 'PHENA' && data.code !== 'SHIRLEY' && data.id !== 'aff-shirley') {
+        // Purge test docs from Firestore
+        if (
+          data.code === 'SHIRLEY' || 
+          data.id === 'aff-shirley' || 
+          (data.code === 'PHENA' && (data.email?.includes('instagram.com') || data.name?.includes('Her Tech')))
+        ) {
+          deleteDoc(doc(db, 'affiliates', d.id)).catch(() => {});
+        } else {
           list.push(data);
         }
       });
@@ -120,7 +137,18 @@ export async function getReferralsByCode(code: string): Promise<ReferralLead[]> 
     const snap = await getDocs(q);
     if (!snap.empty) {
       const list: ReferralLead[] = [];
-      snap.forEach(d => list.push(d.data() as ReferralLead));
+      snap.forEach(d => {
+        const data = d.data() as ReferralLead;
+        if (
+          data.studentName === 'DGS' || 
+          data.studentEmail === 'eechebegerald@gmail.com' ||
+          data.id?.startsWith('ref-demo-')
+        ) {
+          deleteDoc(doc(db, 'referrals', d.id)).catch(() => {});
+        } else {
+          list.push(data);
+        }
+      });
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       return list;
     }
@@ -140,13 +168,16 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
       const list: ReferralLead[] = [];
       snap.forEach(d => {
         const data = d.data() as ReferralLead;
-        // Exclude test referrals
+        // Exclude and delete test referrals
         if (
-          data.affiliateCode !== 'PHENA' && 
-          data.affiliateCode !== 'SHIRLEY' && 
-          !data.id?.startsWith('ref-demo-') &&
-          data.studentEmail !== 'eechebegerald@gmail.com'
+          data.affiliateCode === 'SHIRLEY' || 
+          data.id?.startsWith('ref-demo-') ||
+          data.studentEmail === 'eechebegerald@gmail.com' ||
+          data.studentName === 'DGS' ||
+          (data.affiliateCode === 'PHENA' && data.studentName === 'DGS')
         ) {
+          deleteDoc(doc(db, 'referrals', d.id)).catch(() => {});
+        } else {
           list.push(data);
         }
       });
