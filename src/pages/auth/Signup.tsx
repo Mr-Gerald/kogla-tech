@@ -113,8 +113,12 @@ export default function Signup() {
           await sendEmailVerification(activeUser);
           setVerificationSent(true);
           setRegisteredEmail(trimmedEmail);
-        } catch (verifErr) {
-          console.warn('Email verification send note:', verifErr);
+        } catch (verifErr: any) {
+          console.warn('Email verification dispatch notice:', verifErr);
+          // If Google Identity Toolkit throttles/blocks email sending (e.g. daily quota reached or 400 Bad Request)
+          if (verifErr?.message?.includes('TOO_MANY_ATTEMPTS_TRY_LATER') || verifErr?.code === 'auth/too-many-requests') {
+            console.info('Email verification request was rate-limited by Firebase Auth.');
+          }
         }
       } catch (authErr: any) {
         // If email already exists in Firebase Auth (e.g., deleted from Firestore earlier or previously created),

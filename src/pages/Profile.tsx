@@ -39,6 +39,8 @@ import { useAuth } from '../context/AuthContext';
 import { UserProfile, ReviewRecord } from '../types';
 import { subscribeToReviews, deleteReview } from '../lib/reviews';
 import { makeSignatureTransparent } from '../lib/signatureProcessor';
+import { sendEmailVerification } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 type TabType = 'personal' | 'referrals' | 'security' | 'display' | 'notifications' | 'academy' | 'reviews' | 'bookmarks' | 'connected';
 
@@ -209,6 +211,32 @@ export default function Profile() {
     });
     return () => unsubscribe();
   }, [user]);
+
+  // Handle Email Verification Resend
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationSentSuccess, setVerificationSentSuccess] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+
+  const handleSendVerificationEmail = async () => {
+    if (!auth.currentUser) return;
+    setSendingVerification(true);
+    setVerificationError(null);
+    setVerificationSentSuccess(false);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      setVerificationSentSuccess(true);
+      setTimeout(() => setVerificationSentSuccess(false), 8000);
+    } catch (err: any) {
+      console.error('Failed to send verification email:', err);
+      if (err?.code === 'auth/too-many-requests' || err?.message?.includes('TOO_MANY_ATTEMPTS')) {
+        setVerificationError('Email dispatch rate limit reached for this project. Please wait a while before requesting again.');
+      } else {
+        setVerificationError(err?.message || 'Could not send verification email. Please try again later.');
+      }
+    } finally {
+      setSendingVerification(false);
+    }
+  };
 
   // Handle Save Personal Info
   const handleSavePersonal = async (e: React.FormEvent) => {
@@ -458,6 +486,61 @@ export default function Profile() {
                 <p className="text-xs text-zinc-400 mt-0.5">
                   Update your display credentials, professional headline, and contact details.
                 </p>
+              </div>
+
+              {/* Email Verification Status Card */}
+              <div className={`p-4 rounded-lg border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                user?.emailVerified 
+                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' 
+                  : 'bg-amber-950/30 border-amber-500/30 text-amber-300'
+              }`}>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider">
+                    {user?.emailVerified ? (
+                      <>
+                        <CheckCircle2 size={15} className="text-emerald-400" />
+                        <span className="text-emerald-400">Email Verified</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail size={15} className="text-amber-400" />
+                        <span className="text-amber-400">Email Verification Pending</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-300">
+                    Account email: <span className="font-mono text-white">{user?.email || profile?.email}</span>
+                  </p>
+                  {verificationSentSuccess && (
+                    <p className="text-[11px] text-emerald-400 font-mono flex items-center gap-1 mt-1">
+                      <CheckCircle2 size={12} /> Verification email dispatched! Please check your inbox & spam folder.
+                    </p>
+                  )}
+                  {verificationError && (
+                    <p className="text-[11px] text-red-400 font-mono mt-1">
+                      Notice: {verificationError}
+                    </p>
+                  )}
+                </div>
+
+                {!user?.emailVerified && (
+                  <button
+                    type="button"
+                    disabled={sendingVerification}
+                    onClick={handleSendVerificationEmail}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold font-mono text-xs uppercase rounded flex items-center gap-1.5 transition-all shrink-0 cursor-pointer shadow"
+                  >
+                    {sendingVerification ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" /> Dispatching...
+                      </>
+                    ) : (
+                      <>
+                        <Mail size={13} /> Send Verification Link
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
 
               <form onSubmit={handleSavePersonal} className="space-y-4">
