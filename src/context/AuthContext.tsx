@@ -24,7 +24,7 @@ import {
   where,
   orderBy
 } from 'firebase/firestore';
-import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType, safeFirestoreWrite } from '../lib/firebase';
 import { UserProfile, NotificationRecord } from '../types';
 
 interface AuthContextType {
@@ -80,12 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(newProfile);
             setLoading(false);
             
-            // Try saving to database silently
-            try {
+            // Try saving to database silently with safe timeout
+            safeFirestoreWrite(async () => {
               await setDoc(userRef, newProfile);
-            } catch (err) {
-              console.warn('[AuthContext] Silent profile persistence note:', err);
-            }
+            }, 1500);
           }
         }, (error) => {
           console.warn('[AuthContext] Firestore profile listener warning:', error?.message);
@@ -189,16 +187,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfileData = async (data: Partial<UserProfile>) => {
     if (!user) return;
+    setProfile(prev => prev ? { ...prev, ...data, updatedAt: new Date().toISOString() } : prev);
     const userRef = doc(db, 'users', user.uid);
-    try {
+    await safeFirestoreWrite(async () => {
       const payload = {
         ...data,
         updatedAt: new Date().toISOString()
       };
       await updateDoc(userRef, payload);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
-    }
+    }, 1500);
   };
 
   const completeRoom = async (roomSlug: string, xpReward: number) => {
@@ -207,26 +204,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check if room is already completed
     if (profile.completedRooms.includes(roomSlug)) return;
 
+    // Update local state immediately
+    setProfile(prev => prev ? {
+      ...prev,
+      completedRooms: [...prev.completedRooms, roomSlug],
+      xp: (prev.xp || 0) + xpReward,
+      updatedAt: new Date().toISOString()
+    } : prev);
+
     const userRef = doc(db, 'users', user.uid);
-    try {
+    await safeFirestoreWrite(async () => {
       await updateDoc(userRef, {
         completedRooms: arrayUnion(roomSlug),
         xp: increment(xpReward),
         updatedAt: new Date().toISOString()
       });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
-    }
+    }, 1500);
   };
 
   const markNotificationRead = async (notifId: string) => {
     if (!user) return;
+    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
     const notifRef = doc(db, 'notifications', notifId);
-    try {
+    await safeFirestoreWrite(async () => {
       await updateDoc(notifRef, { read: true });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `notifications/${notifId}`);
-    }
+    }, 1500);
   };
 
   return (

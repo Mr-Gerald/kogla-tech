@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType, safeFirestoreWrite } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
 import { ShieldCheck, Mail, Lock, Loader2, Key } from 'lucide-react';
@@ -72,7 +72,7 @@ export default function Login() {
       const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase());
       const role = isSystemAdmin ? 'admin' : 'user';
 
-      try {
+      await safeFirestoreWrite(async () => {
         const profileSnap = await getDoc(userRef);
         if (!profileSnap.exists()) {
           const initialProfile = {
@@ -93,9 +93,7 @@ export default function Login() {
             await updateDoc(userRef, { role: 'admin', updatedAt: new Date().toISOString() });
           }
         }
-      } catch (docErr) {
-        console.warn('[Login] Database check note (running in resilient session):', docErr);
-      }
+      }, 2000);
 
       setSuccessMsg('Login successful. Redirecting...');
       

@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { auth, db, safeFirestoreWrite } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
-import { ShieldCheck, Mail, Lock, User, Terminal, Loader2 } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, User, Loader2, Tag, CheckCircle2, Check } from 'lucide-react';
+import { captureUrlReferral, getActiveReferralCode, setManualReferralCode } from '../../lib/referralTracker';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -14,9 +15,20 @@ export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [promoCode, setPromoCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loadingState, setLoadingState] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+
+  useEffect(() => {
+    const urlRef = captureUrlReferral();
+    const activeRef = urlRef || getActiveReferralCode();
+    if (activeRef) {
+      setPromoCode(activeRef);
+    }
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setErrorMsg('');
@@ -26,6 +38,16 @@ export default function Signup() {
       
       const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = gUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(gUser.email.toLowerCase());
+
+      const activeCode = promoCode.trim().toUpperCase() || getActiveReferralCode();
+      if (activeCode && gUser.uid) {
+        await safeFirestoreWrite(async () => {
+          await setDoc(doc(db, 'users', gUser.uid), {
+            referredBy: activeCode,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        }, 2000);
+      }
 
       setGoogleLoading(false);
       if (isSystemAdmin) {
@@ -71,11 +93,21 @@ export default function Signup() {
       // 2. Set display name
       await updateProfile(user, { displayName: name });
 
-      // 3. Write profile record securely to Firestore with resilient error handling
+      // 3. Send 100% Real Email Verification Link
+      try {
+        await sendEmailVerification(user);
+        setVerificationSent(true);
+        setRegisteredEmail(email);
+      } catch (verifErr) {
+        console.warn('Email verification send note:', verifErr);
+      }
+
+      // 4. Write profile record securely to Firestore
       const userRef = doc(db, 'users', user.uid);
       const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase());
       const role = isSystemAdmin ? 'admin' : 'user';
+      const cleanPromo = promoCode.trim().toUpperCase();
 
       const initialProfile = {
         uid: user.uid,
@@ -84,37 +116,44 @@ export default function Signup() {
         role: role,
         xp: 0,
         completedRooms: [],
+        referredBy: cleanPromo || null,
+        emailVerified: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      try {
+      await safeFirestoreWrite(async () => {
         await setDoc(userRef, initialProfile);
         const notifId = `welcome-${Date.now()}`;
         await setDoc(doc(db, 'notifications', notifId), {
           id: notifId,
           userId: user.uid,
           title: 'Welcome to Kogla Tech',
-          body: `Congratulations ${name}. Your account has been successfully created. Access our Academy or services to begin.`,
+          body: `Congratulations ${name}. Your account has been registered. Please check your email to verify your address.`,
           read: false,
           timestamp: new Date().toISOString()
         });
-      } catch (docErr) {
-        console.warn('[Signup] Database storage note (running in resilient session):', docErr);
+      }, 2000);
+
+      if (cleanPromo) {
+        setManualReferralCode(cleanPromo);
       }
 
       setLoadingState(false);
-      const redirectTo = sessionStorage.getItem('studyRedirectTo');
-      if (redirectTo) {
-        sessionStorage.removeItem('studyRedirectTo');
-        navigate(redirectTo);
-      } else {
-        if (isSystemAdmin) {
-          navigate('/admin');
+
+      setTimeout(() => {
+        const redirectTo = sessionStorage.getItem('studyRedirectTo');
+        if (redirectTo) {
+          sessionStorage.removeItem('studyRedirectTo');
+          navigate(redirectTo);
         } else {
-          navigate('/academy'); // Redirect to training academy
+          if (isSystemAdmin) {
+            navigate('/admin');
+          } else {
+            navigate('/academy');
+          }
         }
-      }
+      }, 3000);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(formatUserError(err));
@@ -141,6 +180,18 @@ export default function Signup() {
             Create your account to access our professional academy and services.
           </p>
         </div>
+
+        {/* VERIFICATION SENT SUCCESS BANNER */}
+        {verificationSent && (
+          <div className="p-4 bg-emerald-950/70 border border-emerald-500/50 rounded text-emerald-200 text-xs mb-6 space-y-2">
+            <div className="flex items-center gap-2 font-bold uppercase font-mono text-emerald-400">
+              <CheckCircle2 size={16} /> Verification Link Dispatched
+            </div>
+            <p className="text-[11px] leading-relaxed text-zinc-300">
+              We sent a verification link to <b>{registeredEmail}</b>. Click the link in your email to authenticate your credential. Redirecting to Academy...
+            </p>
+          </div>
+        )}
 
         {errorMsg && (
           <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-400 text-xs rounded-sm mb-6 flex items-start gap-2 max-h-48 overflow-y-auto">
@@ -234,6 +285,33 @@ export default function Signup() {
               placeholder="Minimum 6 characters" 
               className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
             />
+          </div>
+
+          {/* OPTIONAL REFERRAL / AMBASSADOR PROMO CODE */}
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                <Tag size={10} className="text-gold-400" /> Referral / Promo Code (Optional)
+              </label>
+              {promoCode && (
+                <span className="text-[9px] font-mono text-emerald-400 uppercase font-bold flex items-center gap-1">
+                  <Check size={11} /> 5% Discount Active
+                </span>
+              )}
+            </div>
+            <input 
+              type="text" 
+              disabled={loadingState}
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+              placeholder="e.g. PHENA" 
+              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-gold-400 font-mono uppercase placeholder:text-gray-700" 
+            />
+            {promoCode && (
+              <p className="text-[10px] text-zinc-400 font-sans mt-1">
+                Ambassador referral code <b>{promoCode}</b> will automatically grant you a 5% tuition discount across all academy courses.
+              </p>
+            )}
           </div>
 
           <button 

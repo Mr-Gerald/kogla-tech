@@ -18,7 +18,7 @@ import {
   ImageConfig,
   DEFAULT_IMAGES 
 } from '../utils/storage';
-import { UserProfile } from '../types';
+import { UserProfile, AffiliatePartner, ReferralLead, CertificateRecord } from '../types';
 import { Link } from 'react-router-dom';
 import { 
   Settings, 
@@ -46,8 +46,23 @@ import {
   FileText,
   Terminal,
   Save,
-  RotateCcw
+  RotateCcw,
+  Award,
+  ShieldCheck,
+  QrCode,
+  Printer,
+  DollarSign,
+  Clock,
+  CheckCircle2,
+  UserCheck,
+  Plus,
+  Tag,
+  ExternalLink
 } from 'lucide-react';
+import { getAllAffiliates, getAllReferrals, approveReferralPayment, markReferralPaidOut, saveAffiliatePartner } from '../lib/affiliates';
+import { getAllCertificates, issueCertificate, FOUNDER_NAME, FOUNDER_TITLE } from '../lib/certificates';
+import { ACADEMY_COURSES, formatNaira } from '../data/coursesPricing';
+import { OfficialCertificate } from '../components/OfficialCertificate';
 
 export default function AdminPortal() {
   const { user, profile, logout, loading } = useAuth();
@@ -76,7 +91,35 @@ export default function AdminPortal() {
 
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [tab, setTab] = useState<'leads' | 'users' | 'images' | 'settings'>('leads');
+  const [tab, setTab] = useState<'leads' | 'affiliates' | 'certificates' | 'users' | 'images' | 'settings'>('leads');
+
+  // Affiliates & Creator Pipeline States
+  const [affiliates, setAffiliates] = useState<AffiliatePartner[]>([]);
+  const [referrals, setReferrals] = useState<ReferralLead[]>([]);
+  const [loadingAffiliates, setLoadingAffiliates] = useState(false);
+  const [approvingReferralId, setApprovingReferralId] = useState<string | null>(null);
+  const [approvalNote, setApprovalNote] = useState('');
+  const [activeApprovalLead, setActiveApprovalLead] = useState<ReferralLead | null>(null);
+
+  // New Affiliate Modal
+  const [showNewAffiliateModal, setShowNewAffiliateModal] = useState(false);
+  const [newAffCode, setNewAffCode] = useState('');
+  const [newAffName, setNewAffName] = useState('');
+  const [newAffEmail, setNewAffEmail] = useState('');
+  const [newAffPhone, setNewAffPhone] = useState('');
+
+  // Certificates State
+  const [certificates, setCertificates] = useState<CertificateRecord[]>([]);
+  const [loadingCerts, setLoadingCerts] = useState(false);
+  const [previewCert, setPreviewCert] = useState<CertificateRecord | null>(null);
+  
+  // Issue Certificate Form State
+  const [certStudentName, setCertStudentName] = useState('');
+  const [certStudentEmail, setCertStudentEmail] = useState('');
+  const [certCourseTitle, setCertCourseTitle] = useState(ACADEMY_COURSES[0].title);
+  const [certMode, setCertMode] = useState<'Online Interactive Cohort' | 'Physical Hub Immersion'>('Online Interactive Cohort');
+  const [certGrade, setCertGrade] = useState('Distinction (Top 5%)');
+  const [isIssuingCert, setIsIssuingCert] = useState(false);
 
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
@@ -171,6 +214,138 @@ export default function AdminPortal() {
       };
     }
   }, [profile]);
+
+  // Load Affiliates & Certificates data
+  const loadAffiliatesData = async () => {
+    setLoadingAffiliates(true);
+    try {
+      const affs = await getAllAffiliates();
+      setAffiliates(affs);
+      const refs = await getAllReferrals();
+      setReferrals(refs);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAffiliates(false);
+    }
+  };
+
+  const loadCertificatesData = async () => {
+    setLoadingCerts(true);
+    try {
+      const certs = await getAllCertificates();
+      setCertificates(certs);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingCerts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'affiliates') {
+      loadAffiliatesData();
+    } else if (tab === 'certificates') {
+      loadCertificatesData();
+    }
+  }, [tab]);
+
+  // Affiliate Handlers
+  const handleConfirmApproval = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeApprovalLead) return;
+    setApprovingReferralId(activeApprovalLead.id);
+    try {
+      await approveReferralPayment(activeApprovalLead.id, approvalNote || 'Bank tuition payment verified');
+      triggerSuccess(`Payment verified! ${activeApprovalLead.studentName}'s enrollment is confirmed.`);
+      setActiveApprovalLead(null);
+      setApprovalNote('');
+      await loadAffiliatesData();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed approving payment: ${err.message}`);
+    } finally {
+      setApprovingReferralId(null);
+    }
+  };
+
+  const handleMarkPaidOutAction = async (referralId: string) => {
+    if (!window.confirm('Mark this affiliate commission as paid out to the creator\'s bank account?')) return;
+    try {
+      await markReferralPaidOut(referralId);
+      triggerSuccess('Affiliate commission marked as Paid Out!');
+      await loadAffiliatesData();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed marking payout: ${err.message}`);
+    }
+  };
+
+  const handleCreateNewAffiliate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAffCode.trim() || !newAffName.trim()) return;
+
+    try {
+      const codeUpper = newAffCode.trim().toUpperCase();
+      const newPartner: AffiliatePartner = {
+        id: codeUpper,
+        code: codeUpper,
+        name: newAffName.trim(),
+        email: newAffEmail.trim(),
+        phone: newAffPhone.trim(),
+        tier: 1,
+        baseRate: 6,
+        boostedRate: 10,
+        discountOffered: 5,
+        totalReferrals: 0,
+        confirmedCount: 0,
+        totalEarned: 0,
+        totalPaidOut: 0,
+        pendingPayout: 0,
+        contractSigned: true,
+        contractSignedDate: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      await saveAffiliatePartner(newPartner);
+      triggerSuccess(`Affiliate partner "${newPartner.code}" successfully registered!`);
+      setShowNewAffiliateModal(false);
+      setNewAffCode('');
+      setNewAffName('');
+      setNewAffEmail('');
+      setNewAffPhone('');
+      await loadAffiliatesData();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed creating partner: ${err.message}`);
+    }
+  };
+
+  // Certificate Issuance Handler
+  const handleIssueNewCertificate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!certStudentName.trim() || !certCourseTitle.trim()) return;
+
+    setIsIssuingCert(true);
+    try {
+      const issued = await issueCertificate({
+        studentName: certStudentName.trim(),
+        studentEmail: certStudentEmail.trim(),
+        courseTitle: certCourseTitle,
+        mode: certMode,
+        grade: certGrade
+      });
+      triggerSuccess(`Official Certificate [${issued.id}] successfully generated and issued to ${issued.studentName}!`);
+      setCertStudentName('');
+      setCertStudentEmail('');
+      setPreviewCert(issued);
+      await loadCertificatesData();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`Failed issuing certificate: ${err.message}`);
+    } finally {
+      setIsIssuingCert(false);
+    }
+  };
 
   const triggerSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -542,10 +717,10 @@ export default function AdminPortal() {
       )}
 
       {/* Tabs list menu */}
-      <div className="flex border-b border-gray-800 mb-8 font-display bg-gray-950 rounded-sm p-1 gap-1">
+      <div className="flex flex-wrap border-b border-gray-800 mb-8 font-display bg-gray-950 rounded-sm p-1 gap-1">
         <button 
           onClick={() => setTab('leads')}
-          className={`flex-1 md:flex-none px-5 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+          className={`flex-1 md:flex-none px-4 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
             tab === 'leads' 
               ? 'bg-gold-500 text-black font-bold' 
               : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
@@ -555,10 +730,36 @@ export default function AdminPortal() {
         </button>
         <button 
           onClick={() => {
+            setTab('affiliates');
+            loadAffiliatesData();
+          }}
+          className={`flex-1 md:flex-none px-4 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+            tab === 'affiliates' 
+              ? 'bg-gold-500 text-black font-bold' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
+          }`}
+        >
+          <DollarSign size={13} /> Creators & Affiliates ({referrals.length})
+        </button>
+        <button 
+          onClick={() => {
+            setTab('certificates');
+            loadCertificatesData();
+          }}
+          className={`flex-1 md:flex-none px-4 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+            tab === 'certificates' 
+              ? 'bg-gold-500 text-black font-bold' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
+          }`}
+        >
+          <Award size={13} /> Certificates Registry ({certificates.length})
+        </button>
+        <button 
+          onClick={() => {
             setTab('users');
             setSelectedUser(null);
           }}
-          className={`flex-1 md:flex-none px-5 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+          className={`flex-1 md:flex-none px-4 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
             tab === 'users' 
               ? 'bg-gold-500 text-black font-bold' 
               : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
@@ -568,7 +769,7 @@ export default function AdminPortal() {
         </button>
         <button 
           onClick={() => setTab('images')}
-          className={`flex-1 md:flex-none px-5 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+          className={`flex-1 md:flex-none px-4 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
             tab === 'images' 
               ? 'bg-gold-500 text-black font-bold' 
               : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
@@ -578,7 +779,7 @@ export default function AdminPortal() {
         </button>
         <button 
           onClick={() => setTab('settings')}
-          className={`flex-1 md:flex-none px-5 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+          className={`flex-1 md:flex-none px-4 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
             tab === 'settings' 
               ? 'bg-gold-500 text-black font-bold' 
               : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
@@ -767,6 +968,611 @@ export default function AdminPortal() {
             ) : (
               <div className="bg-gray-950 border border-gray-800 p-8 rounded-sm text-center text-gray-500 text-xs font-mono">
                 Select an active intake file from the stream list to audit dynamic blueprints and alter tracking states.
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* Tab: Affiliates & Creator Pipeline */}
+      {tab === 'affiliates' && (
+        <div className="space-y-8">
+          
+          {/* Header Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-zinc-950 border border-zinc-850 rounded-lg">
+            <div>
+              <span className="text-[10px] font-mono uppercase text-gold-400 font-bold block mb-1">
+                AMBASSADOR & CREATOR PARTNERSHIPS
+              </span>
+              <h2 className="text-xl sm:text-2xl font-display font-bold text-white uppercase">
+                Referrals & Payouts Engine
+              </h2>
+              <p className="text-xs text-zinc-400 font-sans mt-0.5">
+                Manage partner promo codes (Phena @ 6% &rarr; 10%), verify student payments, and authorize bank settlements.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowNewAffiliateModal(true)}
+                className="px-4 py-2.5 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs uppercase tracking-wider font-display rounded-sm flex items-center gap-1.5 transition-all shadow"
+              >
+                <Plus size={14} /> Add Ambassador
+              </button>
+              <Link
+                to="/affiliate-portal"
+                target="_blank"
+                className="px-3.5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono uppercase rounded-sm flex items-center gap-1.5 transition-all"
+              >
+                <ExternalLink size={13} className="text-gold-400" /> Public Partner Portal
+              </Link>
+            </div>
+          </div>
+
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-zinc-950 border border-zinc-850 rounded space-y-1">
+              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Total Active Ambassadors</span>
+              <span className="text-xl font-bold font-display text-white">{affiliates.length}</span>
+            </div>
+            <div className="p-4 bg-zinc-950 border border-zinc-850 rounded space-y-1">
+              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Pending Student Payments</span>
+              <span className="text-xl font-bold font-display text-amber-400">
+                {referrals.filter(r => r.status === 'pending').length}
+              </span>
+            </div>
+            <div className="p-4 bg-zinc-950 border border-zinc-850 rounded space-y-1">
+              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Confirmed Paid Students</span>
+              <span className="text-xl font-bold font-display text-emerald-400">
+                {referrals.filter(r => r.status === 'confirmed' || r.status === 'paid_out').length}
+              </span>
+            </div>
+            <div className="p-4 bg-zinc-950 border border-zinc-850 rounded space-y-1">
+              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Unsettled Commissions</span>
+              <span className="text-xl font-bold font-display text-gold-400">
+                {formatNaira(
+                  referrals
+                    .filter(r => r.status === 'confirmed')
+                    .reduce((sum, r) => sum + r.commissionAmount, 0)
+                )}
+              </span>
+            </div>
+          </div>
+
+          {/* APPROVAL PROMPT / MODAL (WHEN ADMIN CLICKS APPROVE) */}
+          {activeApprovalLead && (
+            <div className="p-6 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border-2 border-gold-500 rounded-lg shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <h3 className="text-base font-display font-bold text-white uppercase flex items-center gap-2">
+                  <ShieldCheck className="text-gold-400" size={18} /> Confirm Student Tuition Payment & Authorize Commission
+                </h3>
+                <button
+                  onClick={() => setActiveApprovalLead(null)}
+                  className="text-xs text-zinc-400 hover:text-white font-mono uppercase"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4 text-xs font-mono text-zinc-300">
+                <div className="p-3 bg-black/60 border border-zinc-800 rounded">
+                  <span className="text-zinc-500 block text-[10px] uppercase">Student</span>
+                  <span className="font-bold text-white text-sm font-sans">{activeApprovalLead.studentName}</span>
+                  <span className="block text-[10px] text-zinc-400">{activeApprovalLead.studentEmail}</span>
+                </div>
+                <div className="p-3 bg-black/60 border border-zinc-800 rounded">
+                  <span className="text-zinc-500 block text-[10px] uppercase">Course & Format</span>
+                  <span className="font-bold text-white">{activeApprovalLead.courseTitle}</span>
+                  <span className="block text-[10px] text-gold-400 uppercase">
+                    {activeApprovalLead.mode === 'physical' ? 'Physical Hub' : 'Online Cohort'}
+                  </span>
+                </div>
+                <div className="p-3 bg-black/60 border border-zinc-800 rounded">
+                  <span className="text-zinc-500 block text-[10px] uppercase">Tuition & Commission</span>
+                  <span className="font-bold text-white">{formatNaira(activeApprovalLead.discountedAmount)}</span>
+                  <span className="block text-[10px] text-emerald-400 font-bold">
+                    Commission: {formatNaira(activeApprovalLead.commissionAmount)} ({activeApprovalLead.commissionRate}%)
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleConfirmApproval} className="flex flex-col sm:flex-row gap-3 pt-2">
+                <input
+                  type="text"
+                  value={approvalNote}
+                  onChange={(e) => setApprovalNote(e.target.value)}
+                  placeholder="Payment reference (e.g. Bank Transfer Verified - GTBank / POS Receipt #4928)"
+                  className="flex-1 p-2.5 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={Boolean(approvingReferralId)}
+                  className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-bold text-xs uppercase tracking-wider font-display rounded transition-all shadow shrink-0"
+                >
+                  {approvingReferralId ? 'Approving...' : '✓ Approve & Confirm Enrollment'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* MAIN PIPELINE TABLE */}
+          <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-850 pb-3 font-mono">
+              <span className="text-xs font-display font-semibold text-gold-400 uppercase tracking-wider">
+                Student Referral Inquiries & Payment Verification Pipeline
+              </span>
+              <span className="text-[10px] text-zinc-400 uppercase">
+                {referrals.length} Total Referrals
+              </span>
+            </div>
+
+            {referrals.length === 0 ? (
+              <div className="p-10 text-center text-zinc-500 font-mono text-xs">
+                No student referrals logged yet. Share promo code "PHENA" or link with students to test.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-[10px] uppercase text-zinc-500">
+                      <th className="pb-3 pr-3">Student</th>
+                      <th className="pb-3 px-3">Partner Code</th>
+                      <th className="pb-3 px-3">Course</th>
+                      <th className="pb-3 px-3">Tuition Paid</th>
+                      <th className="pb-3 px-3">Commission</th>
+                      <th className="pb-3 px-3">Status</th>
+                      <th className="pb-3 pl-3 text-right">Admin Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-850">
+                    {referrals.map((r) => (
+                      <tr key={r.id} className="hover:bg-zinc-900/40 transition-colors">
+                        <td className="py-4 pr-3">
+                          <span className="font-bold text-white font-sans text-sm block">{r.studentName}</span>
+                          <span className="text-[10px] text-zinc-400">{r.studentEmail}</span>
+                          {r.studentPhone && (
+                            <span className="text-[10px] text-zinc-500 block">{r.studentPhone}</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-3">
+                          <span className="px-2 py-0.5 bg-gold-500/10 border border-gold-500/30 text-gold-400 rounded text-[10px] font-bold">
+                            {r.affiliateCode}
+                          </span>
+                        </td>
+                        <td className="py-4 px-3">
+                          <span className="text-zinc-200 block">{r.courseTitle}</span>
+                          <span className="text-[9px] uppercase text-zinc-500">
+                            {r.mode === 'physical' ? 'Physical Hub' : 'Online'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-3 text-zinc-200">
+                          {formatNaira(r.discountedAmount)}
+                        </td>
+                        <td className="py-4 px-3 font-bold text-gold-400">
+                          {formatNaira(r.commissionAmount)}
+                          <span className="block text-[9px] text-zinc-500 font-normal">({r.commissionRate}%)</span>
+                        </td>
+                        <td className="py-4 px-3">
+                          {r.status === 'pending' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded text-[10px] uppercase">
+                              <Clock size={10} /> Pending Payment
+                            </span>
+                          )}
+                          {r.status === 'confirmed' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded text-[10px] uppercase font-bold">
+                              <CheckCircle2 size={10} /> Confirmed
+                            </span>
+                          )}
+                          {r.status === 'paid_out' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-[10px] uppercase font-bold">
+                              <DollarSign size={10} /> Paid Out
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-4 pl-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {r.status === 'pending' && (
+                              <button
+                                onClick={() => {
+                                  setActiveApprovalLead(r);
+                                  setApprovalNote('');
+                                }}
+                                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all shadow"
+                              >
+                                Approve Payment
+                              </button>
+                            )}
+                            {r.status === 'confirmed' && (
+                              <button
+                                onClick={() => handleMarkPaidOutAction(r.id)}
+                                className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all"
+                              >
+                                Mark Paid Out
+                              </button>
+                            )}
+                            {r.status === 'paid_out' && (
+                              <span className="text-[10px] text-zinc-500 font-mono">
+                                Completed
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* REGISTERED AFFILIATE PARTNERS ROSTER */}
+          <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-850 pb-3 font-mono">
+              <span className="text-xs font-display font-semibold text-white uppercase tracking-wider">
+                Ambassador Partners Roster & Settlement Accounts
+              </span>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {affiliates.map((p) => {
+                const isTier2 = (p.confirmedCount || 0) >= 3 || p.tier === 2;
+                return (
+                  <div key={p.code} className="p-5 bg-black/60 border border-zinc-800 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 bg-gold-500/15 border border-gold-500 text-gold-400 font-mono font-bold text-xs uppercase rounded">
+                          {p.code}
+                        </span>
+                        <h4 className="text-sm font-display font-bold text-white">{p.name}</h4>
+                      </div>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase ${
+                        isTier2 ? 'bg-gold-500 text-black' : 'bg-zinc-800 text-zinc-300'
+                      }`}>
+                        {isTier2 ? 'Tier 2 (10%)' : 'Tier 1 (6%)'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-zinc-400">
+                      <div>
+                        <span className="text-zinc-500 block text-[9px] uppercase">Confirmed Referrals</span>
+                        <b className="text-white">{p.confirmedCount || 0} Students</b>
+                      </div>
+                      <div>
+                        <span className="text-zinc-500 block text-[9px] uppercase">Email Contact</span>
+                        <span className="text-zinc-300 truncate block">{p.email || 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    {/* Bank Settlement Info */}
+                    <div className="p-3 bg-zinc-900/60 border border-zinc-850 rounded text-[11px] font-mono space-y-1">
+                      <span className="text-[9px] text-gold-400 uppercase font-bold block">Settlement Bank:</span>
+                      {p.bankDetails ? (
+                        <p className="text-zinc-300">
+                          {p.bankDetails.bankName} • <b>{p.bankDetails.accountNumber}</b> ({p.bankDetails.accountName})
+                        </p>
+                      ) : (
+                        <p className="text-zinc-500 italic">No bank account submitted yet.</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* NEW AFFILIATE CREATION MODAL */}
+          {showNewAffiliateModal && (
+            <div className="p-6 bg-zinc-950 border-2 border-gold-500 rounded-lg shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <h3 className="text-base font-display font-bold text-white uppercase">
+                  Register New Ambassador Partner
+                </h3>
+                <button
+                  onClick={() => setShowNewAffiliateModal(false)}
+                  className="text-xs text-zinc-400 hover:text-white font-mono uppercase"
+                >
+                  Close
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateNewAffiliate} className="space-y-4 font-mono text-xs">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase text-zinc-400 mb-1">Promo Code *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newAffCode}
+                      onChange={(e) => setNewAffCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. PHENA or TECHGIRL"
+                      className="w-full p-2 bg-black border border-zinc-800 rounded text-gold-400 font-bold uppercase focus:border-gold-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-zinc-400 mb-1">Creator / Brand Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newAffName}
+                      onChange={(e) => setNewAffName(e.target.value)}
+                      placeholder="e.g. Phena (Her Tech)"
+                      className="w-full p-2 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase text-zinc-400 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      value={newAffEmail}
+                      onChange={(e) => setNewAffEmail(e.target.value)}
+                      placeholder="creator@gmail.com"
+                      className="w-full p-2 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase text-zinc-400 mb-1">Phone / WhatsApp</label>
+                    <input
+                      type="tel"
+                      value={newAffPhone}
+                      onChange={(e) => setNewAffPhone(e.target.value)}
+                      placeholder="+234..."
+                      className="w-full p-2 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display rounded shadow"
+                >
+                  Create Ambassador Account
+                </button>
+              </form>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* Tab: Certificates Registry & Issuance */}
+      {tab === 'certificates' && (
+        <div className="space-y-8">
+          
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-zinc-950 border border-zinc-850 rounded-lg">
+            <div>
+              <span className="text-[10px] font-mono uppercase text-gold-400 font-bold block mb-1">
+                ACADEMIC CREDENTIAL DISPATCHER
+              </span>
+              <h2 className="text-xl sm:text-2xl font-display font-bold text-white uppercase">
+                Student Certificates & Official Registry
+              </h2>
+              <p className="text-xs text-zinc-400 font-sans mt-0.5">
+                Issue tamper-proof certificates featuring Gerald Emechebe's signature, official gold seal, and live verification codes.
+              </p>
+            </div>
+
+            <Link
+              to="/verify-certificate"
+              target="_blank"
+              className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono uppercase rounded-sm flex items-center gap-1.5 transition-all self-start sm:self-auto"
+            >
+              <ShieldCheck size={14} className="text-gold-400" /> Public Verification Portal
+            </Link>
+          </div>
+
+          {/* CERTIFICATE PREVIEW MODAL / EXPANDED VIEW */}
+          {previewCert && (
+            <div className="p-6 bg-zinc-950 border-2 border-gold-500 rounded-lg shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <h3 className="text-base font-display font-bold text-white uppercase flex items-center gap-2">
+                  <Award className="text-gold-400" size={18} /> Official Certificate Document Preview
+                </h3>
+                <button
+                  onClick={() => setPreviewCert(null)}
+                  className="text-xs text-zinc-400 hover:text-white font-mono uppercase"
+                >
+                  Close Preview
+                </button>
+              </div>
+
+              <OfficialCertificate certificate={previewCert} showActions={true} />
+            </div>
+          )}
+
+          {/* ISSUE NEW CERTIFICATE FORM */}
+          <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-6">
+            <div className="border-b border-zinc-850 pb-3">
+              <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold block mb-0.5">
+                ISSUANCE DISPATCH
+              </span>
+              <h3 className="text-base font-display font-bold text-white uppercase">
+                Issue Official Certificate to Graduate
+              </h3>
+            </div>
+
+            <form onSubmit={handleIssueNewCertificate} className="space-y-4 font-mono text-xs">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">
+                    Student Full Legal Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={certStudentName}
+                    onChange={(e) => setCertStudentName(e.target.value)}
+                    placeholder="e.g. Chidimma Okeke"
+                    className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-white font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">
+                    Student Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={certStudentEmail}
+                    onChange={(e) => setCertStudentEmail(e.target.value)}
+                    placeholder="student@gmail.com"
+                    className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">
+                    Course Specialization *
+                  </label>
+                  <select
+                    value={certCourseTitle}
+                    onChange={(e) => setCertCourseTitle(e.target.value)}
+                    className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-white"
+                  >
+                    {ACADEMY_COURSES.map(c => (
+                      <option key={c.slug} value={c.title}>{c.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">
+                    Cohort Delivery Mode
+                  </label>
+                  <select
+                    value={certMode}
+                    onChange={(e) => setCertMode(e.target.value as any)}
+                    className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-white"
+                  >
+                    <option value="Online Interactive Cohort">Online Interactive Cohort</option>
+                    <option value="Physical Hub Immersion">Physical Hub Immersion</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">
+                    Honors / Grade Assessment
+                  </label>
+                  <select
+                    value={certGrade}
+                    onChange={(e) => setCertGrade(e.target.value)}
+                    className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-white"
+                  >
+                    <option value="Distinction (Top 5%)">Distinction (Top 5%)</option>
+                    <option value="Honors Excellence">Honors Excellence</option>
+                    <option value="Pass with Merit">Pass with Merit</option>
+                    <option value="Capstone Completed">Capstone Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* FOUNDER SIGNATURE VERIFICATION DETAILS */}
+              <div className="p-4 bg-black/60 border border-zinc-800/80 rounded flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[10px] text-zinc-500 uppercase block">Authorized Signatory</span>
+                  <b className="text-gold-400">{FOUNDER_NAME}</b>
+                  <span className="text-zinc-400 block text-[11px]">{FOUNDER_TITLE}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Digital Signature & Gold Seal Verified
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isIssuingCert}
+                className="px-8 py-3 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs uppercase tracking-widest font-display rounded shadow transition-all flex items-center gap-2"
+              >
+                {isIssuingCert ? <Loader2 size={14} className="animate-spin" /> : <Award size={14} />}
+                {isIssuingCert ? 'Generating Credential...' : 'Issue & Publish Certificate'}
+              </button>
+            </form>
+          </div>
+
+          {/* ISSUED CERTIFICATES ROSTER TABLE */}
+          <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-850 pb-3 font-mono">
+              <span className="text-xs font-display font-semibold text-white uppercase tracking-wider">
+                Issued Credentials Ledger
+              </span>
+              <span className="text-[10px] text-zinc-400 uppercase">
+                {certificates.length} Total Issued
+              </span>
+            </div>
+
+            {certificates.length === 0 ? (
+              <div className="p-8 text-center text-zinc-500 font-mono text-xs">
+                No certificates registered in archive.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-[10px] uppercase text-zinc-500">
+                      <th className="pb-3 pr-3">Certificate ID</th>
+                      <th className="pb-3 px-3">Student Name</th>
+                      <th className="pb-3 px-3">Specialization</th>
+                      <th className="pb-3 px-3">Format</th>
+                      <th className="pb-3 px-3">Issue Date</th>
+                      <th className="pb-3 pl-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-850">
+                    {certificates.map((cert) => (
+                      <tr key={cert.id} className="hover:bg-zinc-900/40 transition-colors">
+                        <td className="py-4 pr-3 font-bold text-gold-400">
+                          {cert.id}
+                        </td>
+                        <td className="py-4 px-3 font-bold text-white font-sans text-sm">
+                          {cert.studentName}
+                          {cert.studentEmail && (
+                            <span className="block text-[10px] text-zinc-500 font-mono font-normal">
+                              {cert.studentEmail}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-4 px-3 text-zinc-300">
+                          {cert.courseTitle}
+                          <span className="block text-[9px] text-gold-400 font-mono">
+                            {cert.grade}
+                          </span>
+                        </td>
+                        <td className="py-4 px-3">
+                          <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded text-[10px]">
+                            {cert.mode}
+                          </span>
+                        </td>
+                        <td className="py-4 px-3 text-zinc-400">
+                          {cert.issueDate}
+                        </td>
+                        <td className="py-4 pl-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setPreviewCert(cert)}
+                              className="px-3 py-1.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all shadow"
+                            >
+                              Preview / Print
+                            </button>
+                            <Link
+                              to={`/verify-certificate/${cert.id}`}
+                              target="_blank"
+                              className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-750 text-zinc-300 text-[10px] uppercase font-mono rounded"
+                            >
+                              Verify
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

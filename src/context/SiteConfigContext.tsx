@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { ImageConfig, DEFAULT_IMAGES } from '../utils/storage';
+import { ImageConfig, DEFAULT_IMAGES, sanitizeImages } from '../utils/storage';
 
 export interface SiteConfig {
   companyName: string;
@@ -73,7 +73,7 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
     try {
       const saved = localStorage.getItem('kogla_images');
       if (saved) {
-        return { ...DEFAULT_IMAGES, ...JSON.parse(saved) };
+        return sanitizeImages(JSON.parse(saved));
       }
     } catch (_) {}
     return DEFAULT_IMAGES;
@@ -108,9 +108,9 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
     const unsubscribeImages = onSnapshot(imagesRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data() as ImageConfig;
-        const merged = { ...DEFAULT_IMAGES, ...data };
-        setImages(merged);
-        localStorage.setItem('kogla_images', JSON.stringify(merged));
+        const sanitized = sanitizeImages(data);
+        setImages(sanitized);
+        localStorage.setItem('kogla_images', JSON.stringify(sanitized));
       } else {
         // Document does not exist yet. Use default images.
         setImages(DEFAULT_IMAGES);

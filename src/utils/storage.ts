@@ -35,6 +35,32 @@ export const DEFAULT_IMAGES: ImageConfig = {
   labs: labsImage
 };
 
+export function sanitizeImages(raw: Partial<ImageConfig> | null | undefined): ImageConfig {
+  const result: ImageConfig = { ...DEFAULT_IMAGES };
+  if (!raw) return result;
+
+  const keys: (keyof ImageConfig)[] = ['hero', 'academy', 'services', 'projects', 'labs'];
+
+  for (const key of keys) {
+    const val = raw[key];
+    if (typeof val === 'string' && val.trim() !== '') {
+      // Catch unbundled dev paths like /src/assets/ or /assets/academy_image_... that causes 404s in prod
+      if (
+        val.startsWith('/src/assets/') ||
+        (val.startsWith('/assets/') && (val.includes('_image_') || val.includes('_coder_')))
+      ) {
+        result[key] = DEFAULT_IMAGES[key];
+      } else {
+        result[key] = val;
+      }
+    } else {
+      result[key] = DEFAULT_IMAGES[key];
+    }
+  }
+
+  return result;
+}
+
 const DEFAULT_INQUIRIES: Inquiry[] = [
   {
     id: 'inq-1',
