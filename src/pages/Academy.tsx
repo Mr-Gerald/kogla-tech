@@ -19,7 +19,8 @@ import {
   Search,
   Check,
   Tag,
-  ShieldCheck
+  ShieldCheck,
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ACADEMY_COURSES, formatNaira, CourseTrack } from '../data/coursesPricing';
@@ -67,9 +68,21 @@ export default function Academy() {
 
         {/* ACTIVE PROMO BADGE IF DETECTED */}
         {activePromo && (
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-gold-500/20 border border-gold-500/50 rounded-full text-gold-300 text-xs font-mono">
-            <Tag size={13} className="text-gold-400" />
+          <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 bg-gold-500/20 border border-gold-500/50 rounded-full text-gold-300 text-xs font-mono">
+            <Tag size={13} className="text-gold-400 shrink-0" />
             <span>Referral Promo Active: <b className="text-white font-bold">{activePromo}</b> (5% Discount Applied at Checkout)</span>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem('kogla_referral_code');
+                localStorage.removeItem('kogla_referral_timestamp');
+                setActivePromo(null);
+              }}
+              className="ml-1 px-1.5 py-0.5 bg-black/40 hover:bg-black text-gold-400 hover:text-white rounded text-[10px] uppercase font-mono flex items-center gap-1 border border-gold-500/30 transition-colors cursor-pointer"
+              title="Clear active promo code"
+            >
+              <X size={11} /> Remove
+            </button>
           </div>
         )}
       </div>

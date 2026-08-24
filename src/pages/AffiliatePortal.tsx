@@ -227,10 +227,12 @@ export default function AffiliatePortal() {
             </div>
 
             <div className="bg-black/50 border border-zinc-800 p-4 rounded space-y-3 font-mono text-xs">
-              <h4 className="text-gold-400 font-bold uppercase tracking-wider">3. Ambassador Activation & Onboarding</h4>
-              <p className="text-zinc-300">
-                Ambassadors must create a verified user account on Kogla Tech, copy their unique tracking code and shareable link from their profile / ambassador portal, and provide valid bank account details for automated settlement.
-              </p>
+              <h4 className="text-gold-400 font-bold uppercase tracking-wider">3. Ambassador Activation, Portal & Social Bio Link</h4>
+              <ul className="list-disc list-inside space-y-1 text-zinc-300">
+                <li><b>Official Partner Representation:</b> Ambassador agrees to feature their official partner designation and tracking link (e.g., <i>"🎓 Tech Ambassador @koglatech | Link in bio"</i>) in their social profile bio / link tree.</li>
+                <li><b>Real-Time Tracking:</b> Ambassadors access their private portal at <code>/affiliate-portal</code> to view live student clicks, attributions, and payout records.</li>
+                <li><b>Settlement Profile:</b> Valid bank account details must be maintained in the portal for automated settlement disbursements.</li>
+              </ul>
             </div>
 
             <div className="bg-black/50 border border-zinc-800 p-4 rounded space-y-3 font-mono text-xs">

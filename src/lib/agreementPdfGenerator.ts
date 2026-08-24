@@ -154,11 +154,11 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   });
   y += 2.5;
 
-  // 5. SECTION 3: AMBASSADOR ONBOARDING & SELF-RECORDING PORTAL
+  // 5. SECTION 3: AMBASSADOR ONBOARDING & BIO LINK CLAUSE
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   doc.setTextColor(10, 10, 12);
-  doc.text('3. AMBASSADOR ACTIVATION & DEDICATED TRACKING PORTAL', 12, y);
+  doc.text('3. AMBASSADOR ACTIVATION, DEDICATED PORTAL & SOCIAL BIO LINK CLAUSE', 12, y);
   y += 5;
 
   doc.setFont('helvetica', 'normal');
@@ -166,8 +166,8 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.setTextColor(50, 50, 55);
 
   const c3Lines = [
-    `• Independent Account: Ambassador creates a user account on koglatech.com to access their private Ambassador Portal at /affiliate-portal.`,
-    `• Real-Time Tracking: The Ambassador Portal displays live student attributions, confirmed enrollments, commission totals, and payout histories.`,
+    `• Official Brand Representation: Ambassador agrees to feature their verified partner status and tracking link (e.g. "🎓 Tech Ambassador @koglatech | koglatech.com/academy?ref=${code}") prominently in their public bio / link tree across active social profiles.`,
+    `• Real-Time Tracking Portal: Ambassador accesses their private tracking dashboard at /affiliate-portal to view real-time student attributions, confirmed enrollments, and live payout ledgers.`,
     `• Settlement Details: Ambassador maintains their preferred bank account details directly within their portal profile for swift automated processing.`
   ];
 

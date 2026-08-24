@@ -88,7 +88,7 @@ export const AiAssistantChat: React.FC = () => {
       });
 
       const data = await response.json();
-      const assistantText = data.reply || `Thank you for reaching out! You can also chat directly with our Admin on WhatsApp at ${config.whatsappLink || 'https://wa.me/2349120713573'}.`;
+      const assistantText = data.reply || `Thank you for reaching out! You can also chat directly with our Admin on WhatsApp at ${config.whatsappLink || 'https://wa.me/2347012489041'}.`;
 
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
@@ -100,7 +100,7 @@ export const AiAssistantChat: React.FC = () => {
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
       console.error('[AI Chat Error]', err);
-      const whatsappUrl = config.whatsappLink || 'https://wa.me/2349120713573';
+      const whatsappUrl = config.whatsappLink || 'https://wa.me/2347012489041';
       const fallbackMsg: ChatMessage = {
         id: `assistant-err-${Date.now()}`,
         sender: 'assistant',
@@ -127,7 +127,7 @@ export const AiAssistantChat: React.FC = () => {
   // Helper function to render text with bold formatting and embedded WhatsApp CTA buttons
   const renderFormattedText = (text: string) => {
     // Check if text contains WhatsApp link or phone number
-    const whatsappUrl = config.whatsappLink || 'https://wa.me/2349120713573';
+    const whatsappUrl = config.whatsappLink || 'https://wa.me/2347012489041';
     const hasWhatsAppLink = text.includes('wa.me') || text.includes('WhatsApp');
 
     // Split text into lines
@@ -279,14 +279,14 @@ export const AiAssistantChat: React.FC = () => {
                   </span>
                   <div className="flex items-center gap-2">
                     <a
-                      href={`tel:${(config.contactPhone || '+2349120713573').replace(/[^0-9+]/g, '')}`}
+                      href={`tel:${(config.contactPhone || '+2347012489041').replace(/[^0-9+]/g, '')}`}
                       className="px-2 py-0.5 bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 text-gold-400 font-mono text-[10px] font-bold rounded flex items-center gap-1 transition-colors"
                       title="Call Us Directly"
                     >
-                      <PhoneCall size={10} /> Call {config.contactPhone || '+234 912 071 3573'}
+                      <PhoneCall size={10} /> Call {config.contactPhone || '+234 701 248 9041'}
                     </a>
                     <a
-                      href={config.whatsappLink || 'https://wa.me/2349120713573'}
+                      href={config.whatsappLink || 'https://wa.me/2347012489041'}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-2 py-0.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold rounded flex items-center gap-1 transition-colors"

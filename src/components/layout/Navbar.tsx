@@ -229,14 +229,14 @@ export default function Navbar() {
                 <Mail size={11} /> Email
               </a>
               <a 
-                href={`tel:${(config.contactPhone || '+2349120713573').replace(/[^0-9+]/g, '')}`}
+                href={`tel:${(config.contactPhone || '+2347012489041').replace(/[^0-9+]/g, '')}`}
                 onClick={() => setIsOpen(false)}
                 className="py-2 px-1.5 bg-gold-500 text-black font-bold text-[9px] uppercase tracking-wider font-display rounded-sm flex items-center justify-center gap-1"
               >
                 <Phone size={11} className="fill-current" /> Call Us
               </a>
               <a 
-                href={config.whatsappLink || 'https://wa.me/2349120713573'}
+                href={config.whatsappLink || 'https://wa.me/2347012489041'}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setIsOpen(false)}

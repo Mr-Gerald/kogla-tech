@@ -650,7 +650,7 @@ export default function Home() {
             
             {/* WhatsApp Card */}
             <a 
-              href={config.whatsappLink || 'https://wa.me/2349120713573'} 
+              href={config.whatsappLink || 'https://wa.me/2347012489041'} 
               target="_blank" 
               rel="noopener noreferrer"
               className="p-6 bg-black border border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
@@ -671,7 +671,7 @@ export default function Home() {
 
             {/* Call Us Hotline Card */}
             <a 
-              href={`tel:${(config.contactPhone || '+2349120713573').replace(/[^0-9+]/g, '')}`}
+              href={`tel:${(config.contactPhone || '+2347012489041').replace(/[^0-9+]/g, '')}`}
               className="p-6 bg-black border border-gold-500/40 hover:border-gold-500 hover:bg-gold-950/20 transition-all rounded-sm flex flex-col justify-between group text-center cursor-pointer shadow-lg"
             >
               <div className="space-y-3">
@@ -684,7 +684,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-gray-900 text-[11px] font-mono text-gold-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
-                Call {config.contactPhone || '+234 912 071 3573'} <ArrowRight size={12} />
+                Call {config.contactPhone || '+234 701 248 9041'} <ArrowRight size={12} />
               </div>
             </a>
 

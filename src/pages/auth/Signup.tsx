@@ -174,8 +174,21 @@ export default function Signup() {
         });
       }, 2000);
 
+      // Remove this user from deletion tracking if recreating
+      try {
+        const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
+        const cleanEmails = deletedEmails.filter(e => e.toLowerCase() !== trimmedEmail.toLowerCase());
+        localStorage.setItem('kogla_deleted_emails', JSON.stringify(cleanEmails));
+
+        const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
+        const cleanUids = deletedUids.filter(u => u !== activeUser.uid);
+        localStorage.setItem('kogla_deleted_uids', JSON.stringify(cleanUids));
+      } catch (_) {}
+
       if (cleanPromo) {
         setManualReferralCode(cleanPromo);
+      } else {
+        setManualReferralCode('');
       }
 
       setLoadingState(false);
@@ -350,23 +363,36 @@ export default function Signup() {
               <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono flex items-center gap-1">
                 <Tag size={10} className="text-gold-400" /> Referral / Promo Code (Optional)
               </label>
-              {promoCode && (
-                <span className="text-[9px] font-mono text-emerald-400 uppercase font-bold flex items-center gap-1">
-                  <Check size={11} /> 5% Discount Active
-                </span>
-              )}
+              {promoCode ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPromoCode('');
+                    setManualReferralCode('');
+                  }}
+                  className="text-[9px] font-mono text-red-400 hover:text-red-300 uppercase underline cursor-pointer"
+                >
+                  Clear Promo
+                </button>
+              ) : null}
             </div>
             <input 
               type="text" 
               disabled={loadingState}
               value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="e.g. AMBASSADOR" 
+              onChange={(e) => {
+                const val = e.target.value.toUpperCase();
+                setPromoCode(val);
+                if (val.trim() === '') {
+                  setManualReferralCode('');
+                }
+              }}
+              placeholder="e.g. AMBASSADOR (Leave blank for none)" 
               className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-gold-400 font-mono uppercase placeholder:text-gray-700" 
             />
             {promoCode && (
-              <p className="text-[10px] text-zinc-400 font-sans mt-1">
-                Ambassador referral code <b>{promoCode}</b> will automatically grant you a 5% tuition discount across all academy courses.
+              <p className="text-[10px] text-emerald-400 font-mono mt-1 flex items-center gap-1">
+                <Check size={11} /> Referral code <b>{promoCode}</b> active (5% discount applied).
               </p>
             )}
           </div>

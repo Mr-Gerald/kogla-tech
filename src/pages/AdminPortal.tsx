@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig, SiteConfig } from '../context/SiteConfigContext';
-import { db } from '../lib/firebase';
+import { db, safeFirestoreWrite } from '../lib/firebase';
 import { motion } from 'motion/react';
 import { 
   collection, 
@@ -332,15 +332,24 @@ export default function AdminPortal() {
       // 2. Listen to registered profiles database
       const usersRef = collection(db, 'users');
       const unsubUsers = onSnapshot(usersRef, (snapshot) => {
+        const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
+        const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
+
         const loaded: UserProfile[] = [];
         snapshot.forEach((snap) => {
-          loaded.push(snap.data() as UserProfile);
+          const uData = snap.data() as UserProfile;
+          const uUid = uData.uid || snap.id;
+          const uEmail = (uData.email || '').toLowerCase();
+          
+          if (!deletedUids.includes(uUid) && !deletedEmails.includes(uEmail)) {
+            loaded.push({ ...uData, uid: uUid });
+          }
         });
         // Sort by XP of users
         loaded.sort((a, b) => (b.xp || 0) - (a.xp || 0));
         setUsers(loaded);
       }, (err) => {
-        console.error('Firestore users sync failed:', err);
+        console.warn('[AdminPortal] Firestore users sync fallback (local state preserved):', err?.message);
       });
 
       return () => {
@@ -724,28 +733,44 @@ export default function AdminPortal() {
     if (!targetUser) return;
     if (confirm(`CRITICAL WARNING: Permanently delete user account "${targetUser.name}" (${targetUser.email})? This action will purge their profile data and allow this email to be registered afresh.`)) {
       try {
-        const userRef = doc(db, 'users', targetUser.uid);
-        await deleteDoc(userRef);
-        
-        // Remove from localStorage cache as well
+        const targetUid = targetUser.uid;
+        const targetEmail = (targetUser.email || '').toLowerCase();
+
+        // 1. Immediately store in persistent deletion sets so they never reappear on refresh
+        const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
+        if (targetUid && !deletedUids.includes(targetUid)) {
+          deletedUids.push(targetUid);
+          localStorage.setItem('kogla_deleted_uids', JSON.stringify(deletedUids));
+        }
+
+        const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
+        if (targetEmail && !deletedEmails.includes(targetEmail)) {
+          deletedEmails.push(targetEmail);
+          localStorage.setItem('kogla_deleted_emails', JSON.stringify(deletedEmails));
+        }
+
+        // 2. Remove from localStorage cache as well
         try {
           const rawUsers = localStorage.getItem('kogla_users_cache');
           if (rawUsers) {
             const parsed = JSON.parse(rawUsers);
-            const filtered = parsed.filter((u: any) => u.uid !== targetUser.uid && u.email !== targetUser.email);
+            const filtered = parsed.filter((u: any) => u.uid !== targetUid && (u.email || '').toLowerCase() !== targetEmail);
             localStorage.setItem('kogla_users_cache', JSON.stringify(filtered));
           }
         } catch (_) {}
 
-        const deletedEmails = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
-        if (targetUser.email) {
-          deletedEmails.push(targetUser.email.toLowerCase());
-          localStorage.setItem('kogla_deleted_emails', JSON.stringify(deletedEmails));
-        }
-        setUsers(prev => prev.filter(u => u.uid !== targetUser.uid));
-        if (selectedUser?.uid === targetUser.uid) {
+        // 3. Update React state immediately
+        setUsers(prev => prev.filter(u => u.uid !== targetUid && (u.email || '').toLowerCase() !== targetEmail));
+        if (selectedUser?.uid === targetUid) {
           setSelectedUser(null);
         }
+
+        // 4. Safe delete from Firestore
+        await safeFirestoreWrite(async () => {
+          const userRef = doc(db, 'users', targetUid);
+          await deleteDoc(userRef);
+        }, 1500);
+
         triggerSuccess(`User account "${targetUser.email}" permanently purged successfully. The user can now recreate an account.`);
       } catch (err: any) {
         console.error(err);
@@ -2956,7 +2981,7 @@ export default function AdminPortal() {
                     <input 
                       type="text"
                       required
-                      placeholder="+234 912 071 3573"
+                      placeholder="+234 701 248 9041"
                       value={siteForm.whatsappPhone || ''}
                       onChange={(e) => {
                         const newPhone = e.target.value;
@@ -2982,7 +3007,7 @@ export default function AdminPortal() {
                     <input 
                       type="text"
                       required
-                      placeholder="+234 912 071 3573"
+                      placeholder="+234 701 248 9041"
                       value={siteForm.contactPhone}
                       onChange={(e) => setSiteForm({ ...siteForm, contactPhone: e.target.value })}
                       className="w-full p-2.5 bg-gray-950 border border-gold-500/50 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
