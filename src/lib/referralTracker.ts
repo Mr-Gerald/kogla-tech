@@ -6,23 +6,23 @@ const REF_STORAGE_KEY = 'kogla_referral_code';
 const REF_TIMESTAMP_KEY = 'kogla_referral_timestamp';
 const ATTRIBUTION_DAYS = 30;
 
-// Default pre-seeded affiliate partners (Phena, etc.)
+// Default pre-seeded affiliate partners (Shirley, etc.)
 export const DEFAULT_AFFILIATES: AffiliatePartner[] = [
   {
-    id: 'aff-phena',
-    code: 'PHENA',
-    name: 'Phena (Her Tech)',
-    email: 'phena_designs@instagram.com',
-    instagramHandle: '@phena_designs',
+    id: 'aff-shirley',
+    code: 'SHIRLEY',
+    name: 'Shirley Johnson',
+    email: 'shirley@kogla-creator.com',
+    instagramHandle: '@shirley_tech',
     tier: 1,
     baseRate: 6,
     boostedRate: 10,
     discountOffered: 5,
-    totalReferrals: 0,
-    confirmedCount: 0,
-    totalEarned: 0,
+    totalReferrals: 2,
+    confirmedCount: 2,
+    totalEarned: 39900,
     totalPaidOut: 0,
-    pendingPayout: 0,
+    pendingPayout: 39900,
     contractSigned: true,
     contractSignedDate: '2026-08-23',
     createdAt: new Date().toISOString()

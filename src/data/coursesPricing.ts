@@ -287,9 +287,45 @@ export const ACADEMY_COURSES: CourseTrack[] = [
   }
 ];
 
+const PRICING_STORAGE_KEY = 'kogla_course_prices_override_v1';
+
+export function getCustomPricingMap(): Record<string, { onlinePrice: number; physicalPrice: number }> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(PRICING_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+export function saveCustomPricingMap(map: Record<string, { onlinePrice: number; physicalPrice: number }>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PRICING_STORAGE_KEY, JSON.stringify(map));
+  } catch (err) {
+    console.warn('[CoursesPricing] Error saving prices locally:', err);
+  }
+}
+
+export function getAllCourses(): CourseTrack[] {
+  const overrides = getCustomPricingMap();
+  return ACADEMY_COURSES.map(course => {
+    if (overrides[course.slug]) {
+      return {
+        ...course,
+        onlinePrice: overrides[course.slug].onlinePrice ?? course.onlinePrice,
+        physicalPrice: overrides[course.slug].physicalPrice ?? course.physicalPrice
+      };
+    }
+    return course;
+  });
+}
+
 export function getCourseBySlug(slug: string): CourseTrack | undefined {
   const norm = slug.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  return ACADEMY_COURSES.find(c => c.slug === norm || norm.includes(c.slug) || c.slug.includes(norm));
+  const all = getAllCourses();
+  return all.find(c => c.slug === norm || norm.includes(c.slug) || c.slug.includes(norm));
 }
 
 export function formatNaira(amount: number): string {

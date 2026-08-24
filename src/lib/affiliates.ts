@@ -21,7 +21,7 @@ const LOCAL_REFERRALS_KEY = 'kogla_referrals_cache';
 const INITIAL_DEMO_REFERRALS: ReferralLead[] = [
   {
     id: 'ref-demo-1',
-    affiliateCode: 'PHENA',
+    affiliateCode: 'SHIRLEY',
     studentName: 'Chidimma O.',
     studentEmail: 'chidimma.o@gmail.com',
     studentPhone: '+2348031234567',
@@ -39,7 +39,7 @@ const INITIAL_DEMO_REFERRALS: ReferralLead[] = [
   },
   {
     id: 'ref-demo-2',
-    affiliateCode: 'PHENA',
+    affiliateCode: 'SHIRLEY',
     studentName: 'Tunde Bakare',
     studentEmail: 'tunde.b@yahoo.com',
     studentPhone: '+2348129876543',

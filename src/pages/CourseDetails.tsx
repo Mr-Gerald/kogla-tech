@@ -15,7 +15,8 @@ import {
   Tag, 
   Check, 
   Terminal,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare
 } from 'lucide-react';
 import { addInquiry } from '../utils/storage';
 import { ReviewSection } from '../components/ReviewSection';
@@ -250,46 +251,120 @@ export default function CourseDetails() {
           </div>
 
           {formSubmitted ? (
-            <div className="p-6 bg-emerald-950/40 border border-emerald-500/40 rounded-lg text-center space-y-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center mx-auto text-emerald-400">
-                <Check size={24} />
+            <div className="p-6 sm:p-7 bg-zinc-950 border-2 border-gold-500/50 rounded-lg shadow-2xl space-y-6">
+              
+              {/* STEP PROGRESSION HEADER */}
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-black font-bold text-[10px] flex items-center justify-center">✓</span>
+                  <span className="text-[11px] font-mono text-zinc-400">Step 1: Logged</span>
+                </div>
+                <div className="text-zinc-600">&rarr;</div>
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-gold-500 text-black font-bold text-[10px] flex items-center justify-center font-mono animate-pulse">2</span>
+                  <span className="text-[11px] font-mono text-gold-400 font-bold uppercase">Step 2: Payment Details</span>
+                </div>
               </div>
+
               <div>
-                <h4 className="text-base font-display font-bold text-white uppercase">
-                  Admissions Application Logged
+                <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-bold block mb-1">
+                  OFFICIAL TUITION SETTLEMENT
+                </span>
+                <h4 className="text-lg font-display font-bold text-white uppercase">
+                  Bank Transfer Instructions
                 </h4>
                 <p className="text-xs text-zinc-300 font-sans mt-1">
-                  Thank you, <b>{name}</b>! Your enrollment request for <b>{course.title}</b> ({selectedFormat === 'online' ? 'Online Class' : 'Physical Hub'}) has been recorded.
+                  Dear <b>{name}</b>, your admission record for <b>{course.title}</b> ({selectedFormat === 'online' ? 'Online' : 'Physical Hub'}) has been registered. Please complete your tuition transfer to secure your seat.
                 </p>
               </div>
 
-              <div className="p-3 bg-black/60 border border-zinc-800 rounded text-left text-xs font-mono space-y-1.5 text-zinc-300">
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Net Tuition Payable:</span>
-                  <span className="text-gold-400 font-bold">{formatNaira(finalPrice)}</span>
+              {/* HIGH-VISIBILITY OFFICIAL BANK DETAILS CARD */}
+              <div className="bg-black border-2 border-gold-500/40 rounded-lg p-4 sm:p-5 space-y-3.5 shadow-inner">
+                <div className="flex items-center justify-between pb-2.5 border-b border-zinc-850">
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase">Bank Institution</span>
+                  <span className="text-xs font-bold text-white font-mono uppercase bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
+                    OPAY (Opay Digital Services)
+                  </span>
                 </div>
-                {promoApplied && (
-                  <div className="flex justify-between text-emerald-400 text-[11px]">
-                    <span>Promo Discount Applied:</span>
-                    <span>-{formatNaira(discountAmount)}</span>
+
+                <div className="flex items-center justify-between pb-2.5 border-b border-zinc-850">
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase">Account Number</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base sm:text-lg font-black font-mono text-gold-400 tracking-wider">
+                      6540152461
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText('6540152461');
+                        alert('Account number 6540152461 copied to clipboard!');
+                      }}
+                      className="px-2 py-1 bg-gold-500/20 hover:bg-gold-500/30 text-gold-400 border border-gold-500/40 rounded text-[10px] font-mono uppercase transition-all cursor-pointer"
+                    >
+                      Copy
+                    </button>
                   </div>
-                )}
-                <div className="flex justify-between text-[11px] text-zinc-400 pt-1 border-t border-zinc-850">
-                  <span>Verification Status:</span>
-                  <span className="text-amber-400 font-bold">Pending Tuition Transfer</span>
+                </div>
+
+                <div className="flex items-center justify-between pb-2.5 border-b border-zinc-850">
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase">Account Name</span>
+                  <span className="text-xs sm:text-sm font-bold text-white font-mono uppercase text-right">
+                    IKECHUKWU GERALD EMEMCHEBE
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs font-mono text-zinc-300 font-bold uppercase">Exact Net Tuition</span>
+                  <span className="text-base sm:text-lg font-black font-mono text-emerald-400">
+                    {formatNaira(finalPrice)}
+                  </span>
                 </div>
               </div>
 
-              <p className="text-[11px] text-zinc-400 font-sans leading-relaxed">
-                Bank payment details and cohort onboarding schedule have been sent to <b>{email}</b>. Our admissions coordinator will also reach out on WhatsApp.
-              </p>
+              {/* ADVICE & CONTACT ADMIN OPTIONS */}
+              <div className="p-3.5 bg-zinc-900/80 border border-zinc-800 rounded space-y-2 text-xs font-sans text-zinc-300">
+                <p className="text-[11px] leading-relaxed text-zinc-300">
+                  After initiating transfer, send your transaction receipt/screenshot or transaction reference to the Admissions Desk for instant LMS portal onboarding.
+                </p>
+                <div className="pt-2 border-t border-zinc-800 flex flex-col sm:flex-row gap-2">
+                  <a
+                    href={`https://wa.me/2348000000000?text=${encodeURIComponent(`Hello Kogla Tech Admissions Desk, I have submitted my enrollment application for ${course.title} (${selectedFormat === 'online' ? 'Online' : 'Physical Hub'}) with Net Tuition ${formatNaira(finalPrice)}. My name is ${name}. Please verify my payment.`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider font-display rounded flex items-center justify-center gap-1.5 transition-all shadow"
+                  >
+                    <MessageSquare size={13} /> Chat With Admin (WhatsApp)
+                  </a>
+                  <a
+                    href="mailto:admissions@kogla-tech.com"
+                    className="py-2.5 px-3 bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 text-zinc-200 font-mono text-xs uppercase rounded flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    Email Admin
+                  </a>
+                </div>
+              </div>
 
-              <button
-                onClick={() => setFormSubmitted(false)}
-                className="w-full py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-mono uppercase rounded transition-all"
-              >
-                Submit Another Enrollment
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fullText = `KOGLA TECH TUITION PAYMENT DETAILS:\nBank: OPAY\nAccount Number: 6540152461\nAccount Name: IKECHUKWU GERALD EMEMCHEBE\nCourse: ${course.title} (${selectedFormat})\nPayable Amount: ${formatNaira(finalPrice)}`;
+                    navigator.clipboard.writeText(fullText);
+                    alert('Official bank details copied to clipboard!');
+                  }}
+                  className="flex-1 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs font-display uppercase tracking-wider rounded transition-all cursor-pointer shadow"
+                >
+                  Copy All Bank Details
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormSubmitted(false)}
+                  className="px-3.5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white text-xs font-mono uppercase rounded transition-all"
+                >
+                  Back
+                </button>
+              </div>
+
             </div>
           ) : (
             <form onSubmit={handleEnroll} className="space-y-5">
@@ -361,7 +436,7 @@ export default function CourseDetails() {
               {/* PROMO / REFERRAL CODE INPUT */}
               <div>
                 <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1.5">
-                  Ambassador Promo / Referral Code
+                  Ambassador Promo / Referral Code (Optional)
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -371,13 +446,13 @@ export default function CourseDetails() {
                       setPromoCode(e.target.value.toUpperCase());
                       setPromoApplied(false);
                     }}
-                    placeholder="e.g. PHENA"
+                    placeholder="e.g. SHIRLEY"
                     className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-gold-400 font-mono uppercase"
                   />
                   <button
                     type="button"
                     onClick={handleApplyPromo}
-                    className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-750 text-zinc-300 text-xs font-mono uppercase rounded transition-all shrink-0"
+                    className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-750 text-zinc-300 text-xs font-mono uppercase rounded transition-all shrink-0 cursor-pointer"
                   >
                     {promoApplied ? 'Applied' : 'Apply'}
                   </button>

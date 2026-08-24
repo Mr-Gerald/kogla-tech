@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Star, ThumbsUp, MessageSquare, Trash2, LogIn, Send, CornerDownRight, CheckCircle2, UserCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +19,8 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   title = 'Community Reviews & Ratings',
   subtitle = 'Real feedback from developers, students, and corporate partners across our ecosystem.',
 }) => {
-  const { user, profile, signInWithGoogle } = useAuth();
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,9 +44,23 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     setLoading(true);
     const unsubscribe = subscribeToReviews((allReviews) => {
       // Filter by targetType & targetId if specified
-      const filtered = allReviews.filter(
-        (r) => r.targetType === targetType && (targetId === 'general' || r.targetId === targetId)
-      );
+      const filtered = allReviews.filter((r) => {
+        if (!targetType || targetType === 'platform') {
+          return true;
+        }
+        if (targetType === 'course') {
+          const normTarget = (targetId || 'web-development').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const rTarget = (r.targetId || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          return (
+            rTarget === normTarget ||
+            (normTarget !== '' && rTarget.includes(normTarget)) ||
+            (rTarget !== '' && normTarget.includes(rTarget)) ||
+            r.targetType === 'platform' ||
+            r.targetId === 'general'
+          );
+        }
+        return r.targetType === targetType && (targetId === 'general' || r.targetId === targetId);
+      });
       setReviews(filtered);
       setLoading(false);
     });
@@ -55,7 +71,11 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   // Handle post new review
   const handlePostReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !newContent.trim()) return;
+    if (!user) {
+      navigate('/auth/login');
+      return;
+    }
+    if (!newContent.trim()) return;
 
     setIsSubmitting(true);
     try {
@@ -85,7 +105,11 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
 
   // Handle post reply
   const handlePostReply = async (parentId: string) => {
-    if (!user || !replyContent.trim()) return;
+    if (!user) {
+      navigate('/auth/login');
+      return;
+    }
+    if (!replyContent.trim()) return;
 
     setIsSubmittingReply(true);
     try {
@@ -114,7 +138,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   // Handle like toggle
   const handleLike = async (review: ReviewRecord) => {
     if (!user) {
-      signInWithGoogle();
+      navigate('/auth/login');
       return;
     }
     if (likingIds[review.id]) return;
@@ -300,13 +324,13 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
             ) : (
               <div className="bg-zinc-900/70 border border-zinc-800 rounded p-4 text-center space-y-3">
                 <p className="text-xs text-zinc-300">
-                  Only logged-in members can submit reviews and participate in community discussions.
+                  Join our verified ecosystem to share feedback, ask questions, and connect directly with instructors and alumni.
                 </p>
                 <button
-                  onClick={signInWithGoogle}
-                  className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded font-display inline-flex items-center gap-2 shadow"
+                  onClick={() => navigate('/auth/login')}
+                  className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded font-display inline-flex items-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
                 >
-                  <LogIn size={14} /> Sign In With Google to Review
+                  <LogIn size={14} /> Sign In or Create Account to Review
                 </button>
               </div>
             )}
@@ -480,12 +504,12 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                     <button
                       onClick={() => {
                         if (!user) {
-                          signInWithGoogle();
+                          navigate('/auth/login');
                         } else {
                           setReplyingToId(replyingToId === review.id ? null : review.id);
                         }
                       }}
-                      className="flex items-center gap-1.5 text-zinc-400 hover:text-gold-400 transition-colors text-xs"
+                      className="flex items-center gap-1.5 text-zinc-400 hover:text-gold-400 transition-colors text-xs cursor-pointer"
                     >
                       <MessageSquare size={13} />
                       <span>Reply ({replies.length})</span>

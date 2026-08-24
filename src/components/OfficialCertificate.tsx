@@ -52,7 +52,7 @@ export const OfficialCertificate: React.FC<OfficialCertificateProps> = ({
       {/* OFFICIAL HIGH-RESOLUTION PRINTABLE CERTIFICATE FRAME */}
       <div 
         ref={certRef}
-        className="relative bg-zinc-950 text-white border-8 border-double border-gold-500/80 p-8 sm:p-12 md:p-16 rounded-sm shadow-2xl overflow-hidden print:border-4 print:p-8 print:shadow-none print:bg-black print:text-black font-sans max-w-4xl mx-auto"
+        className="official-certificate-container relative bg-zinc-950 text-white border-8 border-double border-gold-500/80 p-8 sm:p-12 md:p-16 rounded-sm shadow-2xl overflow-hidden print:border-4 print:p-8 print:shadow-none print:bg-black print:text-black font-sans max-w-4xl mx-auto"
         style={{
           boxShadow: '0 0 50px -10px rgba(234, 179, 8, 0.15), inset 0 0 40px rgba(0, 0, 0, 0.9)'
         }}

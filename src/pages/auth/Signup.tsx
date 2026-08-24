@@ -79,6 +79,13 @@ export default function Signup() {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setErrorMsg('Please enter a valid, authenticated email address (e.g. name@domain.com).');
+      setLoadingState(false);
+      return;
+    }
+
     if (password.length < 6) {
       setErrorMsg('Password must be at least 6 characters.');
       setLoadingState(false);
@@ -304,7 +311,7 @@ export default function Signup() {
               disabled={loadingState}
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="e.g. PHENA" 
+              placeholder="e.g. SHIRLEY" 
               className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-gold-400 font-mono uppercase placeholder:text-gray-700" 
             />
             {promoCode && (

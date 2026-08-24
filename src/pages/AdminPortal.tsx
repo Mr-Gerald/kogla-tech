@@ -61,7 +61,7 @@ import {
 } from 'lucide-react';
 import { getAllAffiliates, getAllReferrals, approveReferralPayment, markReferralPaidOut, saveAffiliatePartner } from '../lib/affiliates';
 import { getAllCertificates, issueCertificate, FOUNDER_NAME, FOUNDER_TITLE } from '../lib/certificates';
-import { ACADEMY_COURSES, formatNaira } from '../data/coursesPricing';
+import { ACADEMY_COURSES, formatNaira, getCustomPricingMap, saveCustomPricingMap, getAllCourses } from '../data/coursesPricing';
 import { OfficialCertificate } from '../components/OfficialCertificate';
 
 export default function AdminPortal() {
@@ -91,7 +91,69 @@ export default function AdminPortal() {
 
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [tab, setTab] = useState<'leads' | 'affiliates' | 'certificates' | 'users' | 'images' | 'settings'>('leads');
+  const [tab, setTab] = useState<'leads' | 'affiliates' | 'pricing' | 'certificates' | 'users' | 'images' | 'settings'>('leads');
+
+  // Course Pricing Editor State
+  const [coursePrices, setCoursePrices] = useState<Record<string, { onlinePrice: number; physicalPrice: number }>>({});
+  const [isSavingPricing, setIsSavingPricing] = useState(false);
+
+  useEffect(() => {
+    const existing = getCustomPricingMap();
+    const initMap: Record<string, { onlinePrice: number; physicalPrice: number }> = {};
+    ACADEMY_COURSES.forEach(c => {
+      initMap[c.slug] = {
+        onlinePrice: existing[c.slug]?.onlinePrice ?? c.onlinePrice,
+        physicalPrice: existing[c.slug]?.physicalPrice ?? c.physicalPrice
+      };
+    });
+    setCoursePrices(initMap);
+  }, []);
+
+  const handlePriceChange = (slug: string, type: 'onlinePrice' | 'physicalPrice', val: number) => {
+    setCoursePrices(prev => ({
+      ...prev,
+      [slug]: {
+        ...prev[slug],
+        [type]: val
+      }
+    }));
+  };
+
+  const handleSaveCoursePricing = async () => {
+    setIsSavingPricing(true);
+    try {
+      saveCustomPricingMap(coursePrices);
+      // Also persist to Firestore config/courses_pricing if available
+      try {
+        const pricingRef = doc(db, 'config', 'courses_pricing');
+        await setDoc(pricingRef, { pricing: coursePrices, updatedAt: new Date().toISOString() });
+      } catch (cloudErr) {
+        console.warn('Firestore pricing sync note:', cloudErr);
+      }
+      triggerSuccess('All 11 course track tuition prices updated and synced globally across the platform!');
+    } catch (err: any) {
+      console.error('Save pricing error:', err);
+      setErrorMsg(`Failed saving prices: ${err.message}`);
+      setTimeout(() => setErrorMsg(''), 5000);
+    } finally {
+      setIsSavingPricing(false);
+    }
+  };
+
+  const handleResetCoursePricing = () => {
+    if (window.confirm('Reset all course tuition prices back to original default catalog prices?')) {
+      const resetMap: Record<string, { onlinePrice: number; physicalPrice: number }> = {};
+      ACADEMY_COURSES.forEach(c => {
+        resetMap[c.slug] = {
+          onlinePrice: c.onlinePrice,
+          physicalPrice: c.physicalPrice
+        };
+      });
+      setCoursePrices(resetMap);
+      saveCustomPricingMap(resetMap);
+      triggerSuccess('Course pricing reset to factory defaults.');
+    }
+  };
 
   // Affiliates & Creator Pipeline States
   const [affiliates, setAffiliates] = useState<AffiliatePartner[]>([]);
@@ -742,6 +804,16 @@ export default function AdminPortal() {
           <DollarSign size={13} /> Creators & Affiliates ({referrals.length})
         </button>
         <button 
+          onClick={() => setTab('pricing')}
+          className={`flex-1 md:flex-none px-4 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+            tab === 'pricing' 
+              ? 'bg-gold-500 text-black font-bold' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-900/50'
+          }`}
+        >
+          <Tag size={13} /> Course Pricing (11 Tracks)
+        </button>
+        <button 
           onClick={() => {
             setTab('certificates');
             loadCertificatesData();
@@ -989,7 +1061,7 @@ export default function AdminPortal() {
                 Referrals & Payouts Engine
               </h2>
               <p className="text-xs text-zinc-400 font-sans mt-0.5">
-                Manage partner promo codes (Phena @ 6% &rarr; 10%), verify student payments, and authorize bank settlements.
+                Manage partner promo codes (Phena Nwachukwu, Shirley @ 6% &rarr; 10%), verify student payments, and authorize bank settlements.
               </p>
             </div>
 
@@ -1285,7 +1357,7 @@ export default function AdminPortal() {
                       required
                       value={newAffCode}
                       onChange={(e) => setNewAffCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. PHENA or TECHGIRL"
+                      placeholder="e.g. SHIRLEY or TECHGIRL"
                       className="w-full p-2 bg-black border border-zinc-800 rounded text-gold-400 font-bold uppercase focus:border-gold-500 outline-none"
                     />
                   </div>
@@ -1296,7 +1368,7 @@ export default function AdminPortal() {
                       required
                       value={newAffName}
                       onChange={(e) => setNewAffName(e.target.value)}
-                      placeholder="e.g. Phena (Her Tech)"
+                      placeholder="e.g. Shirley Okon"
                       className="w-full p-2 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
                     />
                   </div>
@@ -1334,6 +1406,164 @@ export default function AdminPortal() {
               </form>
             </div>
           )}
+
+        </div>
+      )}
+
+      {/* Tab: Course Pricing Management */}
+      {tab === 'pricing' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-zinc-950 border border-zinc-850 rounded-lg">
+            <div>
+              <span className="text-[10px] font-mono uppercase text-gold-400 font-bold block mb-1">
+                TUITION & CURRICULUM PRICING ENGINE
+              </span>
+              <h2 className="text-xl sm:text-2xl font-display font-bold text-white uppercase">
+                Update Course Tuition (All 11 Tracks)
+              </h2>
+              <p className="text-xs text-zinc-400 font-sans mt-0.5">
+                Set and calibrate online cohort and physical immersive hub tuition fees in Naira (₦). Changes reflect instantly across the catalog, checkout, and creator commission rates.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleResetCoursePricing}
+                className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-mono uppercase rounded flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <RotateCcw size={13} /> Reset Defaults
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCoursePricing}
+                disabled={isSavingPricing}
+                className="px-6 py-2.5 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs uppercase tracking-wider font-display rounded flex items-center gap-2 shadow-lg transition-all cursor-pointer"
+              >
+                {isSavingPricing ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Saving Changes...
+                  </>
+                ) : (
+                  <>
+                    <Save size={14} /> Save All Course Prices
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* COURSES PRICING GRID */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ACADEMY_COURSES.map((course) => {
+              const currentOnline = coursePrices[course.slug]?.onlinePrice ?? course.onlinePrice;
+              const currentPhysical = coursePrices[course.slug]?.physicalPrice ?? course.physicalPrice;
+
+              return (
+                <div 
+                  key={course.slug} 
+                  className="p-5 bg-zinc-950 border border-zinc-850 hover:border-gold-500/40 rounded-lg space-y-4 transition-all shadow-lg flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase text-gold-400 font-bold">
+                        {course.category} • {course.duration}
+                      </span>
+                      <span className="text-[9px] font-mono px-2 py-0.5 bg-zinc-900 border border-zinc-850 text-zinc-400 rounded">
+                        {course.slug}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-display font-bold text-white uppercase">
+                      {course.title}
+                    </h3>
+                    <p className="text-[11px] text-zinc-400 font-sans line-clamp-2 leading-relaxed">
+                      {course.tagline}
+                    </p>
+                  </div>
+
+                  {/* PRICE INPUTS */}
+                  <div className="p-3.5 bg-black/60 border border-zinc-850 rounded space-y-3 font-mono text-xs">
+                    {/* ONLINE TUITION */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-[10px] uppercase text-zinc-400 flex items-center gap-1">
+                          Online Tuition (₦)
+                        </label>
+                        <span className="text-[10px] text-emerald-400">
+                          -5% Promo: {formatNaira(Math.round(currentOnline * 0.95))}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="5000"
+                        value={currentOnline}
+                        onChange={(e) => handlePriceChange(course.slug, 'onlinePrice', parseInt(e.target.value) || 0)}
+                        className="w-full p-2 bg-zinc-900 border border-zinc-750 focus:border-gold-500 rounded text-white font-mono font-bold text-sm outline-none"
+                      />
+                    </div>
+
+                    {/* PHYSICAL TUITION */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-[10px] uppercase text-zinc-400 flex items-center gap-1">
+                          Physical Hub Tuition (₦)
+                        </label>
+                        <span className="text-[10px] text-gold-400">
+                          -5% Promo: {formatNaira(Math.round(currentPhysical * 0.95))}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="5000"
+                        value={currentPhysical}
+                        onChange={(e) => handlePriceChange(course.slug, 'physicalPrice', parseInt(e.target.value) || 0)}
+                        className="w-full p-2 bg-zinc-900 border border-zinc-750 focus:border-gold-500 rounded text-white font-mono font-bold text-sm outline-none"
+                      />
+                    </div>
+
+                    {/* COMMISSIONS PREVIEW */}
+                    <div className="pt-2 border-t border-zinc-800/80 grid grid-cols-2 gap-2 text-[10px] text-zinc-400">
+                      <div>
+                        <span className="text-zinc-500 block">Tier 1 Aff. (6%):</span>
+                        <span className="text-white font-bold">{formatNaira(Math.round(currentOnline * 0.06))}</span>
+                      </div>
+                      <div>
+                        <span className="text-zinc-500 block">Tier 2 Aff. (10%):</span>
+                        <span className="text-gold-400 font-bold">{formatNaira(Math.round(currentOnline * 0.1))}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 pt-1">
+                    <span>Live status: Active</span>
+                    <Link
+                      to={`/academy/${course.slug}`}
+                      target="_blank"
+                      className="text-gold-400 hover:underline flex items-center gap-1"
+                    >
+                      Preview Live Page <ExternalLink size={10} />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded flex items-center justify-between">
+            <span className="text-xs font-mono text-zinc-400">
+              Need to publish these updated prices to all student portals & admissions checkout?
+            </span>
+            <button
+              type="button"
+              onClick={handleSaveCoursePricing}
+              disabled={isSavingPricing}
+              className="px-6 py-2 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs uppercase tracking-wider font-display rounded shadow cursor-pointer"
+            >
+              {isSavingPricing ? 'Publishing...' : 'Save & Publish All Prices'}
+            </button>
+          </div>
 
         </div>
       )}

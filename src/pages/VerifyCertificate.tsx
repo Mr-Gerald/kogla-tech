@@ -12,6 +12,11 @@ export default function VerifyCertificate() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.body.style.overflow = 'auto';
+  }, []);
+
   const fetchCert = async (id: string) => {
     if (!id.trim()) return;
     setLoading(true);
@@ -119,6 +124,15 @@ export default function VerifyCertificate() {
 
           {/* RENDER CERTIFICATE */}
           <OfficialCertificate certificate={certificate} showActions={true} />
+
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-mono uppercase rounded flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              &uarr; Back to Top Search
+            </button>
+          </div>
         </div>
       ) : searched ? (
         <div className="p-10 text-center bg-zinc-950 border border-red-500/20 rounded-lg space-y-3">

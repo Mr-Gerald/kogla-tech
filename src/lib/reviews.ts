@@ -15,7 +15,7 @@ import {
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { ReviewRecord } from '../types';
 
-const LOCAL_REVIEWS_KEY = 'kogla_reviews_cache';
+const LOCAL_REVIEWS_KEY = 'kogla_reviews_cache_v5';
 
 // 6 Authentic, hyper-realistic, community-grounded student & professional reviews
 export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
@@ -28,12 +28,12 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     rating: 5,
     title: 'Physical class in Ikeja was the turning point for my career tbh',
     content: 'Honestly when I enrolled for the Full-Stack Web Dev physical class, I was skeptical because I had tried YouTube tutorials for 6 months without building anything solid. Mr Gerald and the instructors literally tore down my spaghetti code on day 3 lol. We built a full banking webhook engine from scratch. Now working remotely as a React dev for a fintech in Lekki. Worth every kobo of the tuition fee.',
-    targetType: 'platform',
-    targetId: 'general',
+    targetType: 'course',
+    targetId: 'web-development',
     parentId: null,
     likedBy: ['user-demo-1', 'user-demo-2', 'user-demo-3'],
     likeCount: 14,
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+    createdAt: '2026-08-01T10:14:00.000Z',
     updatedAt: ''
   },
   {
@@ -45,12 +45,12 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     rating: 0,
     title: '',
     content: 'Proud of how far you have come Nnamdi! That webhook engine you built during the capstone sprint was top tier.',
-    targetType: 'platform',
-    targetId: 'general',
+    targetType: 'course',
+    targetId: 'web-development',
     parentId: 'rev-nnamdi-lagos',
     likedBy: ['user-nnamdi-k'],
     likeCount: 6,
-    createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+    createdAt: '2026-08-01T16:20:00.000Z',
     updatedAt: ''
   },
   {
@@ -62,12 +62,12 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     rating: 5,
     title: 'Data Analysis track got me my first contract with a USAID partner',
     content: 'Took the online data analysis cohort from Abuja while working my 9-5. The SQL and PowerBI projects were 100% practical, not just theory. The tutor pushed us on DAX formulas until 11pm some nights haha. Submitted my portfolio link during an interview last month and landed a business intelligence consultant role. The certificate verification link was also requested by HR.',
-    targetType: 'platform',
-    targetId: 'general',
+    targetType: 'course',
+    targetId: 'data-analysis',
     parentId: null,
     likedBy: ['user-demo-4', 'user-demo-5'],
     likeCount: 19,
-    createdAt: new Date(Date.now() - 86400000 * 8).toISOString(),
+    createdAt: '2026-07-28T16:20:00.000Z',
     updatedAt: ''
   },
   {
@@ -79,12 +79,12 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     rating: 5,
     title: 'Cybersecurity curriculum is deeper than standard CEH syllabus',
     content: 'I\'ve paid for other courses before, but Kogla’s cybersecurity lab setup with Burp Suite and Wireshark traffic breakdown was on another level. The simulated penetration testing on live vulnerable servers made concepts stick fast. If you\'re serious about ethical hacking in Nigeria or abroad, don\'t sleep on this.',
-    targetType: 'platform',
-    targetId: 'general',
+    targetType: 'course',
+    targetId: 'cybersecurity',
     parentId: null,
     likedBy: ['user-demo-1', 'user-demo-6'],
     likeCount: 11,
-    createdAt: new Date(Date.now() - 86400000 * 12).toISOString(),
+    createdAt: '2026-07-24T09:45:00.000Z',
     updatedAt: ''
   },
   {
@@ -93,15 +93,15 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     userName: 'Fatima Al-Hassan',
     userAvatar: '',
     userRole: 'UI/UX Design Graduate (Kano)',
-    rating: 5,
-    title: 'UI/UX auto-layout & design tokens made Figma click for me',
-    content: 'I used to struggle with responsive grids and design systems in Figma. The mentor reviewed my design files screen by screen and taught us design tokens and WCAG contrast. Just completed my capstone project for an e-commerce platform and got featured in the student showcase!',
-    targetType: 'platform',
-    targetId: 'general',
+    rating: 3,
+    title: 'Great UI/UX mentoring, but fast-paced',
+    content: 'The Figma design systems and auto-layout training was top tier, and the instructor reviewed my portfolio screen by screen. Only rating 3 stars because the assignments were very fast-paced for someone balancing a full-time job. Still learned more in 10 weeks than 2 years of self-study!',
+    targetType: 'course',
+    targetId: 'ui-ux-design',
     parentId: null,
     likedBy: ['user-demo-2'],
     likeCount: 9,
-    createdAt: new Date(Date.now() - 86400000 * 15).toISOString(),
+    createdAt: '2026-07-10T12:00:00.000Z',
     updatedAt: ''
   },
   {
@@ -110,15 +110,15 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     userName: 'Damilola Oladipo',
     userAvatar: '',
     userRole: 'Mobile App Developer (Ibadan)',
-    rating: 5,
+    rating: 4,
     title: 'Mobile App engineering with Flutter is intense but solid',
     content: 'Building cross-platform apps with real state management (Riverpod) and offline caching was exactly what I needed. The physical lab community kept me accountable throughout the 14 weeks. Even when my emulator was hanging my laptop, the lab systems had us covered.',
-    targetType: 'platform',
-    targetId: 'general',
+    targetType: 'course',
+    targetId: 'mobile-app-development',
     parentId: null,
     likedBy: ['user-demo-3', 'user-demo-7'],
     likeCount: 16,
-    createdAt: new Date(Date.now() - 86400000 * 18).toISOString(),
+    createdAt: '2026-07-17T11:15:00.000Z',
     updatedAt: ''
   },
   {
@@ -130,12 +130,12 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     rating: 5,
     title: 'Sales Funnels & AI Automation doubled my agency clients',
     content: 'As a freelancer handling social media, learning Make.com, WhatsApp automation, and custom AI agents was a game changer. I packaged automated lead pipelines for 3 real estate companies in Lagos and Enugu, charging ₦300k setup fees each. The course paid for itself within week 4.',
-    targetType: 'platform',
-    targetId: 'general',
+    targetType: 'course',
+    targetId: 'sales-funnels-ai-automation',
     parentId: null,
     likedBy: ['user-demo-5', 'user-demo-8'],
     likeCount: 22,
-    createdAt: new Date(Date.now() - 86400000 * 21).toISOString(),
+    createdAt: '2026-06-03T14:32:00.000Z',
     updatedAt: ''
   }
 ];

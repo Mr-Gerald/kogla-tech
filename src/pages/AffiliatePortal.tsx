@@ -27,7 +27,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function AffiliatePortal() {
   const { user } = useAuth();
-  const [partnerCode, setPartnerCode] = useState('PHENA');
+  const [partnerCode, setPartnerCode] = useState('SHIRLEY');
   const [partner, setPartner] = useState<AffiliatePartner | null>(null);
   const [referrals, setReferrals] = useState<ReferralLead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,15 +130,27 @@ export default function AffiliatePortal() {
             Partner <span className="text-gold-500">Dashboard</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl font-sans">
-            Real-time attribution engine for <b>{partner?.name || 'Phena (Her Tech)'}</b>. Track your enrolled students, commission lifecycle, and instant payouts.
+            Real-time attribution engine for <b>{partner?.name || 'Shirley Johnson'}</b>. Track your enrolled students, commission lifecycle, and instant payouts.
           </p>
         </div>
 
-        {/* TOP CONTROLS: CONTRACT & QUICK CODE */}
+        {/* TOP CONTROLS: CONTRACT & CODE SWITCHER */}
         <div className="flex flex-wrap items-center gap-3">
+          {user && (
+            <div className="flex items-center gap-2 bg-black border border-zinc-800 p-1.5 rounded">
+              <span className="text-[10px] font-mono text-zinc-400 uppercase pl-2">Active Code:</span>
+              <input
+                type="text"
+                value={partnerCode}
+                onChange={(e) => setPartnerCode(e.target.value.toUpperCase())}
+                placeholder="e.g. SHIRLEY"
+                className="w-28 bg-zinc-900 border border-zinc-700 px-2 py-1 text-xs text-gold-400 font-mono uppercase rounded focus:outline-none focus:border-gold-500"
+              />
+            </div>
+          )}
           <button
             onClick={() => setShowContract(!showContract)}
-            className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono uppercase tracking-wider rounded-sm flex items-center gap-2 transition-all shadow"
+            className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono uppercase tracking-wider rounded-sm flex items-center gap-2 transition-all shadow cursor-pointer"
           >
             <FileText size={14} className="text-gold-400" />
             {showContract ? 'Hide Agreement' : 'View Formal Agreement'}
@@ -162,7 +174,7 @@ export default function AffiliatePortal() {
             </div>
             <button
               onClick={() => window.print()}
-              className="px-3.5 py-1.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display rounded-sm flex items-center gap-1.5"
+              className="px-3.5 py-1.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display rounded-sm flex items-center gap-1.5 cursor-pointer"
             >
               <Printer size={13} /> Print Contract
             </button>
@@ -170,7 +182,7 @@ export default function AffiliatePortal() {
 
           <div className="space-y-4 text-xs sm:text-sm leading-relaxed font-sans text-zinc-300">
             <p>
-              This Ambassador Agreement is entered into between <b>Kogla Tech Global</b> (hereinafter referred to as the <i>"Academy"</i>) and <b>Phena / Her Tech</b> (hereinafter referred to as the <i>"Ambassador"</i>).
+              This Ambassador Agreement is entered into between <b>Kogla Tech Global</b> (hereinafter referred to as the <i>"Academy"</i>) and <b>{partner?.name || 'Phena Nwachukwu'}</b> (hereinafter referred to as the <i>"Ambassador"</i>).
             </p>
 
             <div className="bg-black/50 border border-zinc-800 p-4 rounded space-y-3 font-mono text-xs">
@@ -178,7 +190,7 @@ export default function AffiliatePortal() {
               <ul className="list-disc list-inside space-y-1 text-zinc-300">
                 <li><b>Tier 1 (Base Rate):</b> Ambassador earns a <b>6% commission</b> on the net tuition of the first 3 enrolled and verified students.</li>
                 <li><b>Tier 2 (Elevated Lifetime Rate):</b> Beginning with the <b>4th enrolled student</b> and indefinitely thereafter, the commission permanently elevates to <b>10%</b> on all subsequent student enrollments.</li>
-                <li><b>Student Discount:</b> Every student registering with promo code <b className="text-gold-400">PHENA</b> receives a <b>5% direct discount</b> on their tuition.</li>
+                <li><b>Student Discount:</b> Every student registering with promo code <b className="text-gold-400">{partnerCode}</b> receives a <b>5% direct discount</b> on their tuition.</li>
               </ul>
             </div>
 
@@ -207,8 +219,8 @@ export default function AffiliatePortal() {
             </div>
             <div>
               <span className="text-zinc-500 uppercase block">Ambassador Entity</span>
-              <span className="text-gold-400 font-bold text-sm">Phena (Her Tech)</span>
-              <span className="text-zinc-400 block text-[10px]">Instagram: @phena_designs</span>
+              <span className="text-gold-400 font-bold text-sm">{partner?.name || 'Phena Nwachukwu'}</span>
+              <span className="text-zinc-400 block text-[10px]">{partner?.instagramHandle || '@phena_designs'}</span>
             </div>
           </div>
         </motion.div>
@@ -518,7 +530,7 @@ export default function AffiliatePortal() {
               required
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
-              placeholder="e.g. Phena Chukwuemeka"
+              placeholder="e.g. Shirley Okon"
               className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-white font-mono"
             />
           </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, 
@@ -18,24 +19,27 @@ import {
   Phone, 
   MapPin, 
   LogOut, 
-  Sparkles,
-  Lock,
-  Smartphone,
-  Layers,
-  Volume2,
-  Trash2,
-  ExternalLink,
-  ChevronRight,
-  UserCheck,
-  Upload,
-  Camera,
-  Image as ImageIcon
+  Sparkles, 
+  Lock, 
+  Smartphone, 
+  Layers, 
+  Volume2, 
+  Trash2, 
+  ExternalLink, 
+  ChevronRight, 
+  UserCheck, 
+  Upload, 
+  Camera, 
+  Image as ImageIcon,
+  Tag,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, ReviewRecord } from '../types';
 import { subscribeToReviews, deleteReview } from '../lib/reviews';
 
-type TabType = 'personal' | 'security' | 'display' | 'notifications' | 'academy' | 'reviews' | 'bookmarks' | 'connected';
+type TabType = 'personal' | 'referrals' | 'security' | 'display' | 'notifications' | 'academy' | 'reviews' | 'bookmarks' | 'connected';
 
 export default function Profile() {
   const { user, profile, logout, resetPassword, updateProfileData } = useAuth();
@@ -366,13 +370,14 @@ export default function Profile() {
         <div className="space-y-1 font-mono text-xs">
           {[
             { id: 'personal', label: '1. Personal Details', icon: User },
-            { id: 'security', label: '2. Security & Auth', icon: Key },
-            { id: 'display', label: '3. Display & Theme', icon: Settings },
-            { id: 'notifications', label: '4. Notifications', icon: Bell },
-            { id: 'academy', label: '5. Academic Progress', icon: Award },
-            { id: 'reviews', label: '6. My Feedback & Activity', icon: MessageSquare },
-            { id: 'bookmarks', label: '7. Saved Bookmarks', icon: Bookmark },
-            { id: 'connected', label: '8. Connected Accounts', icon: ShieldCheck },
+            { id: 'referrals', label: '2. Referral & Ambassador Code', icon: Tag },
+            { id: 'security', label: '3. Security & Auth', icon: Key },
+            { id: 'display', label: '4. Display & Theme', icon: Settings },
+            { id: 'notifications', label: '5. Notifications', icon: Bell },
+            { id: 'academy', label: '6. Academic Progress', icon: Award },
+            { id: 'reviews', label: '7. My Feedback & Activity', icon: MessageSquare },
+            { id: 'bookmarks', label: '8. Saved Bookmarks', icon: Bookmark },
+            { id: 'connected', label: '9. Connected Accounts', icon: ShieldCheck },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -615,7 +620,116 @@ export default function Profile() {
             </motion.div>
           )}
 
-          {/* TAB 2: SECURITY & AUTH */}
+          {/* TAB 2: REFERRALS & AMBASSADOR CODE */}
+          {activeTab === 'referrals' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+              <div>
+                <h3 className="text-lg font-display font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Tag size={18} className="text-gold-500" /> Ambassador & Referral Engine
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Generate your unique promo code, invite students to earn 6% &rarr; 10% lifetime commissions, and grant them a 5% discount.
+                </p>
+              </div>
+
+              {/* ACTIVE CODE & SHAREABLE LINK */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-4">
+                <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-bold block">
+                  YOUR PERSONAL ATTRIBUTION ASSETS
+                </span>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                      Your Unique Promo Code
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={profile?.referralCode || (profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) : user.uid.slice(0, 8).toUpperCase())}
+                        className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono font-bold uppercase select-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const code = profile?.referralCode || (profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) : user.uid.slice(0, 8).toUpperCase());
+                          navigator.clipboard.writeText(code);
+                          alert(`Promo code ${code} copied to clipboard!`);
+                        }}
+                        className="px-3 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded flex items-center gap-1 font-mono transition-all cursor-pointer shrink-0"
+                      >
+                        <Copy size={12} /> Copy
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                      Shareable 1-Click Referral Link
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${window.location.origin}/?ref=${profile?.referralCode || (profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) : user.uid.slice(0, 8).toUpperCase())}`}
+                        className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono select-all truncate"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const code = profile?.referralCode || (profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) : user.uid.slice(0, 8).toUpperCase());
+                          const url = `${window.location.origin}/?ref=${code}`;
+                          navigator.clipboard.writeText(url);
+                          alert(`Referral link copied to clipboard: ${url}`);
+                        }}
+                        className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded flex items-center gap-1 font-mono transition-all cursor-pointer shrink-0"
+                      >
+                        <Copy size={12} /> Link
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* COMMISSION TIERS BREAKDOWN */}
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div className="p-4 bg-zinc-900/70 border border-zinc-800 rounded space-y-1 font-mono">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Student Incentive</span>
+                  <div className="text-xl font-bold text-emerald-400">5% OFF</div>
+                  <p className="text-[10px] text-zinc-400 font-sans">Direct tuition discount across all 11 academy tracks.</p>
+                </div>
+
+                <div className="p-4 bg-zinc-900/70 border border-zinc-800 rounded space-y-1 font-mono">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Tier 1 Commission</span>
+                  <div className="text-xl font-bold text-gold-400">6% Rate</div>
+                  <p className="text-[10px] text-zinc-400 font-sans">Earned on first 3 verified student enrollments.</p>
+                </div>
+
+                <div className="p-4 bg-zinc-900/70 border border-zinc-800 rounded space-y-1 font-mono">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Tier 2 Lifetime</span>
+                  <div className="text-xl font-bold text-gold-300">10% Boost</div>
+                  <p className="text-[10px] text-zinc-400 font-sans">Elevates permanently from the 4th student onward.</p>
+                </div>
+              </div>
+
+              {/* QUICK LINK TO FULL PARTNER DASHBOARD */}
+              <div className="p-4 bg-black/60 border border-gold-500/30 rounded flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white uppercase font-display">Deep Analytics & Payouts</h4>
+                  <p className="text-[11px] text-zinc-400">View real-time attribution logs and save your Nigerian bank account.</p>
+                </div>
+                <Link
+                  to="/affiliate-portal"
+                  className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded font-display flex items-center gap-1.5 transition-all shadow"
+                >
+                  Open Dashboard &rarr;
+                </Link>
+              </div>
+            </motion.div>
+          )}
+
+          {/* TAB 3: SECURITY & AUTH */}
           {activeTab === 'security' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <div>
