@@ -377,12 +377,10 @@ export default function Profile() {
             )}
 
             {/* Camera Hover Overlay */}
-            <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-gold-400 gap-1 p-2 text-center">
+            <span className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-gold-400 gap-1 p-2 text-center pointer-events-none">
               <Camera size={20} />
               <span className="text-[9px] font-mono uppercase font-bold text-white">Upload DP</span>
-            </div>
-
-            <span className="absolute bottom-0 right-0 bg-emerald-500 border-2 border-zinc-950 w-5 h-5 rounded-full shadow" title="Account Active"></span>
+            </span>
           </div>
 
           {/* User Meta Summary */}
@@ -430,7 +428,7 @@ export default function Profile() {
         <div className="space-y-1 font-mono text-xs">
           {[
             { id: 'personal', label: '1. Personal Details', icon: User },
-            { id: 'referrals', label: '2. Referral & Ambassador Code', icon: Tag },
+            ...(profile?.isAmbassador || profile?.role === 'admin' ? [{ id: 'referrals', label: '2. Referral & Ambassador Code', icon: Tag }] : []),
             { id: 'security', label: '3. Security & Auth', icon: Key },
             { id: 'display', label: '4. Display & Theme', icon: Settings },
             { id: 'notifications', label: '5. Notifications', icon: Bell },

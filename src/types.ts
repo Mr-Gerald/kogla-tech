@@ -12,6 +12,7 @@ export interface UserProfile {
   email: string;
   role: 'user' | 'admin' | 'affiliate';
   isPaid?: boolean;
+  isAmbassador?: boolean;
   xp: number;
   completedRooms: string[];
   phone?: string;

@@ -69,6 +69,20 @@ export default function AffiliatePortal() {
 
   const referralUrl = `${window.location.origin}/?ref=${partnerCode}`;
 
+  const handleDownloadAgreement = () => {
+    const agreementText = `KOGLA TECH GLOBAL - CREATOR BRAND AMBASSADOR LEGAL MEMORANDUM\n\nAmbassador Partner: ${partner?.name || 'Phena Nwachukwu'}\nAssigned Code: ${partnerCode}\nDate: ${new Date().toLocaleDateString()}\n\n1. COMMISSION STRUCTURE & ESCALATOR:\n- Tier 1: 6% commission on the first 3 verified student enrollments.\n- Tier 2: 10% lifetime commission permanently unlocked from the 4th student onwards.\n- Student Benefit: 5% direct discount on tuition for students using code ${partnerCode}.\n\n2. SETTLEMENT & PAYOUT TIMELINE:\n- Earned commissions are disbursed within 3-5 business days upon tuition clearance to the Ambassador's registered bank account.\n\n3. ONBOARDING & ACTIVATION STEPS FOR AMBASSADORS (e.g. PHENA):\n- Step 1: Create an active user account on Kogla Tech with your email address.\n- Step 2: Access your Ambassador Portal / Profile to copy your unique promo code (${partnerCode}) and attribution link.\n- Step 3: Share your link and code. Every student registering with your code receives 5% off tuition.\n\n4. LIABILITY, INDEMNIFICATION & LEGAL PROTECTION:\n- Independent Contractor: The Ambassador is an independent contractor and not an employee, partner, or legal representative of Kogla Tech Global.\n- Indemnification: Ambassador agrees to indemnify, defend, and hold harmless Kogla Tech Global, its founder, officers, directors, and agents from and against any and all claims, liabilities, damages, losses, or expenses (including reasonable attorney fees) arising out of Ambassador's marketing practices, misleading representations, or breach of this agreement.\n- Limitation of Liability: In no event shall Kogla Tech Global's total aggregate liability exceed the total commissions paid or payable to Ambassador under this agreement in the preceding 6 months.\n- Intellectual Property: All Kogla Tech trademarks, curriculum materials, logos, and digital assets remain the exclusive intellectual property of Kogla Tech Global.\n\n5. TERMINATION:\n- Either party may terminate this agreement with 7 days written notice. All earned, verified commissions prior to termination date shall be paid out in full.\n\nACCEPTED & AGREED:\nKogla Tech Global (Gerald Emechebe, CEO)\nAmbassador Partner (${partner?.name || 'Phena Nwachukwu'})`;
+
+    const blob = new Blob([agreementText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Kogla_Tech_Ambassador_Legal_Contract_${partnerCode}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const copyToClipboard = (text: string, isCode = false) => {
     navigator.clipboard.writeText(text);
     if (isCode) {
@@ -173,16 +187,16 @@ export default function AffiliatePortal() {
               </h2>
             </div>
             <button
-              onClick={() => window.print()}
-              className="px-3.5 py-1.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display rounded-sm flex items-center gap-1.5 cursor-pointer"
+              onClick={handleDownloadAgreement}
+              className="px-3.5 py-1.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display rounded-sm flex items-center gap-1.5 cursor-pointer shadow"
             >
-              <Printer size={13} /> Print Contract
+              <FileText size={13} /> Download Contract (.TXT)
             </button>
           </div>
 
           <div className="space-y-4 text-xs sm:text-sm leading-relaxed font-sans text-zinc-300">
             <p>
-              This Ambassador Agreement is entered into between <b>Kogla Tech Global</b> (hereinafter referred to as the <i>"Academy"</i>) and <b>{partner?.name || 'Phena Nwachukwu'}</b> (hereinafter referred to as the <i>"Ambassador"</i>).
+              This Brand Ambassador & Creator Partnership Legal Agreement is entered into between <b>Kogla Tech Global</b> (hereinafter referred to as the <i>"Academy"</i>) and <b>{partner?.name || 'Phena Nwachukwu'}</b> (hereinafter referred to as the <i>"Ambassador"</i>).
             </p>
 
             <div className="bg-black/50 border border-zinc-800 p-4 rounded space-y-3 font-mono text-xs">
@@ -204,10 +218,20 @@ export default function AffiliatePortal() {
             </div>
 
             <div className="bg-black/50 border border-zinc-800 p-4 rounded space-y-3 font-mono text-xs">
-              <h4 className="text-gold-400 font-bold uppercase tracking-wider">3. Deliverables & Attribution Window</h4>
+              <h4 className="text-gold-400 font-bold uppercase tracking-wider">3. Ambassador Activation & Onboarding (e.g. Phena)</h4>
               <p className="text-zinc-300">
-                The Ambassador agrees to feature Kogla Academy programs through organic content, story mentions, and bio links. Attribution is tracked via cookie and unique promo code with a <b>30-day tracking window</b>.
+                Ambassadors (including Phena Nwachukwu) must create a verified user account on Kogla Tech, copy their unique tracking code and shareable link from their profile / ambassador portal, and provide valid Opay / bank account details for automated settlement.
               </p>
+            </div>
+
+            <div className="bg-black/50 border border-zinc-800 p-4 rounded space-y-3 font-mono text-xs">
+              <h4 className="text-gold-400 font-bold uppercase tracking-wider">4. Liability, Indemnification & Legal Protection</h4>
+              <ul className="list-disc list-inside space-y-1 text-zinc-300">
+                <li><b>Independent Contractor:</b> The Ambassador operates strictly as an independent contractor and is not an employee, legal partner, or agent of Kogla Tech Global.</li>
+                <li><b>Indemnification:</b> Ambassador agrees to indemnify, defend, and hold harmless Kogla Tech Global, its founder, officers, directors, and employees from any claims, liabilities, damages, losses, or legal expenses arising out of Ambassador's promotional practices or misrepresentations.</li>
+                <li><b>Limitation of Liability:</b> Kogla Tech Global's aggregate liability under this agreement shall never exceed the total commissions paid or payable to the Ambassador in the preceding 6 months.</li>
+                <li><b>Intellectual Property:</b> All curriculum materials, trademarks, and branding remain the exclusive property of Kogla Tech Global.</li>
+              </ul>
             </div>
           </div>
 

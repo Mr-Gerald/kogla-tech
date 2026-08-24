@@ -23,6 +23,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   const { user, profile } = useAuth();
   const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   // New review form state
   const [newRating, setNewRating] = useState<number>(5);
@@ -412,17 +413,18 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
             </p>
           </div>
         ) : (
-          topLevelReviews.map((review) => {
-            const replies = getReplies(review.id);
-            const isLikedByMe = user ? review.likedBy.includes(user.uid) : false;
+          <>
+            {topLevelReviews.slice(0, showAllReviews ? undefined : 5).map((review) => {
+              const replies = getReplies(review.id);
+              const isLikedByMe = user ? review.likedBy.includes(user.uid) : false;
 
-            return (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-zinc-950 border border-zinc-850 rounded-lg p-5 shadow-lg space-y-3"
-              >
+              return (
+                <motion.div
+                  key={review.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-zinc-950 border border-zinc-850 rounded-lg p-3.5 sm:p-4 shadow-md space-y-2.5 text-xs font-normal"
+                >
                 {/* TOP-LEVEL REVIEW HEADER */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -635,7 +637,19 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                 )}
               </motion.div>
             );
-          })
+          })}
+
+          {!showAllReviews && topLevelReviews.length > 5 && (
+            <div className="text-center pt-3">
+              <button
+                onClick={() => setShowAllReviews(true)}
+                className="px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-gold-400 font-mono text-xs uppercase tracking-wider rounded-md shadow transition-all cursor-pointer"
+              >
+                See More Reviews ({topLevelReviews.length - 5} more available)
+              </button>
+            </div>
+          )}
+        </>
         )}
       </div>
     </section>
