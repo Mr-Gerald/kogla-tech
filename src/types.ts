@@ -18,6 +18,7 @@ export interface UserProfile {
   bio?: string;
   title?: string;
   avatarUrl?: string;
+  signatureUrl?: string;
   location?: string;
   website?: string;
   githubUrl?: string;

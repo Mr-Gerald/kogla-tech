@@ -60,7 +60,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { getAllAffiliates, getAllReferrals, approveReferralPayment, markReferralPaidOut, saveAffiliatePartner } from '../lib/affiliates';
-import { getAllCertificates, issueCertificate, FOUNDER_NAME, FOUNDER_TITLE } from '../lib/certificates';
+import { getAllCertificates, issueCertificate, FOUNDER_NAME, FOUNDER_TITLE, getFounderSignature, saveFounderSignature } from '../lib/certificates';
 import { ACADEMY_COURSES, formatNaira, getCustomPricingMap, saveCustomPricingMap, getAllCourses } from '../data/coursesPricing';
 import { OfficialCertificate } from '../components/OfficialCertificate';
 
@@ -174,6 +174,52 @@ export default function AdminPortal() {
   const [certificates, setCertificates] = useState<CertificateRecord[]>([]);
   const [loadingCerts, setLoadingCerts] = useState(false);
   const [previewCert, setPreviewCert] = useState<CertificateRecord | null>(null);
+
+  // Founder Signature State
+  const [founderSig, setFounderSig] = useState(getFounderSignature());
+  const [uploadingFounderSig, setUploadingFounderSig] = useState(false);
+  const founderSigInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFounderSigUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file for the founder signature.');
+      return;
+    }
+    setUploadingFounderSig(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIM = 400;
+        let w = img.width;
+        let h = img.height;
+        if (w > h) {
+          if (w > MAX_DIM) { h *= MAX_DIM / w; w = MAX_DIM; }
+        } else {
+          if (h > MAX_DIM) { w *= MAX_DIM / h; h = MAX_DIM; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/png', 0.95);
+          setFounderSig(dataUrl);
+          saveFounderSignature(dataUrl);
+        }
+        setUploadingFounderSig(false);
+      };
+      img.onerror = () => {
+        setUploadingFounderSig(false);
+        alert('Failed to process signature image.');
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
   
   // Issue Certificate Form State
   const [certStudentName, setCertStudentName] = useState('');
@@ -1613,6 +1659,100 @@ export default function AdminPortal() {
               <OfficialCertificate certificate={previewCert} showActions={true} />
             </div>
           )}
+
+          {/* FOUNDER SIGNATURE CONFIGURATION CARD */}
+          <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-850 pb-4">
+              <div>
+                <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold block mb-0.5">
+                  AUTHORIZED SIGNATORY CONFIGURATION
+                </span>
+                <h3 className="text-base font-display font-bold text-white uppercase">
+                  Founder & CEO Digital Signature (Gerald Emechebe)
+                </h3>
+                <p className="text-xs text-zinc-400 font-sans mt-0.5">
+                  Upload your handwritten or official signature stamp. This signature is automatically applied to all newly issued student certificates prior to printing or PDF downloading.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <input
+                  type="file"
+                  ref={founderSigInputRef}
+                  onChange={handleFounderSigUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => founderSigInputRef.current?.click()}
+                  disabled={uploadingFounderSig}
+                  className="px-4 py-2.5 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-bold text-xs uppercase font-display rounded flex items-center gap-1.5 transition-all cursor-pointer shadow"
+                >
+                  {uploadingFounderSig ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" /> Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={13} /> Upload Founder Signature
+                    </>
+                  )}
+                </button>
+                {founderSig && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFounderSig('');
+                      saveFounderSignature('');
+                    }}
+                    className="px-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-mono uppercase rounded border border-zinc-700"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-6 items-center">
+              <div className="p-4 bg-black border border-zinc-850 rounded flex items-center justify-center h-24">
+                {founderSig ? (
+                  <img
+                    src={founderSig}
+                    alt="Founder Signature Stamp"
+                    className="max-h-full max-w-full object-contain filter invert contrast-200"
+                  />
+                ) : (
+                  <span className="text-[11px] text-zinc-500 font-mono italic text-center">
+                    No signature uploaded yet. Default digital seal active.
+                  </span>
+                )}
+              </div>
+              <div className="sm:col-span-2 space-y-2">
+                <label className="block text-[10px] text-zinc-400 uppercase font-mono">
+                  Or Paste Signature Image URL (PNG / Transparent)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    placeholder="https://example.com/gerald-signature.png"
+                    value={founderSig}
+                    onChange={(e) => {
+                      setFounderSig(e.target.value);
+                      saveFounderSignature(e.target.value);
+                    }}
+                    className="flex-1 p-2.5 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 focus:outline-none"
+                  />
+                  <span className="px-3 py-2.5 bg-zinc-900 border border-zinc-800 rounded text-[11px] font-mono text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Auto-Saved
+                  </span>
+                </div>
+                <p className="text-[10px] text-zinc-500 font-mono">
+                  Tip: Use a high-contrast black signature on a transparent background for professional certification output.
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* ISSUE NEW CERTIFICATE FORM */}
           <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-6">

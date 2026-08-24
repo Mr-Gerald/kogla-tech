@@ -66,6 +66,20 @@ export function generateCertificateId(): string {
   return `KOGLA-CERT-${year}-${randomDigits}`;
 }
 
+export function getFounderSignature(): string {
+  try {
+    return localStorage.getItem('kogla_founder_signature') || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+export function saveFounderSignature(sig: string) {
+  try {
+    localStorage.setItem('kogla_founder_signature', sig);
+  } catch (_) {}
+}
+
 /**
  * Issue a new certificate (Admin action)
  */
@@ -81,6 +95,7 @@ export async function issueCertificate(params: {
   const certId = generateCertificateId();
   const issueDate = new Date().toISOString().split('T')[0];
   const completionDate = params.completionDate || issueDate;
+  const signature = params.signatureImage || getFounderSignature();
 
   const newCert: CertificateRecord = {
     id: certId,
@@ -94,7 +109,7 @@ export async function issueCertificate(params: {
     issuedBy: 'Kogla Tech Academic Board',
     founderName: FOUNDER_NAME,
     founderTitle: FOUNDER_TITLE,
-    signatureImage: params.signatureImage || '',
+    signatureImage: signature,
     verified: true,
     credentialUrl: `${window.location.origin}/verify-certificate/${certId}`,
     createdAt: new Date().toISOString()

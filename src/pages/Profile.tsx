@@ -55,12 +55,15 @@ export default function Profile() {
   const [githubUrl, setGithubUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [signatureUrl, setSignatureUrl] = useState('');
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [personalSuccess, setPersonalSuccess] = useState(false);
 
   // Direct Device File Upload Ref & Handler
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const signatureInputRef = React.useRef<HTMLInputElement>(null);
   const [uploadingDp, setUploadingDp] = useState(false);
+  const [uploadingSig, setUploadingSig] = useState(false);
 
   const handleDeviceDpUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,6 +120,61 @@ export default function Profile() {
     reader.readAsDataURL(file);
   };
 
+  const handleDeviceSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a signature image file (PNG, JPG, WEBP).');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size exceeds 10MB limit.');
+      return;
+    }
+
+    setUploadingSig(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIM = 500;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/png', 0.92);
+          setSignatureUrl(dataUrl);
+        }
+        setUploadingSig(false);
+      };
+      img.onerror = () => {
+        setUploadingSig(false);
+        alert('Failed to read signature image.');
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Form State for Security
   const [sendingReset, setSendingReset] = useState(false);
   const [resetSent, setResetSent] = useState(false);
@@ -151,6 +209,7 @@ export default function Profile() {
       setGithubUrl(profile.githubUrl || '');
       setLinkedinUrl(profile.linkedinUrl || '');
       setAvatarUrl(profile.avatarUrl || user?.photoURL || '');
+      setSignatureUrl(profile.signatureUrl || '');
       
       if (profile.preferences) {
         setThemeTone(profile.preferences.themeTone || 'dark');
@@ -192,6 +251,7 @@ export default function Profile() {
         githubUrl: githubUrl.trim(),
         linkedinUrl: linkedinUrl.trim(),
         avatarUrl: avatarUrl.trim(),
+        signatureUrl: signatureUrl.trim(),
       });
       setPersonalSuccess(true);
       setTimeout(() => setPersonalSuccess(false), 3500);
@@ -548,6 +608,90 @@ export default function Profile() {
                     </div>
                   </div>
                 </div>
+
+                {/* Digital Signature Upload Block */}
+                <div className="bg-zinc-900/70 border border-zinc-800 p-4 rounded-md space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] text-zinc-300 uppercase tracking-widest font-mono font-bold flex items-center gap-1.5">
+                      <Award size={13} className="text-gold-400" /> Digital Signature (For Official Certificates & Contracts)
+                    </label>
+                    <span className="text-[10px] text-zinc-500 font-mono">PNG / Transparent Recommended</span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* Signature Preview Box */}
+                    <div className="relative shrink-0 w-32 h-16 bg-zinc-950 border border-zinc-800 rounded flex items-center justify-center p-1">
+                      {signatureUrl ? (
+                        <img 
+                          src={signatureUrl} 
+                          alt="Signature Preview" 
+                          className="max-h-full max-w-full object-contain filter invert contrast-200"
+                        />
+                      ) : (
+                        <span className="text-[10px] text-zinc-500 font-mono italic">No signature uploaded</span>
+                      )}
+                    </div>
+
+                    {/* Upload button & URL input */}
+                    <div className="flex-1 w-full space-y-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => signatureInputRef.current?.click()}
+                          disabled={uploadingSig}
+                          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-gold-400 font-bold text-xs uppercase font-mono rounded inline-flex items-center gap-2 transition-all border border-gold-500/30 shadow"
+                        >
+                          {uploadingSig ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin" /> Processing Signature...
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={13} /> Upload Signature File
+                            </>
+                          )}
+                        </button>
+
+                        {signatureUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setSignatureUrl('')}
+                            className="px-2.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-mono rounded"
+                            title="Remove Signature"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type="url"
+                          placeholder="Or paste signature image URL (https://...)"
+                          value={signatureUrl}
+                          onChange={(e) => setSignatureUrl(e.target.value)}
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hidden File Inputs for DP & Signature */}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleDeviceDpUpload} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+                <input 
+                  type="file" 
+                  ref={signatureInputRef} 
+                  onChange={handleDeviceSignatureUpload} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
 
                 <div>
                   <label className="block text-[10px] text-zinc-400 uppercase tracking-widest font-mono mb-1">
