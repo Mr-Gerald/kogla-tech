@@ -328,7 +328,7 @@ export default function CourseDetails() {
                 </p>
                 <div className="pt-2 border-t border-zinc-800 flex flex-col sm:flex-row gap-2">
                   <a
-                    href={`https://wa.me/2348000000000?text=${encodeURIComponent(`Hello Kogla Tech Admissions Desk, I have submitted my enrollment application for ${course.title} (${selectedFormat === 'online' ? 'Online' : 'Physical Hub'}) with Net Tuition ${formatNaira(finalPrice)}. My name is ${name}. Please verify my payment.`)}`}
+                    href={`https://wa.me/2347012489041?text=${encodeURIComponent(`Hello Kogla Tech Admissions Desk, I have submitted my enrollment application for ${course.title} (${selectedFormat === 'online' ? 'Online' : 'Physical Hub'}) with Net Tuition ${formatNaira(finalPrice)}. My name is ${name}. Please verify my payment.`)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider font-display rounded flex items-center justify-center gap-1.5 transition-all shadow"

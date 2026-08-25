@@ -361,7 +361,7 @@ export default function StudyRoom() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <a 
-              href={`https://wa.me/2348000000000?text=${encodeURIComponent(`Hello Kogla Tech, I want to pay and get approved for the Academy Course (${activePath?.title || 'Study Course'}). My Email: ${profile?.email || 'N/A'}. Please guide me on payment!`)}`}
+              href={`https://wa.me/2347012489041?text=${encodeURIComponent(`Hello Kogla Tech, I want to pay and get approved for the Academy Course (${activePath?.title || 'Study Course'}). My Email: ${profile?.email || 'N/A'}. Please guide me on payment!`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-widest font-display rounded-sm transition-colors flex items-center justify-center gap-2"

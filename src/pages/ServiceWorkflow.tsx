@@ -383,7 +383,7 @@ export default function ServiceWorkflow() {
                     <Mail size={13} /> Send Email
                   </a>
                   <a 
-                    href={`https://wa.me/2348000000000?text=${encodeURIComponent(`Hello Kogla Tech, I want to book your ${details.title} service. Let's discuss!`)}`}
+                    href={`https://wa.me/2347012489041?text=${encodeURIComponent(`Hello Kogla Tech, I want to book your ${details.title} service. Let's discuss!`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[10px] uppercase tracking-wider font-display rounded-sm transition-colors flex items-center justify-center gap-1.5"

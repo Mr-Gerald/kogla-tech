@@ -173,7 +173,7 @@ export default function Services() {
 
                         <div className="grid sm:grid-cols-2 gap-3 pt-2">
                             <a 
-                                href={`https://wa.me/2348000000000?text=${encodeURIComponent(`Hello Kogla Tech, I want to book your ${selectedService.title} service. My requirement is: [describe project]. I understand higher payment guarantees faster priority delivery. Let's discuss!`)}`}
+                                href={`https://wa.me/2347012489041?text=${encodeURIComponent(`Hello Kogla Tech, I want to book your ${selectedService.title} service. My requirement is: [describe project]. I understand higher payment guarantees faster priority delivery. Let's discuss!`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-widest font-display rounded-sm transition-colors flex items-center justify-center gap-2"

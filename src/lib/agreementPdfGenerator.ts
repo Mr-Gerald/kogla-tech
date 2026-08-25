@@ -16,6 +16,35 @@ export interface AmbassadorAgreementData {
 }
 
 /**
+ * Loads an image from a URL or data URI and converts it to a base64 data URL for jsPDF
+ */
+async function getImageDataUrl(url: string): Promise<string | null> {
+  if (!url) return null;
+  if (url.startsWith('data:image/')) return url;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width || 200;
+        canvas.height = img.naturalHeight || img.height || 200;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(null);
+        ctx.drawImage(img, 0, 0);
+        const dataUri = canvas.toDataURL('image/jpeg', 0.95);
+        resolve(dataUri);
+      } catch (e) {
+        console.warn('Canvas conversion failed for logo:', e);
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+/**
  * Generates and downloads an official Ambassador & Creator Legal Partnership PDF with Kogla Tech Logo
  */
 export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementData): Promise<void> {
@@ -43,20 +72,38 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.setFillColor(212, 175, 55);
   doc.rect(0, 35, 210, 1.2, 'F');
 
-  // Draw Vector Kogla Tech Brand Logo / Emblem
-  // Background Box
-  doc.setFillColor(20, 20, 24);
-  doc.setDrawColor(212, 175, 55);
-  doc.setLineWidth(0.6);
-  doc.roundedRect(12, 6, 22, 22, 2, 2, 'FD');
+  // Try to load and embed the actual Kogla Tech Logo
+  let logoEmbedded = false;
+  if (data.logoUrl) {
+    try {
+      const logoData = await getImageDataUrl(data.logoUrl);
+      if (logoData) {
+        doc.setFillColor(20, 20, 24);
+        doc.setDrawColor(212, 175, 55);
+        doc.setLineWidth(0.6);
+        doc.roundedRect(12, 6, 22, 22, 2, 2, 'FD');
+        doc.addImage(logoData, 'JPEG', 13, 7, 20, 20);
+        logoEmbedded = true;
+      }
+    } catch (e) {
+      console.warn('Could not embed custom logo into PDF:', e);
+    }
+  }
 
-  // Inner Stylized Gold "KT" Crest Monogram
-  doc.setTextColor(212, 175, 55);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text('KT', 23, 19, { align: 'center' });
-  doc.setFontSize(4.5);
-  doc.text('GLOBAL', 23, 24, { align: 'center' });
+  // Draw Gold Vector Crest Monogram fallback if image is not loaded
+  if (!logoEmbedded) {
+    doc.setFillColor(20, 20, 24);
+    doc.setDrawColor(212, 175, 55);
+    doc.setLineWidth(0.6);
+    doc.roundedRect(12, 6, 22, 22, 2, 2, 'FD');
+
+    doc.setTextColor(212, 175, 55);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('KT', 23, 19, { align: 'center' });
+    doc.setFontSize(4.5);
+    doc.text('GLOBAL', 23, 24, { align: 'center' });
+  }
 
   // Company Name and Legal Document Title
   doc.setTextColor(255, 255, 255);
@@ -71,7 +118,7 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
 
   doc.setFontSize(6.5);
   doc.setTextColor(160, 160, 165);
-  doc.text('ACCREDITED DIGITAL ACADEMY & TECHNOLOGY SOLUTIONS • RC-REGISTERED', 38, 27);
+  doc.text('ACCREDITED DIGITAL ACADEMY & TECHNOLOGY SOLUTIONS - RC-REGISTERED', 38, 27);
 
   // Right Header Metadata
   doc.setTextColor(212, 175, 55);
@@ -100,7 +147,7 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(`Party 1 (The Academy): Kogla Tech Global (Ikeja Hub, Lagos / Online Global Cohorts)`, 16, y + 12);
+  doc.text(`Party 1 (The Academy): Kogla Tech Global (Lekki Phase 1 Hub, Lagos / Online Global Cohorts)`, 16, y + 12);
   doc.text(`Party 2 (The Ambassador): ${name}${data.instagramHandle ? ` (${data.instagramHandle})` : ''}${data.email ? ` • ${data.email}` : ''}`, 16, y + 17);
 
   y += 28;
@@ -117,10 +164,10 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.setTextColor(50, 50, 55);
 
   const c1Lines = [
-    `• Tier 1 (Base Commission): Ambassador earns ${t1}% commission on the net tuition fee of the first 3 verified student enrollments.`,
-    `• Tier 2 (Elevated Lifetime Escalator): Beginning from the 4th confirmed student and permanently thereafter, commission unlocks at ${t2}% on all future enrollments.`,
-    `• Student Tuition Benefit: Every student registering via promo code "${code}" or the ambassador's tracking link receives a direct ${disc}% discount off their tuition fee.`,
-    `• Multi-Format Scope: Commissions apply equally to both Physical Hub (Ikeja, Lagos) and Online Cohort registrations.`
+    `* Tier 1 (Base Commission): Ambassador earns ${t1}% commission on the net tuition fee of the first 3 verified student enrollments.`,
+    `* Tier 2 (Elevated Lifetime Escalator): Beginning from the 4th confirmed student and permanently thereafter, commission unlocks at ${t2}% on all future enrollments.`,
+    `* Student Tuition Benefit: Every student registering via promo code "${code}" or the ambassador's tracking link receives a direct ${disc}% discount off their tuition fee.`,
+    `* Multi-Format Scope: Commissions apply equally to both Physical Hub (Lekki Phase 1 Hub, Lagos) and Online Cohort registrations.`
   ];
 
   c1Lines.forEach(line => {
@@ -142,9 +189,9 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.setTextColor(50, 50, 55);
 
   const c2Lines = [
-    `• Initial Attribution: When a student submits registration with code "${code}", the inquiry is recorded in real time as "Pending Payment".`,
-    `• Clearance: Upon tuition payment verification by the Academy accounts office, status automatically transitions to "Confirmed & Earned".`,
-    `• Settlement Window: Earned commissions are disbursed directly to the Ambassador's registered bank account within 3 to 5 business days following payment clearance.`
+    `* Initial Attribution: When a student submits registration with code "${code}", the inquiry is recorded in real time as "Pending Payment".`,
+    `* Clearance: Upon tuition payment verification by the Academy accounts office, status automatically transitions to "Confirmed & Earned".`,
+    `* Settlement Window: Earned commissions are disbursed directly to the Ambassador's registered bank account within 3 to 5 business days following payment clearance.`
   ];
 
   c2Lines.forEach(line => {
@@ -166,9 +213,9 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.setTextColor(50, 50, 55);
 
   const c3Lines = [
-    `• Official Brand Representation: Ambassador agrees to feature their verified partner status and tracking link (e.g. "🎓 Tech Ambassador @koglatech | koglatech.com/academy?ref=${code}") prominently in their public bio / link tree across active social profiles.`,
-    `• Real-Time Tracking Portal: Ambassador accesses their private tracking dashboard at /affiliate-portal to view real-time student attributions, confirmed enrollments, and live payout ledgers.`,
-    `• Settlement Details: Ambassador maintains their preferred bank account details directly within their portal profile for swift automated processing.`
+    `* Official Brand Representation: Ambassador agrees to feature their verified partner status and tracking link (e.g. "Tech Ambassador @koglatech | koglatech.com/academy?ref=${code}") prominently in their public bio / link tree across active social profiles.`,
+    `* Real-Time Tracking Portal: Ambassador accesses their private tracking dashboard at /affiliate-portal to view real-time student attributions, confirmed enrollments, and live payout ledgers.`,
+    `* Settlement Details: Ambassador maintains their preferred bank account details directly within their portal profile for swift automated processing.`
   ];
 
   c3Lines.forEach(line => {
@@ -190,9 +237,9 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.setTextColor(50, 50, 55);
 
   const c4Lines = [
-    `• Independent Contractor: The Ambassador operates strictly as an independent marketing partner and is not an employee, agent, or joint venturer.`,
-    `• Indemnification: Ambassador agrees to defend, indemnify, and hold harmless Kogla Tech Global, its founder, officers, and employees against any claims or liabilities arising out of Ambassador's unauthorized claims, misleading advertising, or breach of this agreement.`,
-    `• Intellectual Property: All course curriculum, brand assets, logos, trademarks, and software remain the exclusive property of Kogla Tech Global.`
+    `* Independent Contractor: The Ambassador operates strictly as an independent marketing partner and is not an employee, agent, or joint venturer.`,
+    `* Indemnification: Ambassador agrees to defend, indemnify, and hold harmless Kogla Tech Global, its founder, officers, and employees against any claims or liabilities arising out of Ambassador's unauthorized claims, misleading advertising, or breach of this agreement.`,
+    `* Intellectual Property: All course curriculum, brand assets, logos, trademarks, and software remain the exclusive property of Kogla Tech Global.`
   ];
 
   c4Lines.forEach(line => {
@@ -231,7 +278,7 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.rect(0, 287, 210, 10, 'F');
   doc.setTextColor(212, 175, 55);
   doc.setFontSize(6.5);
-  doc.text('KOGLA TECH GLOBAL • OFFICIAL PARTNERSHIP CONTRACT • SECURE LEGAL INSTRUMENT', 105, 293, { align: 'center' });
+  doc.text('KOGLA TECH GLOBAL - OFFICIAL PARTNERSHIP CONTRACT - SECURE LEGAL INSTRUMENT', 105, 293, { align: 'center' });
 
   // Download filename
   const cleanCode = code.replace(/[^A-Z0-9_-]/gi, '_');
