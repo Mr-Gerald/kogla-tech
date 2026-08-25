@@ -50,42 +50,51 @@ export async function makeSignatureTransparent(
   source: string | File | Blob,
   options: SignatureProcessOptions = {}
 ): Promise<string> {
-  const {
-    mode = 'gold',
-    threshold = 0.30,
-    autoCrop = true,
-    contrast = 1.3
-  } = options;
+  try {
+    const {
+      mode = 'gold',
+      threshold = 0.30,
+      autoCrop = true,
+      contrast = 1.3
+    } = options;
 
-  const img = await loadImageElement(source);
+    const img = await loadImageElement(source);
 
-  // Normalize dimensions (max 1000px width/height for fast canvas operations & crisp vector-like fidelity)
-  let width = img.naturalWidth || img.width;
-  let height = img.naturalHeight || img.height;
-  const MAX_SIZE = 1000;
+    // Normalize dimensions (max 1000px width/height for fast canvas operations & crisp vector-like fidelity)
+    let width = img.naturalWidth || img.width;
+    let height = img.naturalHeight || img.height;
+    const MAX_SIZE = 1000;
 
-  if (width > MAX_SIZE || height > MAX_SIZE) {
-    if (width > height) {
-      height = Math.round((height * MAX_SIZE) / width);
-      width = MAX_SIZE;
-    } else {
-      width = Math.round((width * MAX_SIZE) / height);
-      height = MAX_SIZE;
+    if (width > MAX_SIZE || height > MAX_SIZE) {
+      if (width > height) {
+        height = Math.round((height * MAX_SIZE) / width);
+        width = MAX_SIZE;
+      } else {
+        width = Math.round((width * MAX_SIZE) / height);
+        height = MAX_SIZE;
+      }
     }
-  }
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-  if (!ctx) {
-    throw new Error('Canvas 2D context unavailable');
-  }
+    if (!ctx) {
+      return typeof source === 'string' ? source : '';
+    }
 
-  ctx.drawImage(img, 0, 0, width, height);
-  const imgData = ctx.getImageData(0, 0, width, height);
-  const data = imgData.data;
+    ctx.drawImage(img, 0, 0, width, height);
+    let imgData: ImageData;
+    try {
+      imgData = ctx.getImageData(0, 0, width, height);
+    } catch (corsErr) {
+      // CORS taint fallback
+      console.warn('Canvas tainted by CORS, returning source directly:', corsErr);
+      return typeof source === 'string' ? source : '';
+    }
+
+    const data = imgData.data;
   const totalPixels = width * height;
 
   // 1. Detect background type (Dark/Black background vs Light/White background vs Already Transparent)
@@ -238,4 +247,8 @@ export async function makeSignatureTransparent(
   );
 
   return croppedCanvas.toDataURL('image/png');
+  } catch (err) {
+    console.warn('Error in makeSignatureTransparent, fallback to source:', err);
+    return typeof source === 'string' ? source : '';
+  }
 }

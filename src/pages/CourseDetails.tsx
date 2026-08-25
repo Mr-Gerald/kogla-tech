@@ -16,31 +16,38 @@ import {
   Check, 
   Terminal,
   ShieldCheck,
-  MessageSquare
+  MessageSquare,
+  Copy,
+  LogIn
 } from 'lucide-react';
 import { addInquiry } from '../utils/storage';
 import { ReviewSection } from '../components/ReviewSection';
 import { ACADEMY_COURSES, getCourseBySlug, formatNaira, CourseTrack } from '../data/coursesPricing';
 import { getActiveReferralCode, setManualReferralCode, captureUrlReferral } from '../lib/referralTracker';
 import { createReferralLead } from '../lib/affiliates';
+import { useAuth } from '../context/AuthContext';
 
 export default function CourseDetails() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const courseKey = slug?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'web-development';
   const course = getCourseBySlug(courseKey) || ACADEMY_COURSES[0];
 
   // Enrollment form state
   const [selectedFormat, setSelectedFormat] = useState<'online' | 'physical'>('online');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(user?.user_metadata?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
   const [motivation, setMotivation] = useState('');
   const [promoCode, setPromoCode] = useState(getActiveReferralCode() || '');
   const [promoApplied, setPromoApplied] = useState(Boolean(getActiveReferralCode()));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [showAuthPromptModal, setShowAuthPromptModal] = useState(false);
+  const [copiedAcc, setCopiedAcc] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
 
   useEffect(() => {
     const urlRef = captureUrlReferral();
@@ -50,6 +57,13 @@ export default function CourseDetails() {
       setPromoApplied(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      if (!name && user.user_metadata?.name) setName(user.user_metadata.name);
+      if (!email && user.email) setEmail(user.email);
+    }
+  }, [user]);
 
   const basePrice = selectedFormat === 'online' ? course.onlinePrice : course.physicalPrice;
   const isDiscountValid = promoApplied && promoCode.trim().length > 0;
@@ -67,6 +81,13 @@ export default function CourseDetails() {
     e.preventDefault();
     if (!name || !email) return;
 
+    // MANDATORY AUTH CHECK: If user is not logged in, prompt sign in / sign up modal first!
+    if (!user) {
+      sessionStorage.setItem('studyRedirectTo', window.location.pathname + window.location.search);
+      setShowAuthPromptModal(true);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // 1. Log student inquiry
@@ -78,7 +99,7 @@ export default function CourseDetails() {
         description: `Format: ${selectedFormat === 'online' ? 'Online Cohort' : 'Physical Hub'}. Tuition: ${formatNaira(finalPrice)}. Promo: ${promoCode || 'None'}. Phone: ${phone || 'N/A'}. Motivation: ${motivation || 'Ready to start'}`
       });
 
-      // 2. If promo code is applied (e.g. PHENA), log lead directly into referral engine!
+      // 2. If promo code is applied, log lead into referral engine
       if (promoCode.trim()) {
         await createReferralLead({
           affiliateCode: promoCode.trim().toUpperCase(),
@@ -297,11 +318,16 @@ export default function CourseDetails() {
                       type="button"
                       onClick={() => {
                         navigator.clipboard.writeText('6540152461');
-                        alert('Account number 6540152461 copied to clipboard!');
+                        setCopiedAcc(true);
+                        setTimeout(() => setCopiedAcc(false), 2000);
                       }}
-                      className="px-2 py-1 bg-gold-500/20 hover:bg-gold-500/30 text-gold-400 border border-gold-500/40 rounded text-[10px] font-mono uppercase transition-all cursor-pointer"
+                      className={`px-2 py-1 rounded text-[10px] font-mono uppercase transition-all cursor-pointer flex items-center gap-1 ${
+                        copiedAcc 
+                          ? 'bg-emerald-500 text-black font-bold border border-emerald-400' 
+                          : 'bg-gold-500/20 hover:bg-gold-500/30 text-gold-400 border border-gold-500/40'
+                      }`}
                     >
-                      Copy
+                      {copiedAcc ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
                     </button>
                   </div>
                 </div>
@@ -350,11 +376,16 @@ export default function CourseDetails() {
                   onClick={() => {
                     const fullText = `KOGLA TECH TUITION PAYMENT DETAILS:\nBank: OPAY\nAccount Number: 6540152461\nAccount Name: IKECHUKWU GERALD EMEMCHEBE\nCourse: ${course.title} (${selectedFormat})\nPayable Amount: ${formatNaira(finalPrice)}`;
                     navigator.clipboard.writeText(fullText);
-                    alert('Official bank details copied to clipboard!');
+                    setCopiedAll(true);
+                    setTimeout(() => setCopiedAll(false), 2000);
                   }}
-                  className="flex-1 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs font-display uppercase tracking-wider rounded transition-all cursor-pointer shadow"
+                  className={`flex-1 py-2.5 font-display uppercase tracking-wider rounded transition-all cursor-pointer shadow text-xs font-bold flex items-center justify-center gap-1.5 ${
+                    copiedAll 
+                      ? 'bg-emerald-500 text-black border border-emerald-400' 
+                      : 'bg-gold-500 hover:bg-gold-600 text-black'
+                  }`}
                 >
-                  Copy All Bank Details
+                  {copiedAll ? <><Check size={13} /> Copied All Details</> : <><Copy size={13} /> Copy All Bank Details</>}
                 </button>
                 <button
                   type="button"
@@ -551,6 +582,49 @@ export default function CourseDetails() {
           subtitle="Real experiences and feedback from students and graduates of this specialization."
         />
       </div>
+
+      {/* MANDATORY SIGN-IN / SIGN-UP PROMPT MODAL */}
+      {showAuthPromptModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border-2 border-gold-500/50 rounded-xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 text-center">
+            <div className="w-14 h-14 rounded-full bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-400 mx-auto">
+              <LogIn size={26} />
+            </div>
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-bold">
+                AUTHENTICATION REQUIRED
+              </span>
+              <h3 className="text-xl font-display font-bold text-white uppercase">
+                Please Sign In or Sign Up First
+              </h3>
+              <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                To confirm your enrollment for <b>{course.title}</b>, you need an active Kogla Tech account. This secures your admission records and unlocks your LMS student portal.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+              <Link
+                to="/auth/login"
+                className="flex-1 py-3 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider font-display rounded transition-all shadow"
+              >
+                Sign In to Account
+              </Link>
+              <Link
+                to="/auth/signup"
+                className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase tracking-wider font-display rounded border border-zinc-700 transition-all shadow"
+              >
+                Create Account
+              </Link>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAuthPromptModal(false)}
+              className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 underline uppercase tracking-wider pt-1"
+            >
+              Continue editing form
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
