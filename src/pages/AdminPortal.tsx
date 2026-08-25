@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig, SiteConfig } from '../context/SiteConfigContext';
 import { db, safeFirestoreWrite } from '../lib/firebase';
+import { getSupabaseUserProfiles } from '../lib/supabase';
 import { motion } from 'motion/react';
 import { 
   collection, 
@@ -331,28 +332,12 @@ export default function AdminPortal() {
         console.error('Firestore inquiries sync failed:', err);
       });
 
-      // 2. Listen to registered profiles database
-      const usersRef = collection(db, 'users');
-      const unsubUsers = onSnapshot(usersRef, (snapshot) => {
-        const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
-        const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
+      // 2. Load registered profiles from Supabase profile store
+      const loadedSupabaseUsers = getSupabaseUserProfiles();
+      loadedSupabaseUsers.sort((a, b) => (b.xp || 0) - (a.xp || 0));
+      setUsers(loadedSupabaseUsers);
 
-        const loaded: UserProfile[] = [];
-        snapshot.forEach((snap) => {
-          const uData = snap.data() as UserProfile;
-          const uUid = uData.uid || snap.id;
-          const uEmail = (uData.email || '').toLowerCase();
-          
-          if (!deletedUids.includes(uUid) && !deletedEmails.includes(uEmail)) {
-            loaded.push({ ...uData, uid: uUid });
-          }
-        });
-        // Sort by XP of users
-        loaded.sort((a, b) => (b.xp || 0) - (a.xp || 0));
-        setUsers(loaded);
-      }, (err) => {
-        console.warn('[AdminPortal] Firestore users sync fallback (local state preserved):', err?.message);
-      });
+      const unsubUsers = () => {};
 
       return () => {
         unsubInquiries();

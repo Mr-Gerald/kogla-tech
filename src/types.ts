@@ -25,6 +25,7 @@ export interface UserProfile {
   githubUrl?: string;
   linkedinUrl?: string;
   affiliateCode?: string;
+  referredBy?: string | null;
   preferences?: UserPreferences;
   savedItems?: string[];
   createdAt: string;

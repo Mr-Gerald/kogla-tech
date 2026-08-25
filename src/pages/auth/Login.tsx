@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db, handleFirestoreError, OperationType, safeFirestoreWrite } from '../../lib/firebase';
+import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
 import { ShieldCheck, Mail, Lock, Loader2, Key } from 'lucide-react';
@@ -22,11 +20,13 @@ export default function Login() {
     setErrorMsg('');
     setGoogleLoading(true);
     try {
-      const gUser = await signInWithGoogle();
+      await signInWithGoogle();
       setSuccessMsg('Google Authentication successful!');
       
       const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
-      const isSystemAdmin = gUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(gUser.email.toLowerCase());
+      const session = await supabase.auth.getSession();
+      const gUser = session.data.session?.user;
+      const isSystemAdmin = gUser?.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(gUser.email.toLowerCase());
 
       setTimeout(() => {
         setGoogleLoading(false);
@@ -62,52 +62,51 @@ export default function Login() {
     }
 
     try {
-      // 1. Authenticate with Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // 1. Authenticate with Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password
+      });
 
-      // 2. Ensure Profile document exists in Firestore and check Admin status with resilient fallback
-      const userRef = doc(db, 'users', user.uid);
+      if (error) throw error;
+      const user = data.user;
+      if (!user) throw new Error('Authentication session could not be established.');
+
       const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
-      const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.toLowerCase());
+      const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.trim().toLowerCase());
       const role = isSystemAdmin ? 'admin' : 'user';
 
-      await safeFirestoreWrite(async () => {
-        const profileSnap = await getDoc(userRef);
-        if (!profileSnap.exists()) {
-          const initialProfile = {
-            uid: user.uid,
-            name: user.displayName || email.split('@')[0] || 'User',
-            email: email,
-            role: role,
-            xp: 0,
-            completedRooms: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          await setDoc(userRef, initialProfile);
-        } else {
-          // If profile exists and they are marked as system admin email but don't have role=admin, upgrade them securely
-          const data = profileSnap.data();
-          if (isSystemAdmin && data.role !== 'admin') {
-            await updateDoc(userRef, { role: 'admin', updatedAt: new Date().toISOString() });
-          }
-        }
-      }, 2000);
+      // 2. Ensure profile exists and is updated in Supabase profile store
+      let profile = getSupabaseUserProfile(user.id);
+      if (!profile) {
+        profile = {
+          uid: user.id,
+          name: user.user_metadata?.name || email.split('@')[0] || 'User',
+          email: email.trim(),
+          role: role,
+          xp: 0,
+          completedRooms: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      } else if (isSystemAdmin && profile.role !== 'admin') {
+        profile.role = 'admin';
+      }
+      saveSupabaseUserProfile(profile);
 
       setSuccessMsg('Login successful. Redirecting...');
       
       setTimeout(() => {
         setLoadingState(false);
         if (isSystemAdmin) {
-          navigate('/admin'); // Redirect to Admin Command center
+          navigate('/admin');
         } else {
           const redirectTo = sessionStorage.getItem('studyRedirectTo');
           if (redirectTo) {
             sessionStorage.removeItem('studyRedirectTo');
             navigate(redirectTo);
           } else {
-            navigate('/academy'); // Redirect users to learning catalog
+            navigate('/academy');
           }
         }
       }, 1000);

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db, safeFirestoreWrite } from '../../lib/firebase';
+import { UserProfile } from '../../types';
+import { supabase, saveSupabaseUserProfile } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
 import { ShieldCheck, Mail, Lock, User, Loader2, Tag, CheckCircle2, Check, ArrowRight, KeyRound } from 'lucide-react';
@@ -35,20 +34,12 @@ export default function Signup() {
     setErrorMsg('');
     setGoogleLoading(true);
     try {
-      const gUser = await signInWithGoogle();
+      await signInWithGoogle();
       
       const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
-      const isSystemAdmin = gUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(gUser.email.toLowerCase());
-
-      const activeCode = promoCode.trim().toUpperCase() || getActiveReferralCode();
-      if (activeCode && gUser.uid) {
-        await safeFirestoreWrite(async () => {
-          await setDoc(doc(db, 'users', gUser.uid), {
-            referredBy: activeCode,
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
-        }, 2000);
-      }
+      const session = await supabase.auth.getSession();
+      const gUser = session.data.session?.user;
+      const isSystemAdmin = gUser?.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(gUser.email.toLowerCase());
 
       setGoogleLoading(false);
       if (isSystemAdmin) {
@@ -72,7 +63,6 @@ export default function Signup() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    setExistingAccountDetected(false);
     setLoadingState(true);
 
     if (!name || !email || !password) {
@@ -101,111 +91,48 @@ export default function Signup() {
     const role = isSystemAdmin ? 'admin' : 'user';
 
     try {
-      let activeUser: any = null;
-
-      try {
-        // 1. Attempt to create user in Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
-        activeUser = userCredential.user;
-        await updateProfile(activeUser, { displayName: name });
-
-        try {
-          await sendEmailVerification(activeUser);
-          setVerificationSent(true);
-          setRegisteredEmail(trimmedEmail);
-        } catch (verifErr: any) {
-          console.warn('Email verification dispatch notice:', verifErr);
-          // If Google Identity Toolkit throttles/blocks email sending (e.g. daily quota reached or 400 Bad Request)
-          if (verifErr?.message?.includes('TOO_MANY_ATTEMPTS_TRY_LATER') || verifErr?.code === 'auth/too-many-requests') {
-            console.info('Email verification request was rate-limited by Firebase Auth.');
-          }
+      // 1. Sign up with Supabase Auth (dispatches email verification link)
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password: password,
+        options: {
+          data: {
+            name: name,
+            role: role,
+            promoCode: cleanPromo
+          },
+          emailRedirectTo: `${window.location.origin}/auth/login`
         }
-      } catch (authErr: any) {
-        // If email already exists in Firebase Auth (e.g., deleted from Firestore earlier or previously created),
-        // attempt seamless sign-in with the provided password
-        if (authErr?.code === 'auth/email-already-in-use') {
-          try {
-            const loginCred = await signInWithEmailAndPassword(auth, trimmedEmail, password);
-            activeUser = loginCred.user;
-            if (name && !activeUser.displayName) {
-              await updateProfile(activeUser, { displayName: name });
-            }
-          } catch (loginErr: any) {
-            // Password did not match existing Auth credential
-            setExistingAccountDetected(true);
-            setErrorMsg('An account with this email address already exists. Please log in with your password or reset your credentials.');
-            setLoadingState(false);
-            return;
-          }
-        } else {
-          throw authErr;
-        }
+      });
+
+      if (error) {
+        throw error;
       }
 
+      const activeUser = data.user;
       if (!activeUser) {
         throw new Error('Authentication could not be initialized.');
       }
 
-      // 2. Write/Restore profile record in Firestore
-      const userRef = doc(db, 'users', activeUser.uid);
-      const initialProfile = {
-        uid: activeUser.uid,
-        name: name || activeUser.displayName || trimmedEmail.split('@')[0],
+      // 2. Save profile to Supabase master profile store so it shows up in Admin dashboard instantly with zero hidden accounts
+      const initialProfile: UserProfile = {
+        uid: activeUser.id,
+        name: name || trimmedEmail.split('@')[0],
         email: trimmedEmail,
-        role: role,
+        role: role as ('user' | 'admin' | 'affiliate'),
         xp: 0,
         completedRooms: [],
         referredBy: cleanPromo || null,
-        emailVerified: activeUser.emailVerified || false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      await safeFirestoreWrite(async () => {
-        await setDoc(userRef, initialProfile, { merge: true });
-        const notifId = `welcome-${Date.now()}`;
-        await setDoc(doc(db, 'notifications', notifId), {
-          id: notifId,
-          userId: activeUser.uid,
-          title: 'Welcome to Kogla Tech',
-          body: `Congratulations ${name || 'Student'}. Your account has been initialized and synchronized.`,
-          read: false,
-          timestamp: new Date().toISOString()
-        });
-      }, 2000);
+      saveSupabaseUserProfile(initialProfile);
 
-      // Remove this user from deletion tracking if recreating
-      try {
-        const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
-        const cleanEmails = deletedEmails.filter(e => e.toLowerCase() !== trimmedEmail.toLowerCase());
-        localStorage.setItem('kogla_deleted_emails', JSON.stringify(cleanEmails));
-
-        const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
-        const cleanUids = deletedUids.filter(u => u !== activeUser.uid);
-        localStorage.setItem('kogla_deleted_uids', JSON.stringify(cleanUids));
-      } catch (_) {}
-
-      if (cleanPromo) {
-        setManualReferralCode(cleanPromo);
-      } else {
-        setManualReferralCode('');
-      }
-
+      setVerificationSent(true);
+      setRegisteredEmail(trimmedEmail);
       setLoadingState(false);
 
-      setTimeout(() => {
-        const redirectTo = sessionStorage.getItem('studyRedirectTo');
-        if (redirectTo) {
-          sessionStorage.removeItem('studyRedirectTo');
-          navigate(redirectTo);
-        } else {
-          if (isSystemAdmin) {
-            navigate('/admin');
-          } else {
-            navigate('/academy');
-          }
-        }
-      }, 1200);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(formatUserError(err));
@@ -235,13 +162,21 @@ export default function Signup() {
 
         {/* VERIFICATION SENT SUCCESS BANNER */}
         {verificationSent && (
-          <div className="p-4 bg-emerald-950/70 border border-emerald-500/50 rounded text-emerald-200 text-xs mb-6 space-y-2">
+          <div className="p-4 bg-emerald-950/70 border border-emerald-500/50 rounded text-emerald-200 text-xs mb-6 space-y-3">
             <div className="flex items-center gap-2 font-bold uppercase font-mono text-emerald-400">
               <CheckCircle2 size={16} /> Verification Link Dispatched
             </div>
             <p className="text-[11px] leading-relaxed text-zinc-300">
-              We sent a verification link to <b>{registeredEmail}</b>. Click the link in your email to authenticate your credential. Redirecting to Academy...
+              A confirmation link has been sent to <b>{registeredEmail}</b>. Please check your inbox and click the link to verify your email. Once verified, return to the login page to access your account!
             </p>
+            <div className="pt-2 border-t border-emerald-500/30 flex flex-wrap gap-2">
+              <Link
+                to="/auth/login"
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[11px] rounded flex items-center gap-1.5 transition-all font-bold shadow"
+              >
+                <KeyRound size={12} /> Return to Login Page <ArrowRight size={11} />
+              </Link>
+            </div>
           </div>
         )}
 
