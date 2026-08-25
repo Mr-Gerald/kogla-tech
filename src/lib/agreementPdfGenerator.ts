@@ -147,7 +147,7 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(`Party 1 (The Academy): Kogla Tech Global (Lekki Phase 1 Hub, Lagos / Online Global Cohorts)`, 16, y + 12);
+  doc.text(`Party 1 (The Academy): Kogla Tech Global (Lekki Hub, Lagos / Online Global Cohorts)`, 16, y + 12);
   doc.text(`Party 2 (The Ambassador): ${name}${data.instagramHandle ? ` (${data.instagramHandle})` : ''}${data.email ? ` • ${data.email}` : ''}`, 16, y + 17);
 
   y += 28;
@@ -167,7 +167,7 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
     `* Tier 1 (Base Commission): Ambassador earns ${t1}% commission on the net tuition fee of the first 3 verified student enrollments.`,
     `* Tier 2 (Elevated Lifetime Escalator): Beginning from the 4th confirmed student and permanently thereafter, commission unlocks at ${t2}% on all future enrollments.`,
     `* Student Tuition Benefit: Every student registering via promo code "${code}" or the ambassador's tracking link receives a direct ${disc}% discount off their tuition fee.`,
-    `* Multi-Format Scope: Commissions apply equally to both Physical Hub (Lekki Phase 1 Hub, Lagos) and Online Cohort registrations.`
+    `* Multi-Format Scope: Commissions apply equally to both Physical Hub (Lekki Hub, Lagos) and Online Cohort registrations.`
   ];
 
   c1Lines.forEach(line => {
@@ -281,6 +281,13 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.text('KOGLA TECH GLOBAL - OFFICIAL PARTNERSHIP CONTRACT - SECURE LEGAL INSTRUMENT', 105, 293, { align: 'center' });
 
   // Download filename
+  const cleanName = name.replace(/[^A-Z0-9_-]/gi, '_');
   const cleanCode = code.replace(/[^A-Z0-9_-]/gi, '_');
-  doc.save(`Kogla_Tech_Ambassador_Agreement_${cleanCode}.pdf`);
+  const isPlaceholder = code.includes('YOUR') || code.includes('CODE') || code.includes('[') || code.includes(']</u>');
+  
+  const fileName = (isPlaceholder || !code || code === 'CREATOR')
+    ? `Kogla_Tech_Ambassador_Agreement_${cleanName || 'Template'}.pdf`
+    : `Kogla_Tech_Ambassador_Agreement_${cleanName}_${cleanCode}.pdf`;
+
+  doc.save(fileName);
 }
