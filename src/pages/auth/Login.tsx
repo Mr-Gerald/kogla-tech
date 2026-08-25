@@ -1,47 +1,54 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
-import { ShieldCheck, Mail, Lock, Loader2, Key } from 'lucide-react';
+import { isSystemAdminEmail } from '../../lib/authUtils';
+import { ShieldCheck, Mail, Lock, Loader2, Key, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { signInWithGoogle } = useAuth();
+  const location = useLocation();
+  const { signInWithGoogle, syncSession } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loadingState, setLoadingState] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Check if there was a redirected path (e.g. /admin)
+  const queryParams = new URLSearchParams(location.search);
+  const targetRedirect = queryParams.get('redirect');
 
   const handleGoogleSignIn = async () => {
     setErrorMsg('');
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
-      setSuccessMsg('Google Authentication successful!');
+      setSuccessMsg('Google Authentication verified!');
       
-      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const session = await supabase.auth.getSession();
       const gUser = session.data.session?.user;
-      const isSystemAdmin = gUser?.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(gUser.email.toLowerCase());
+      const isSystemAdmin = isSystemAdminEmail(gUser?.email);
 
-      setTimeout(() => {
-        setGoogleLoading(false);
-        if (isSystemAdmin) {
-          navigate('/admin');
-        } else {
-          const redirectTo = sessionStorage.getItem('studyRedirectTo');
-          if (redirectTo) {
-            sessionStorage.removeItem('studyRedirectTo');
-            navigate(redirectTo);
-          } else {
-            navigate('/academy');
-          }
+      if (gUser) {
+        await syncSession(gUser);
+        window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: gUser }));
+      }
+
+      setGoogleLoading(false);
+      if (isSystemAdmin) {
+        navigate('/admin');
+      } else {
+        const redirectTo = targetRedirect || sessionStorage.getItem('studyRedirectTo') || '/academy';
+        if (sessionStorage.getItem('studyRedirectTo')) {
+          sessionStorage.removeItem('studyRedirectTo');
         }
-      }, 800);
+        navigate(redirectTo);
+      }
     } catch (err: any) {
       console.error(err);
       setErrorMsg(formatUserError(err));
@@ -62,8 +69,7 @@ export default function Login() {
       return;
     }
 
-    const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
-    const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(trimmedEmail.toLowerCase());
+    const isSystemAdmin = isSystemAdminEmail(trimmedEmail);
     const defaultRole = isSystemAdmin ? 'admin' : 'user';
 
     try {
@@ -75,7 +81,7 @@ export default function Login() {
 
       let activeUser: any = data?.user;
 
-      // 2. If login failed because account was not yet registered in Supabase Auth, attempt seamless signup
+      // 2. If login failed because account was not yet registered in Supabase Auth, attempt seamless signup / initialization
       if (error) {
         const errorMsgLower = (error.message || '').toLowerCase();
         
@@ -113,9 +119,10 @@ export default function Login() {
                 }
               } else if (signUpMsg.includes('confirmation email') || signUpMsg.includes('rate limit') || signUpMsg.includes('smtp') || signUpMsg.includes('500')) {
                 // Built-in SMTP quota reached on Supabase project - allow instant local profile sign-in
-                const fallbackId = `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                const fallbackId = isSystemAdmin ? `admin_${Date.now()}` : `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
                 activeUser = {
                   id: fallbackId,
+                  uid: fallbackId,
                   email: trimmedEmail,
                   user_metadata: {
                     name: isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0],
@@ -129,9 +136,10 @@ export default function Login() {
           } catch (signUpErr: any) {
             const innerMsg = (signUpErr?.message || '').toLowerCase();
             if (innerMsg.includes('confirmation email') || innerMsg.includes('rate limit') || isSystemAdmin) {
-              const fallbackId = `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+              const fallbackId = isSystemAdmin ? `admin_${Date.now()}` : `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
               activeUser = {
                 id: fallbackId,
+                uid: fallbackId,
                 email: trimmedEmail,
                 user_metadata: {
                   name: isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0],
@@ -151,6 +159,7 @@ export default function Login() {
         const fallbackId = `admin_${Date.now()}`;
         activeUser = {
           id: fallbackId,
+          uid: fallbackId,
           email: trimmedEmail,
           user_metadata: {
             name: 'Gerald Emechebe',
@@ -163,7 +172,7 @@ export default function Login() {
         throw new Error('Authentication session could not be established. Please check your credentials.');
       }
 
-      // 3. Ensure master Supabase profile registry has this user
+      // 3. Ensure master Supabase profile registry has this user with correct role
       let profile = getSupabaseUserProfile(activeUser.id);
       if (!profile) {
         profile = getSupabaseUserProfile(trimmedEmail);
@@ -171,7 +180,7 @@ export default function Login() {
 
       if (!profile) {
         profile = {
-          uid: activeUser.id,
+          uid: activeUser.id || activeUser.uid,
           name: activeUser.user_metadata?.name || (isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0]),
           email: trimmedEmail,
           role: defaultRole,
@@ -188,8 +197,8 @@ export default function Login() {
       // Save active session for instant restoration
       try {
         localStorage.setItem('kogla_active_session', JSON.stringify({
-          id: activeUser.id,
-          uid: activeUser.id,
+          id: activeUser.id || activeUser.uid,
+          uid: activeUser.id || activeUser.uid,
           email: trimmedEmail,
           user_metadata: {
             name: profile.name,
@@ -198,22 +207,27 @@ export default function Login() {
         }));
       } catch (_) {}
 
-      setSuccessMsg('Login successful. Redirecting...');
+      // Synchronously sync state in context and dispatch global event
+      await syncSession({
+        ...activeUser,
+        id: activeUser.id || activeUser.uid,
+        uid: activeUser.id || activeUser.uid,
+        email: trimmedEmail
+      });
+      window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: activeUser }));
+
+      setSuccessMsg(isSystemAdmin ? 'Sovereign Administrator Verified. Opening Console...' : 'Login successful. Redirecting...');
       
-      setTimeout(() => {
-        setLoadingState(false);
-        if (isSystemAdmin) {
-          navigate('/admin');
-        } else {
-          const redirectTo = sessionStorage.getItem('studyRedirectTo');
-          if (redirectTo) {
-            sessionStorage.removeItem('studyRedirectTo');
-            navigate(redirectTo);
-          } else {
-            navigate('/academy');
-          }
+      setLoadingState(false);
+      if (isSystemAdmin) {
+        navigate('/admin');
+      } else {
+        const redirectTo = targetRedirect || sessionStorage.getItem('studyRedirectTo') || '/academy';
+        if (sessionStorage.getItem('studyRedirectTo')) {
+          sessionStorage.removeItem('studyRedirectTo');
         }
-      }, 900);
+        navigate(redirectTo);
+      }
 
     } catch (err: any) {
       console.error(err);
@@ -228,7 +242,7 @@ export default function Login() {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="p-6 md:p-8 bg-gray-950 border border-gray-900 rounded-sm"
+        className="p-6 md:p-8 bg-gray-950 border border-gray-900 rounded-sm shadow-2xl"
       >
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-full uppercase tracking-widest font-mono mb-4">
@@ -238,7 +252,7 @@ export default function Login() {
             Log In
           </h1>
           <p className="text-[10px] text-gray-400 font-mono mt-1">
-            Sign in to access your portal and courses.
+            Sign in to access your sovereign portal, academy courses, and admin console.
           </p>
         </div>
 
@@ -250,18 +264,18 @@ export default function Login() {
         )}
 
         {successMsg && (
-          <div className="p-3 bg-green-950/40 border border-green-500/20 text-green-400 text-xs rounded-sm mb-6 flex items-start gap-2">
-            <span className="font-bold text-[10px] font-mono text-green-500 uppercase shrink-0 mt-0.5">Success:</span>
-            <p className="text-[11px] leading-relaxed font-sans">{successMsg}</p>
+          <div className="p-3 bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs rounded-sm mb-6 flex items-center gap-2">
+            <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
+            <span className="font-mono text-[11px]">{successMsg}</span>
           </div>
         )}
 
-        {/* GOOGLE QUICK SIGN IN */}
+        {/* GOOGLE SIGN IN */}
         <button
           type="button"
           onClick={handleGoogleSignIn}
           disabled={googleLoading || loadingState}
-          className="w-full mb-5 py-3 px-4 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-white font-medium text-xs rounded transition-all flex items-center justify-center gap-3 shadow"
+          className="w-full mb-6 py-3 px-4 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-white font-medium text-xs rounded transition-all flex items-center justify-center gap-3 shadow cursor-pointer"
         >
           {googleLoading ? (
             <Loader2 size={16} className="animate-spin text-gold-500" />
@@ -285,7 +299,7 @@ export default function Login() {
               />
             </svg>
           )}
-          <span>{googleLoading ? 'Connecting Google...' : 'Continue with Google'}</span>
+          <span>{googleLoading ? 'Authenticating...' : 'Sign in with Google'}</span>
         </button>
 
         <div className="relative my-6 text-center">
@@ -308,46 +322,65 @@ export default function Login() {
               disabled={loadingState}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com" 
-              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
+              placeholder="name@domain.com" 
+              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-700" 
             />
           </div>
 
           <div>
-            <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-              <Lock size={10} /> Password
-            </label>
-            <input 
-              type="password" 
-              required
-              disabled={loadingState}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••" 
-              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
-            />
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                <Lock size={10} /> Password
+              </label>
+              <Link 
+                to="/auth/forgot-password" 
+                className="text-[9px] text-gold-500 hover:text-gold-400 font-mono"
+              >
+                Forgot password?
+              </Link>
+            </div>
+            <div className="relative">
+              <input 
+                type={showPassword ? 'text' : 'password'} 
+                required
+                disabled={loadingState}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••" 
+                className="w-full p-3 pr-10 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-700" 
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 p-1 cursor-pointer"
+              >
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           </div>
 
           <button 
             type="submit" 
             disabled={loadingState}
-            className="w-full py-3 bg-gold-500 hover:bg-gold-600 disabled:bg-gold-500/40 text-black font-semibold text-xs transition-all uppercase tracking-widest font-display rounded-sm flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-gold-500 hover:bg-gold-600 text-black font-display font-bold text-xs uppercase tracking-wider rounded-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-gold-500/10 cursor-pointer"
           >
             {loadingState ? (
               <>
-                <Loader2 size={13} className="animate-spin" /> Signing In...
+                <Loader2 size={14} className="animate-spin" /> Authenticating Credentials...
               </>
             ) : (
-              'Log In'
+              <>
+                <Key size={14} /> Sign In to Portal
+              </>
             )}
           </button>
         </form>
 
-        <div className="mt-6 text-xs text-center space-y-2">
-          <Link to="/auth/forgot-password" className="text-gray-400 hover:text-white block font-sans">Forgot password?</Link>
-          <div className="text-gray-500">
-            Don't have an account? <Link to="/auth/signup" className="text-gold-500 hover:underline font-semibold">Sign Up</Link>
-          </div>
+        <div className="mt-8 pt-4 border-t border-gray-900 text-center text-xs">
+          <span className="text-gray-500">Don't have a student or creator account? </span>
+          <Link to="/auth/signup" className="text-gold-500 hover:text-gold-400 font-semibold uppercase tracking-wider font-sans">
+            Register Here
+          </Link>
         </div>
       </motion.div>
     </div>

@@ -11,10 +11,11 @@ import {
 } from 'lucide-react';
 import { captureUrlReferral, getActiveReferralCode, setManualReferralCode } from '../../lib/referralTracker';
 import { saveAffiliatePartner, getUserReferralCode } from '../../lib/affiliates';
+import { isSystemAdminEmail } from '../../lib/authUtils';
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, syncSession } = useAuth();
   
   // Form State
   const [name, setName] = useState('');
@@ -60,10 +61,14 @@ export default function Signup() {
     try {
       await signInWithGoogle();
       
-      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const session = await supabase.auth.getSession();
       const gUser = session.data.session?.user;
-      const isSystemAdmin = gUser?.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(gUser.email.toLowerCase());
+      const isSystemAdmin = isSystemAdminEmail(gUser?.email);
+
+      if (gUser) {
+        await syncSession(gUser);
+        window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: gUser }));
+      }
 
       setGoogleLoading(false);
       if (isSystemAdmin) {
@@ -118,8 +123,7 @@ export default function Signup() {
 
     const trimmedEmail = email.trim();
     const cleanPromo = promoCode.trim().toUpperCase();
-    const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
-    const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(trimmedEmail.toLowerCase());
+    const isSystemAdmin = isSystemAdminEmail(trimmedEmail);
     const isCreator = accountType === 'creator';
     const role = isSystemAdmin ? 'admin' : (isCreator ? 'affiliate' : 'user');
 

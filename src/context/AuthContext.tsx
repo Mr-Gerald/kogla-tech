@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { LogOut } from 'lucide-react';
 import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile } from '../lib/supabase';
 import { UserProfile, NotificationRecord } from '../types';
+import { isSystemAdminEmail } from '../lib/authUtils';
 
 interface SupabaseUser {
   id: string;
@@ -27,6 +28,7 @@ interface AuthContextType {
   updateProfileData: (data: Partial<UserProfile>) => Promise<void>;
   completeRoom: (roomSlug: string, xpReward: number) => Promise<void>;
   markNotificationRead: (notifId: string) => Promise<void>;
+  syncSession: (forcedUser?: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,42 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
-
-  useEffect(() => {
-    // 1. Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user || null;
-      if (!currentUser) {
-        try {
-          const cachedSession = localStorage.getItem('kogla_active_session');
-          if (cachedSession) {
-            handleUserSession(JSON.parse(cachedSession));
-            return;
-          }
-        } catch (_) {}
-      }
-      handleUserSession(currentUser);
-    });
-
-    // 2. Listen to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user || null;
-      if (!currentUser) {
-        try {
-          const cachedSession = localStorage.getItem('kogla_active_session');
-          if (cachedSession) {
-            handleUserSession(JSON.parse(cachedSession));
-            return;
-          }
-        } catch (_) {}
-      }
-      handleUserSession(currentUser);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   const handleUserSession = async (currentUser: any) => {
     if (currentUser) {
@@ -87,9 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('kogla_active_session', JSON.stringify(normalizedUser));
       } catch (_) {}
 
-      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
-      const isSystemAdmin = currentUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(currentUser.email.toLowerCase());
-      const role = isSystemAdmin ? 'admin' : 'user';
+      const isSystemAdmin = isSystemAdminEmail(currentUser.email);
+      const role = isSystemAdmin ? 'admin' : (currentUser.user_metadata?.isAmbassador ? 'affiliate' : 'user');
 
       let existingProfile = getSupabaseUserProfile(normalizedUser.id);
       if (!existingProfile && currentUser.email) {
@@ -140,6 +105,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const syncSession = async (forcedUser?: any) => {
+    if (forcedUser) {
+      await handleUserSession(forcedUser);
+      return;
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await handleUserSession(session.user);
+      return;
+    }
+    try {
+      const cached = localStorage.getItem('kogla_active_session');
+      if (cached) {
+        await handleUserSession(JSON.parse(cached));
+        return;
+      }
+    } catch (_) {}
+    await handleUserSession(null);
+  };
+
+  useEffect(() => {
+    // 1. Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUser = session?.user || null;
+      if (!currentUser) {
+        try {
+          const cachedSession = localStorage.getItem('kogla_active_session');
+          if (cachedSession) {
+            handleUserSession(JSON.parse(cachedSession));
+            return;
+          }
+        } catch (_) {}
+      }
+      handleUserSession(currentUser);
+    });
+
+    // 2. Listen to auth state changes from Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user || null;
+      if (!currentUser) {
+        try {
+          const cachedSession = localStorage.getItem('kogla_active_session');
+          if (cachedSession) {
+            handleUserSession(JSON.parse(cachedSession));
+            return;
+          }
+        } catch (_) {}
+      }
+      handleUserSession(currentUser);
+    });
+
+    // 3. Listen to custom sync events
+    const handleCustomSync = (e: any) => {
+      if (e.detail) {
+        handleUserSession(e.detail);
+      } else {
+        syncSession();
+      }
+    };
+    window.addEventListener('kogla_auth_sync', handleCustomSync);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('kogla_auth_sync', handleCustomSync);
+    };
+  }, []);
+
   const logout = async () => {
     setShowSignOutModal(true);
   };
@@ -152,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (_) {}
     setUser(null);
     setProfile(null);
+    window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: null }));
   };
 
   const signInWithGoogle = async () => {
@@ -204,7 +237,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resetPassword,
       updateProfileData,
       completeRoom,
-      markNotificationRead
+      markNotificationRead,
+      syncSession
     }}>
       {children}
       <AnimatePresence>
