@@ -57,7 +57,8 @@ import {
   UserCheck,
   Plus,
   Tag,
-  ExternalLink
+  ExternalLink,
+  Copy
 } from 'lucide-react';
 import { 
   getAllAffiliates, 
@@ -183,13 +184,14 @@ export default function AdminPortal() {
 
   // Agreement PDF Generator State (for generating contracts for incoming ambassadors)
   const [agreeAmbName, setAgreeAmbName] = useState('');
-  const [agreePromoCode, setAgreePromoCode] = useState('');
+  const [agreePromoCode, setAgreePromoCode] = useState('[YOUR_CODE]');
   const [agreeEmail, setAgreeEmail] = useState('');
   const [agreeHandle, setAgreeHandle] = useState('');
   const [agreeTier1Rate, setAgreeTier1Rate] = useState(6);
   const [agreeTier2Rate, setAgreeTier2Rate] = useState(10);
   const [agreeDiscountRate, setAgreeDiscountRate] = useState(5);
   const [isGeneratingAgreement, setIsGeneratingAgreement] = useState(false);
+  const [lastGeneratedInfo, setLastGeneratedInfo] = useState<{name: string; email: string; code: string} | null>(null);
 
   // Certificates State
   const [certificates, setCertificates] = useState<CertificateRecord[]>([]);
@@ -470,9 +472,33 @@ export default function AdminPortal() {
 
     setIsGeneratingAgreement(true);
     try {
+      const codeUpper = agreePromoCode.trim().toUpperCase();
+      
+      // Automatically save/register the affiliate partner in the database so their promo code is live & active right away!
+      const partnerRecord: AffiliatePartner = {
+        id: codeUpper,
+        code: codeUpper,
+        name: agreeAmbName.trim(),
+        email: agreeEmail.trim(),
+        phone: '',
+        tier: 1,
+        baseRate: Number(agreeTier1Rate) || 6,
+        boostedRate: Number(agreeTier2Rate) || 10,
+        discountOffered: Number(agreeDiscountRate) || 5,
+        totalReferrals: 0,
+        confirmedCount: 0,
+        totalEarned: 0,
+        totalPaidOut: 0,
+        pendingPayout: 0,
+        contractSigned: true,
+        contractSignedDate: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      await saveAffiliatePartner(partnerRecord);
+
       await generateAmbassadorAgreementPdf({
         ambassadorName: agreeAmbName.trim(),
-        promoCode: agreePromoCode.trim().toUpperCase(),
+        promoCode: codeUpper,
         email: agreeEmail.trim(),
         instagramHandle: agreeHandle.trim(),
         tier1Rate: Number(agreeTier1Rate) || 6,
@@ -480,13 +506,54 @@ export default function AdminPortal() {
         discountRate: Number(agreeDiscountRate) || 5,
         logoUrl: config.logoUrl
       });
-      triggerSuccess(`Official Legal Agreement PDF generated for ${agreeAmbName}!`);
+      triggerSuccess(`Official Legal Agreement generated & Promo Code "${codeUpper}" registered for ${agreeAmbName}!`);
+      setLastGeneratedInfo({
+        name: agreeAmbName.trim(),
+        email: agreeEmail.trim(),
+        code: codeUpper
+      });
+      await loadAffiliatesData();
     } catch (err: any) {
       console.error(err);
       setErrorMsg(`Failed generating agreement PDF: ${err.message}`);
     } finally {
       setIsGeneratingAgreement(false);
     }
+  };
+
+  const handleOpenEmailClient = () => {
+    if (!lastGeneratedInfo?.email) {
+      alert('Please enter an email address for the ambassador first.');
+      return;
+    }
+    const subject = "Official Kogla Tech Global Ambassador Agreement & Partnership Onboarding";
+    const body = `Hi ${lastGeneratedInfo.name},
+
+Attached is your official Kogla Tech Global Ambassador Agreement outlining commission tiers, settlement terms, and creator guidelines.
+
+To activate your promo code and claim your unique tracking link instantly, simply create a free student account on our website at ${window.location.origin}/profile, navigate to the Referral & Ambassador Code tab, and your personalized code (with 2 random digits) and live dashboard will be unlocked immediately!
+
+Welcome aboard,
+Kogla Tech Global Admissions & Partnerships`;
+
+    window.open(`mailto:${lastGeneratedInfo.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  };
+
+  const handleCopyEmailTemplate = () => {
+    const subject = "Official Kogla Tech Global Ambassador Agreement & Partnership Onboarding";
+    const body = `Subject: ${subject}
+
+Hi ${lastGeneratedInfo?.name || 'Partner'},
+
+Attached is your official Kogla Tech Global Ambassador Agreement outlining commission tiers, settlement terms, and creator guidelines.
+
+To activate your promo code and claim your unique tracking link instantly, simply create a free student account on our website at ${window.location.origin}/profile, navigate to the Referral & Ambassador Code tab, and your personalized code (with 2 random digits) and live dashboard will be unlocked immediately!
+
+Welcome aboard,
+Kogla Tech Global Admissions & Partnerships`;
+
+    navigator.clipboard.writeText(body);
+    triggerSuccess('Email template & onboarding instructions copied to clipboard!');
   };
 
 
@@ -1424,6 +1491,38 @@ export default function AdminPortal() {
                 </button>
               </div>
             </form>
+
+            {lastGeneratedInfo && (
+              <div className="mt-4 p-4 bg-emerald-950/30 border border-emerald-500/40 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase">
+                    <CheckCircle2 size={16} /> Agreement Downloaded & Partner Registered: {lastGeneratedInfo.name}
+                  </div>
+                  <p className="text-xs text-zinc-300 font-sans">
+                    Target Email: <span className="font-mono text-white">{lastGeneratedInfo.email || 'Not provided'}</span> | Promo Code: <span className="font-mono text-gold-400 font-bold">{lastGeneratedInfo.code}</span>
+                  </p>
+                  <p className="text-[11px] text-zinc-400">
+                    Click below to open your email client (Zoho / Gmail) pre-filled with this recipient and onboarding message, or copy the template.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleOpenEmailClient}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded font-display flex items-center gap-1.5 transition-all shadow cursor-pointer"
+                  >
+                    <Mail size={14} /> Open Email Client
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyEmailTemplate}
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase rounded font-display flex items-center gap-1.5 transition-all cursor-pointer border border-zinc-700"
+                  >
+                    <Copy size={14} /> Copy Message
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* APPROVAL PROMPT / MODAL (WHEN ADMIN CLICKS APPROVE) */}

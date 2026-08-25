@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, ReviewRecord } from '../types';
+import { getUserReferralCode } from '../lib/affiliates';
 import { subscribeToReviews, deleteReview } from '../lib/reviews';
 import { makeSignatureTransparent } from '../lib/signatureProcessor';
 import { sendEmailVerification } from 'firebase/auth';
@@ -399,9 +400,11 @@ export default function Profile() {
               </span>
             </div>
 
-            <p className="text-xs text-gold-400 font-mono font-medium">
-              {profile?.title || 'Full Stack Engineer & Academy Developer'}
-            </p>
+            {profile?.title && (
+              <p className="text-xs text-gold-400 font-mono font-medium">
+                {profile.title}
+              </p>
+            )}
 
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs text-zinc-400 font-mono pt-1">
               <span className="flex items-center gap-1"><Mail size={12} className="text-zinc-500" /> {user.email}</span>
@@ -433,7 +436,7 @@ export default function Profile() {
         <div className="space-y-1 font-mono text-xs">
           {[
             { id: 'personal', label: '1. Personal Details', icon: User },
-            ...(profile?.isAmbassador || profile?.role === 'admin' ? [{ id: 'referrals', label: '2. Referral & Ambassador Code', icon: Tag }] : []),
+            { id: 'referrals', label: '2. Referral & Ambassador Code', icon: Tag },
             { id: 'security', label: '3. Security & Auth', icon: Key },
             { id: 'display', label: '4. Display & Theme', icon: Settings },
             { id: 'notifications', label: '5. Notifications', icon: Bell },
@@ -818,13 +821,13 @@ export default function Profile() {
                       <input
                         type="text"
                         readOnly
-                        value={profile?.referralCode || (profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) : user.uid.slice(0, 8).toUpperCase())}
+                        value={getUserReferralCode(profile, user?.uid)}
                         className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono font-bold uppercase select-all"
                       />
                       <button
                         type="button"
                         onClick={() => {
-                          const code = profile?.referralCode || (profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) : user.uid.slice(0, 8).toUpperCase());
+                          const code = getUserReferralCode(profile, user?.uid);
                           navigator.clipboard.writeText(code);
                           alert(`Promo code ${code} copied to clipboard!`);
                         }}
@@ -843,13 +846,13 @@ export default function Profile() {
                       <input
                         type="text"
                         readOnly
-                        value={`${window.location.origin}/?ref=${profile?.referralCode || (profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) : user.uid.slice(0, 8).toUpperCase())}`}
+                        value={`${window.location.origin}/?ref=${getUserReferralCode(profile, user?.uid)}`}
                         className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono select-all truncate"
                       />
                       <button
                         type="button"
                         onClick={() => {
-                          const code = profile?.referralCode || (profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) : user.uid.slice(0, 8).toUpperCase());
+                          const code = getUserReferralCode(profile, user?.uid);
                           const url = `${window.location.origin}/?ref=${code}`;
                           navigator.clipboard.writeText(url);
                           alert(`Referral link copied to clipboard: ${url}`);

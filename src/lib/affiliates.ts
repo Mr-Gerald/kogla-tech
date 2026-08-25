@@ -447,3 +447,15 @@ export async function saveAffiliatePartner(partner: AffiliatePartner): Promise<b
   }, 2500);
 }
 
+/**
+ * Generates or retrieves a unique referral code for a user, including 2 random digits after the name.
+ */
+export function getUserReferralCode(profile?: any, uid?: string): string {
+  if (profile?.referralCode) return profile.referralCode;
+  const nameBase = profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) : (uid ? uid.slice(0, 6).toUpperCase() : 'KOGLA');
+  const seed = uid ? uid.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : Math.floor(Math.random() * 90);
+  const rand2 = 10 + (seed % 90);
+  return `${nameBase}${rand2}`;
+}
+
+

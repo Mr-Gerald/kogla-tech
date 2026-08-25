@@ -23,16 +23,22 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { AffiliatePartner, ReferralLead } from '../types';
-import { getAffiliateByCode, getReferralsByCode, saveAffiliatePartner } from '../lib/affiliates';
+import { getAffiliateByCode, getReferralsByCode, saveAffiliatePartner, getUserReferralCode } from '../lib/affiliates';
 import { formatNaira } from '../data/coursesPricing';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig } from '../context/SiteConfigContext';
 import { generateAmbassadorAgreementPdf } from '../lib/agreementPdfGenerator';
 
 export default function AffiliatePortal() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { config } = useSiteConfig();
-  const [partnerCode, setPartnerCode] = useState('AMBASSADOR');
+  const [partnerCode, setPartnerCode] = useState(() => {
+    return getUserReferralCode(profile, user?.uid);
+  });
+
+  useEffect(() => {
+    setPartnerCode(getUserReferralCode(profile, user?.uid));
+  }, [profile, user]);
   const [partner, setPartner] = useState<AffiliatePartner | null>(null);
   const [referrals, setReferrals] = useState<ReferralLead[]>([]);
   const [loading, setLoading] = useState(true);
