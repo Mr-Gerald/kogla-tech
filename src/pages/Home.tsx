@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ArrowRight, Cpu, Shield, Zap, BookOpen, BarChart3, Globe, ChevronRight, Mail, Users, Building, Code, Smartphone, Layers, Cloud, Briefcase, Award, MessageSquare, Terminal, Eye, Star, MessageCircle, Send } from 'lucide-react';
+import { ArrowRight, Cpu, Shield, Zap, BookOpen, BarChart3, Globe, ChevronRight, Mail, Users, Building, Code, Smartphone, Layers, Cloud, Briefcase, Award, MessageSquare, Terminal, Eye, Star, MessageCircle, Send, Calendar, Clock, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { getImageConfig, ImageConfig, addInquiry, DEFAULT_IMAGES } from '../utils/storage';
@@ -35,6 +35,22 @@ export default function Home() {
   const [contactEmail, setContactEmail] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+
+  // Dynamic Cohort Countdown
+  const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (config.cohortStartDate) {
+      const target = new Date(config.cohortStartDate).getTime();
+      const now = new Date().getTime();
+      const diff = target - now;
+      if (diff > 0) {
+        setDaysRemaining(Math.ceil(diff / (1000 * 60 * 60 * 24)));
+      } else {
+        setDaysRemaining(0);
+      }
+    }
+  }, [config.cohortStartDate]);
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +95,12 @@ export default function Home() {
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-950/80 border border-gold-500/30 text-gold-500 rounded-sm text-[10px] tracking-widest font-display uppercase font-semibold shadow-xl">
             <span className="h-2 w-2 rounded-full bg-gold-400 animate-ping"></span>
-            COHORT CO-2026: ADMISSIONS OPEN NOW
+            {config.cohortBatchName || 'COHORT CO-2026'}: {config.cohortStatus || 'ADMISSIONS OPEN NOW'}
+            {config.showCountdownTimer && daysRemaining !== null && daysRemaining > 0 && (
+              <span className="ml-1 pl-2 border-l border-gold-500/30 text-zinc-300 font-mono">
+                [T-MINUS {daysRemaining} DAYS]
+              </span>
+            )}
           </div>
           <div className="hidden md:flex items-center gap-3 text-xs font-mono text-zinc-400">
             <span className="flex items-center gap-1.5"><Terminal size={12} className="text-gold-500" /> GLOBAL TECHNOLOGY PARTNER</span>
@@ -253,23 +274,29 @@ export default function Home() {
 
             <div className="space-y-4">
               <span className="text-[10px] font-mono font-bold tracking-widest text-gold-500 uppercase flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/20 px-2.5 py-1 rounded w-fit">
-                <Award size={13} /> Cohort Admissions & Certification
+                <Award size={13} /> {config.cohortBatchName || 'COHORT CO-2026'} • {config.cohortStatus || 'Admissions Open'}
               </span>
 
               <div>
                 <h3 className="text-base font-display font-bold text-white uppercase tracking-wider">
-                  CO-2026 Admissions Open
+                  {config.cohortBatchName || 'CO-2026'}: Launching {config.cohortStartDate ? new Date(config.cohortStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Sep 24, 2026'}
                 </h3>
                 <p className="text-xs text-zinc-300 font-sans mt-1 leading-relaxed">
-                  Join expert-led cohorts in full-stack engineering, cybersecurity, video motion graphics, and data analytics with verified credentials.
+                  {config.cohortAnnouncementBanner || 'Join expert-led cohorts in full-stack engineering, cybersecurity, video motion graphics, and data analytics with verified credentials.'}
                 </p>
               </div>
 
               <div className="bg-zinc-950/80 border border-zinc-800 rounded p-3.5 space-y-2 text-xs font-mono">
                 <div className="flex items-center justify-between text-zinc-300">
-                  <span className="flex items-center gap-1.5"><Shield size={13} className="text-gold-400" /> Issued Credentials:</span>
-                  <span className="font-bold text-gold-400">480+ Verified</span>
+                  <span className="flex items-center gap-1.5"><Calendar size={13} className="text-gold-400" /> Kickoff Date:</span>
+                  <span className="font-bold text-gold-400">{config.cohortStartDate ? new Date(config.cohortStartDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'September 24, 2026'}</span>
                 </div>
+                {config.cohortPrepPhaseEnabled && (
+                  <div className="flex items-center justify-between text-zinc-300">
+                    <span className="flex items-center gap-1.5"><Sparkles size={13} className="text-emerald-400" /> Prep Phase / Sandboxes:</span>
+                    <span className="font-bold text-emerald-400">Immediate Access</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-zinc-300">
                   <span className="flex items-center gap-1.5"><Terminal size={13} className="text-gold-400" /> Interactive Sandboxes:</span>
                   <span className="font-bold text-emerald-400">100% Practical</span>

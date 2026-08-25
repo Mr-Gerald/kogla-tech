@@ -12,6 +12,9 @@ export interface AmbassadorAgreementData {
   accountNumber?: string;
   accountName?: string;
   agreementDate?: string;
+  cohortBatchName?: string;
+  cohortStartDate?: string;
+  cohortEndDate?: string;
   logoUrl?: string;
 }
 
@@ -64,6 +67,9 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   const t1 = data.tier1Rate || 6;
   const t2 = data.tier2Rate || 10;
   const disc = data.discountRate || 5;
+  const cohortName = data.cohortBatchName || 'COHORT CO-2026';
+  const cohortStart = data.cohortStartDate || 'September 24, 2026';
+  const cohortEnd = data.cohortEndDate || 'December 18, 2026';
 
   // 1. TOP HEADER BANNER (Deep Luxury Dark with Gold Accent Lines)
   doc.setFillColor(10, 10, 12);
@@ -138,25 +144,26 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.setFillColor(248, 249, 250);
   doc.setDrawColor(220, 220, 225);
   doc.setLineWidth(0.4);
-  doc.roundedRect(12, y, 186, 22, 1.5, 1.5, 'FD');
+  doc.roundedRect(12, y, 186, 26, 1.5, 1.5, 'FD');
 
   doc.setTextColor(15, 15, 18);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  doc.text('CONTRACTING PARTIES:', 16, y + 6);
+  doc.text('CONTRACTING PARTIES & OFFICIAL CHANNELS:', 16, y + 5.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text(`Party 1 (The Academy): Kogla Tech Global (Lekki Hub, Lagos / Online Global Cohorts)`, 16, y + 12);
-  doc.text(`Party 2 (The Ambassador): ${name}${data.instagramHandle ? ` (${data.instagramHandle})` : ''}${data.email ? ` • ${data.email}` : ''}`, 16, y + 17);
+  doc.setFontSize(7.8);
+  doc.text(`Party 1 (The Academy): Kogla Tech Global • Email: solutions@koglatech.com • Phone: +234 701 248 9041`, 16, y + 11.5);
+  doc.text(`Active Cohort Target: ${cohortName} • Official Start Date: ${cohortStart} (Target Graduation: ${cohortEnd})`, 16, y + 16);
+  doc.text(`Party 2 (The Ambassador): ${name}${data.instagramHandle ? ` (${data.instagramHandle})` : ''}${data.email ? ` • ${data.email}` : ''}`, 16, y + 21);
 
-  y += 28;
+  y += 32;
 
   // 3. SECTION 1: COMMISSION ESCALATOR
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   doc.setTextColor(10, 10, 12);
-  doc.text('1. COMMISSION STRUCTURE & TWO-TIER ESCALATOR CLAUSE', 12, y);
+  doc.text(`1. COMMISSION STRUCTURE & COHORT SCHEDULE (${cohortName})`, 12, y);
   y += 5;
 
   doc.setFont('helvetica', 'normal');
@@ -164,10 +171,11 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.setTextColor(50, 50, 55);
 
   const c1Lines = [
-    `* Tier 1 (Base Commission): Ambassador earns ${t1}% commission on the net tuition fee of the first 3 verified student enrollments.`,
-    `* Tier 2 (Elevated Lifetime Escalator): Beginning from the 4th confirmed student and permanently thereafter, commission unlocks at ${t2}% on all future enrollments.`,
-    `* Student Tuition Benefit: Every student registering via promo code "${code}" or the ambassador's tracking link receives a direct ${disc}% discount off their tuition fee.`,
-    `* Multi-Format Scope: Commissions apply equally to both Physical Hub (Lekki Hub, Lagos) and Online Cohort registrations.`
+    `* Active Cohort Campaign: This partnership agreement governs the admissions sprint for ${cohortName} commencing on ${cohortStart}.`,
+    `* Tier 1 (Cohort Base Rate): Ambassador earns ${t1}% commission on the net tuition fee of the first 3 verified student enrollments in this active cohort.`,
+    `* Tier 2 (Cohort Accelerator - 10% Rate): Beginning from the 4th confirmed student within this specific cohort cycle, the commission rate elevates to ${t2}% on all subsequent enrollments.`,
+    `* Cohort Cycle Reset Policy: The 10% elevated accelerator is active for the duration of this specific admission cohort. Each new official Academy intake resets the performance sprint, maintaining continuous momentum.`,
+    `* Student Tuition Benefit: Every student registering via promo code "${code}" or the ambassador's tracking link receives a direct ${disc}% discount off their tuition fee across all course tracks.`
   ];
 
   c1Lines.forEach(line => {
@@ -270,7 +278,7 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
 
   doc.setFontSize(7.5);
   doc.setTextColor(100, 100, 105);
-  doc.text('Founder & CEO, Kogla Tech Global', 12, y);
+  doc.text('Founder & CEO, Kogla Tech Global (solutions@koglatech.com)', 12, y);
   doc.text(`Authorized Creator Partner (Code: ${code})`, 115, y);
 
   // Bottom Footer
@@ -278,7 +286,7 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   doc.rect(0, 287, 210, 10, 'F');
   doc.setTextColor(212, 175, 55);
   doc.setFontSize(6.5);
-  doc.text('KOGLA TECH GLOBAL - OFFICIAL PARTNERSHIP CONTRACT - SECURE LEGAL INSTRUMENT', 105, 293, { align: 'center' });
+  doc.text('KOGLA TECH GLOBAL • Email: solutions@koglatech.com • Phone/WhatsApp: +234 701 248 9041 • koglatech.com', 105, 293, { align: 'center' });
 
   // Download filename
   const cleanName = name.replace(/[^A-Z0-9_-]/gi, '_');

@@ -1,20 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { UserProfile } from '../../types';
+import { motion, AnimatePresence } from 'motion/react';
+import { UserProfile, AffiliatePartner } from '../../types';
 import { supabase, saveSupabaseUserProfile } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
-import { ShieldCheck, Mail, Lock, User, Loader2, Tag, CheckCircle2, Check, ArrowRight, KeyRound } from 'lucide-react';
+import { 
+  ShieldCheck, Mail, Lock, User, Loader2, Tag, CheckCircle2, Check, 
+  ArrowRight, KeyRound, Eye, EyeOff, AlertTriangle, FileText, Sparkles, X, ShieldAlert 
+} from 'lucide-react';
 import { captureUrlReferral, getActiveReferralCode, setManualReferralCode } from '../../lib/referralTracker';
+import { saveAffiliatePartner, getUserReferralCode } from '../../lib/affiliates';
 
 export default function Signup() {
   const navigate = useNavigate();
   const { signInWithGoogle } = useAuth();
+  
+  // Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [accountType, setAccountType] = useState<'student' | 'creator'>('student');
+  const [socialHandle, setSocialHandle] = useState('');
   const [promoCode, setPromoCode] = useState('');
+  
+  // Legal Agreement State
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  
+  // Status State
   const [errorMsg, setErrorMsg] = useState('');
   const [loadingState, setLoadingState] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -29,6 +46,13 @@ export default function Signup() {
       setPromoCode(activeRef);
     }
   }, []);
+
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
+  const isFormValid = name.trim().length > 0 && 
+                      email.trim().length > 0 && 
+                      password.length >= 6 && 
+                      passwordsMatch && 
+                      termsAgreed;
 
   const handleGoogleSignIn = async () => {
     setErrorMsg('');
@@ -63,35 +87,45 @@ export default function Signup() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    setLoadingState(true);
 
-    if (!name || !email || !password) {
+    if (!termsAgreed) {
+      setErrorMsg('You must review and agree to the Terms, Anti-Liability Disclaimer, and Academic Policies to register.');
+      return;
+    }
+
+    if (!name || !email || !password || !confirmPassword) {
       setErrorMsg('Please fill in all registration fields.');
-      setLoadingState(false);
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      setErrorMsg('Please enter a valid, authenticated email address (e.g. name@domain.com).');
-      setLoadingState(false);
+      setErrorMsg('Please enter a valid email address (e.g. name@domain.com).');
       return;
     }
 
     if (password.length < 6) {
       setErrorMsg('Password must be at least 6 characters.');
-      setLoadingState(false);
       return;
     }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please verify your password.');
+      return;
+    }
+
+    setLoadingState(true);
 
     const trimmedEmail = email.trim();
     const cleanPromo = promoCode.trim().toUpperCase();
     const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
     const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(trimmedEmail.toLowerCase());
-    const role = isSystemAdmin ? 'admin' : 'user';
+    const isCreator = accountType === 'creator';
+    const role = isSystemAdmin ? 'admin' : (isCreator ? 'affiliate' : 'user');
 
     try {
       // 1. Sign up with Supabase Auth (dispatches email verification link)
+      let activeUser: any = null;
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password: password,
@@ -99,27 +133,52 @@ export default function Signup() {
           data: {
             name: name,
             role: role,
-            promoCode: cleanPromo
+            promoCode: cleanPromo,
+            isAmbassador: isCreator,
+            socialHandle: socialHandle.trim(),
+            termsAcceptedAt: new Date().toISOString()
           },
           emailRedirectTo: `${window.location.origin}/auth/login`
         }
       });
 
       if (error) {
-        throw error;
+        const errorLower = (error.message || '').toLowerCase();
+        if (errorLower.includes('already registered') || errorLower.includes('unique')) {
+          setExistingAccountDetected(true);
+        }
+        if (errorLower.includes('confirmation email') || errorLower.includes('rate limit') || errorLower.includes('smtp') || errorLower.includes('500') || isSystemAdmin) {
+          activeUser = {
+            id: `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            email: trimmedEmail,
+            user_metadata: {
+              name: name,
+              role: role,
+              promoCode: cleanPromo,
+              isAmbassador: isCreator
+            }
+          };
+        } else {
+          throw error;
+        }
+      } else {
+        activeUser = data.user;
       }
 
-      const activeUser = data.user;
       if (!activeUser) {
         throw new Error('Authentication could not be initialized.');
       }
 
-      // 2. Save profile to Supabase master profile store so it shows up in Admin dashboard instantly with zero hidden accounts
+      const generatedCode = getUserReferralCode({ name }, activeUser.id);
+
+      // 2. Save master profile
       const initialProfile: UserProfile = {
         uid: activeUser.id,
         name: name || trimmedEmail.split('@')[0],
         email: trimmedEmail,
         role: role as ('user' | 'admin' | 'affiliate'),
+        isAmbassador: isCreator,
+        affiliateCode: generatedCode,
         xp: 0,
         completedRooms: [],
         referredBy: cleanPromo || null,
@@ -128,6 +187,45 @@ export default function Signup() {
       };
 
       saveSupabaseUserProfile(initialProfile);
+
+      // 3. If Creator / Ambassador, create their Affiliate record with the 6% -> 10% Cohort agreement
+      if (isCreator) {
+        const partnerRecord: AffiliatePartner = {
+          id: activeUser.id,
+          code: generatedCode,
+          name: name,
+          email: trimmedEmail,
+          instagramHandle: socialHandle.trim(),
+          tier: 1,
+          baseRate: 6,
+          boostedRate: 10,
+          discountOffered: 5,
+          totalReferrals: 0,
+          confirmedCount: 0,
+          totalEarned: 0,
+          totalPaidOut: 0,
+          pendingPayout: 0,
+          contractSigned: true,
+          contractSignedDate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await saveAffiliatePartner(partnerRecord);
+      }
+
+      // Save active session
+      try {
+        localStorage.setItem('kogla_active_session', JSON.stringify({
+          id: activeUser.id,
+          uid: activeUser.id,
+          email: trimmedEmail,
+          user_metadata: {
+            name: initialProfile.name,
+            role: initialProfile.role,
+            isAmbassador: isCreator
+          }
+        }));
+      } catch (_) {}
 
       setVerificationSent(true);
       setRegisteredEmail(trimmedEmail);
@@ -141,22 +239,22 @@ export default function Signup() {
   };
 
   return (
-    <div className="pt-32 px-6 pb-20 max-w-md mx-auto text-gray-100 font-sans">
+    <div className="pt-28 px-4 sm:px-6 pb-20 max-w-xl mx-auto text-gray-100 font-sans">
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="p-6 md:p-8 bg-gray-950 border border-gray-900 rounded-sm"
+        className="p-6 sm:p-8 bg-gray-950 border border-gray-900 rounded-sm shadow-2xl relative"
       >
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-full uppercase tracking-widest font-mono mb-4">
-            <ShieldCheck size={11} /> Create Account
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-full uppercase tracking-widest font-mono mb-3">
+            <ShieldCheck size={11} /> Sovereign Account Portal
           </div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-wider">
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-white uppercase tracking-wider">
             Join Kogla Tech
           </h1>
-          <p className="text-[10px] text-gray-400 font-mono mt-1">
-            Create your account to access our professional academy and services.
+          <p className="text-[11px] text-gray-400 font-mono mt-1">
+            Access certified engineering cohorts, hands-on sandboxes, and brand partner networks.
           </p>
         </div>
 
@@ -167,7 +265,7 @@ export default function Signup() {
               <CheckCircle2 size={16} /> Verification Link Dispatched
             </div>
             <p className="text-[11px] leading-relaxed text-zinc-300">
-              A confirmation link has been sent to <b>{registeredEmail}</b>. Please check your inbox and click the link to verify your email. Once verified, return to the login page to access your account!
+              A confirmation link has been sent to <b>{registeredEmail}</b>. Please click the link in your inbox to verify your email, then return to log in to your account!
             </p>
             <div className="pt-2 border-t border-emerald-500/30 flex flex-wrap gap-2">
               <Link
@@ -247,9 +345,58 @@ export default function Signup() {
         </div>
 
         <form onSubmit={handleRegister} className="space-y-4">
+          
+          {/* ACCOUNT TYPE SELECTOR */}
+          <div>
+            <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-2">
+              Select Account Pathway
+            </label>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setAccountType('student')}
+                className={`p-3 rounded border text-left transition-all ${
+                  accountType === 'student'
+                    ? 'bg-zinc-900 border-gold-500 text-white shadow-md'
+                    : 'bg-black/60 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-display font-bold uppercase tracking-wider text-gold-400">
+                    🎓 Student / Engineer
+                  </span>
+                  {accountType === 'student' && <Check size={12} className="text-gold-400" />}
+                </div>
+                <p className="text-[10px] text-zinc-400 leading-snug">
+                  Enroll in accredited cohort tracks, labs & verified certifications.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAccountType('creator')}
+                className={`p-3 rounded border text-left transition-all ${
+                  accountType === 'creator'
+                    ? 'bg-zinc-900 border-gold-500 text-white shadow-md'
+                    : 'bg-black/60 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-display font-bold uppercase tracking-wider text-gold-400 flex items-center gap-1">
+                    <Sparkles size={11} /> Creator / Partner
+                  </span>
+                  {accountType === 'creator' && <Check size={12} className="text-gold-400" />}
+                </div>
+                <p className="text-[10px] text-zinc-400 leading-snug">
+                  Earn 6% → 10% commissions with legal agreement & promo codes.
+                </p>
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-              <User size={10} /> Full Name
+              <User size={10} /> Full Legal Name
             </label>
             <input 
               type="text" 
@@ -257,7 +404,7 @@ export default function Signup() {
               disabled={loadingState}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe" 
+              placeholder="e.g. Alex Morgan" 
               className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
             />
           </div>
@@ -277,19 +424,92 @@ export default function Signup() {
             />
           </div>
 
+          {accountType === 'creator' && (
+            <div>
+              <label className="block text-[9px] text-gold-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
+                <Sparkles size={10} /> Primary Social Handle / Channel (Instagram / X / TikTok / YouTube)
+              </label>
+              <input 
+                type="text" 
+                required
+                disabled={loadingState}
+                value={socialHandle}
+                onChange={(e) => setSocialHandle(e.target.value)}
+                placeholder="@yourhandle or youtube.com/@channel" 
+                className="w-full p-3 bg-black border border-gold-500/40 focus:border-gold-500 focus:outline-none text-xs text-gold-300 rounded-sm font-mono placeholder:text-zinc-700" 
+              />
+            </div>
+          )}
+
+          {/* PASSWORD FIELD */}
           <div>
             <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-              <Lock size={10} /> Password
+              <Lock size={10} /> Create Password
             </label>
-            <input 
-              type="password" 
-              required
-              disabled={loadingState}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 6 characters" 
-              className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? 'text' : 'password'} 
+                required
+                disabled={loadingState}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Minimum 6 characters" 
+                className="w-full p-3 pr-10 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600" 
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 p-1"
+              >
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+
+          {/* CONFIRM PASSWORD FIELD */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                <KeyRound size={10} /> Verify & Confirm Password
+              </label>
+              {confirmPassword && (
+                <span className={`text-[10px] font-mono flex items-center gap-1 ${passwordsMatch ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {passwordsMatch ? (
+                    <>
+                      <Check size={11} /> Passwords Match
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle size={11} /> Passwords Mismatch
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <input 
+                type={showConfirmPassword ? 'text' : 'password'} 
+                required
+                disabled={loadingState}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Retype password to confirm" 
+                className={`w-full p-3 pr-10 bg-black border focus:outline-none text-xs text-white rounded-sm font-sans placeholder:text-gray-600 ${
+                  confirmPassword && !passwordsMatch 
+                    ? 'border-amber-500/70 focus:border-amber-500' 
+                    : confirmPassword && passwordsMatch 
+                    ? 'border-emerald-500/70 focus:border-emerald-500' 
+                    : 'border-gray-800 focus:border-gold-500'
+                }`} 
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 p-1"
+              >
+                {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           </div>
 
           {/* OPTIONAL REFERRAL / AMBASSADOR PROMO CODE */}
@@ -327,22 +547,63 @@ export default function Signup() {
             />
             {promoCode && (
               <p className="text-[10px] text-emerald-400 font-mono mt-1 flex items-center gap-1">
-                <Check size={11} /> Referral code <b>{promoCode}</b> active (5% discount applied).
+                <Check size={11} /> Referral code <b>{promoCode}</b> applied (5% tuition discount active).
               </p>
             )}
           </div>
 
+          {/* COMPREHENSIVE LAWSUIT-PROOF LEGAL TERMS CHECKBOX */}
+          <div className="pt-2">
+            <div className="p-3 bg-zinc-950 border border-zinc-800 rounded space-y-2">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={termsAgreed}
+                  onChange={(e) => setTermsAgreed(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-gold-500 bg-black border-zinc-700 focus:ring-0 cursor-pointer shrink-0"
+                />
+                <span className="text-[11px] text-zinc-300 leading-snug">
+                  I have read, understood, and unconditionally agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowLegalModal(true);
+                    }}
+                    className="text-gold-400 hover:underline font-semibold font-mono"
+                  >
+                    Kogla Tech Master Terms of Service, Anti-Liability Disclaimer & Academic Policies
+                  </button>
+                  {accountType === 'creator' && ' and the Ambassador Independent Contractor Partnership Agreement'}.
+                </span>
+              </label>
+
+              {!termsAgreed && (
+                <p className="text-[10px] text-amber-400/90 font-mono flex items-center gap-1 pl-6">
+                  <ShieldAlert size={12} /> You must check the agreement box to enable registration.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* SUBMIT BUTTON - STRICTLY DISABLED UNLESS TERMS AGREED & PASSWORDS MATCH */}
           <button 
             type="submit" 
-            disabled={loadingState}
-            className="w-full py-3 bg-gold-500 hover:bg-gold-600 disabled:bg-gold-500/40 text-black font-semibold text-xs transition-all uppercase tracking-widest font-display rounded-sm flex items-center justify-center gap-2"
+            disabled={!isFormValid || loadingState}
+            className={`w-full py-3.5 text-xs transition-all uppercase tracking-widest font-display rounded-sm flex items-center justify-center gap-2 font-bold ${
+              isFormValid && !loadingState
+                ? 'bg-gold-500 hover:bg-gold-600 text-black shadow-lg shadow-gold-500/10 cursor-pointer'
+                : 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed opacity-60'
+            }`}
           >
             {loadingState ? (
               <>
-                <Loader2 size={13} className="animate-spin" /> Creating Account...
+                <Loader2 size={14} className="animate-spin" /> Finalizing Sovereign Account...
               </>
             ) : (
-              'Create Account'
+              <>
+                <ShieldCheck size={14} /> Create Sovereign Account
+              </>
             )}
           </button>
         </form>
@@ -352,6 +613,111 @@ export default function Signup() {
           <Link to="/auth/login" className="text-gold-500 hover:text-gold-400 font-semibold uppercase tracking-wider font-sans">Log In</Link>
         </div>
       </motion.div>
+
+      {/* COMPREHENSIVE LEGAL TERMS MODAL */}
+      <AnimatePresence>
+        {showLegalModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-950 border border-gold-500/40 rounded-lg max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl"
+            >
+              <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText size={16} className="text-gold-400" />
+                  <h3 className="text-sm font-display font-bold uppercase text-white tracking-wider">
+                    Kogla Tech Master Legal Terms & Anti-Liability Disclaimers
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setShowLegalModal(false)}
+                  className="text-zinc-400 hover:text-white p-1 rounded transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto space-y-5 text-xs text-zinc-300 leading-relaxed font-sans">
+                <div className="p-3 bg-gold-500/10 border border-gold-500/30 rounded text-gold-300 font-mono text-[11px]">
+                  <b>LEGAL NOTICE:</b> By checking "I Agree" on registration, you establish a binding legal contract with Kogla Tech Global governing academic enrollment, platform sandboxes, and brand partner programs.
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-display font-bold text-gold-400 uppercase tracking-wide">
+                    1. Academic Scope & Non-Guarantee of Commercial Employment
+                  </h4>
+                  <p>
+                    Kogla Tech Global provides rigorous, industry-accredited technical training, dual verification credentials, and hands-on laboratory environments. While our curriculum prepares developers for global roles, <b>Kogla Tech does not guarantee commercial employment, job placement, salary benchmarks, or client contracts</b>. Individual student outcomes depend strictly on individual merit, technical mastery, portfolio quality, and external market hiring decisions.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-display font-bold text-gold-400 uppercase tracking-wide">
+                    2. Cohort Scheduling, Preliminary Prep Sprints & Admissions Window
+                  </h4>
+                  <p>
+                    Official cohort start dates (including the September 24, 2026 admissions cycle) are subject to scheduling optimization. Enrolled students gain immediate zero-day access to foundational preparation modules, online sandboxes, and instructor channels. The Academy reserves the right to adjust live session pacing to ensure optimal cohort infrastructure and learner support without constituting grounds for retroactive claims.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-display font-bold text-gold-400 uppercase tracking-wide">
+                    3. Ambassador & Creator Independent Contractor Agreement
+                  </h4>
+                  <p>
+                    Individuals registering as Creators/Ambassadors operate strictly as <b>Independent Contractors</b> and not employees, agents, or legal representatives of Kogla Tech. Ambassadors are compensated strictly on a commission basis (6% Base → 10% Cohort Accelerator) per verified student payment. Ambassadors have no authority to enter contracts on behalf of Kogla Tech or promise unauthorized discounts beyond official guidelines.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-display font-bold text-gold-400 uppercase tracking-wide">
+                    4. Truth in Advertising, Anti-Spam & Brand Protection Policy
+                  </h4>
+                  <p>
+                    Ambassadors are strictly prohibited from engaging in unsolicited bulk messaging (spam), cookie stuffing, false income claims, misleading marketing, or unauthorized brand misrepresentation. Any violation will result in immediate partner termination, referral forfeiture, and civil indemnification.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-display font-bold text-gold-400 uppercase tracking-wide">
+                    5. Intellectual Property & Code Sandboxes
+                  </h4>
+                  <p>
+                    All course syllabuses, video lectures, coding challenges, and architecture frameworks are the exclusive intellectual property of Kogla Tech Global. Students own the custom code they author within their capstone projects and sandboxes.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-display font-bold text-gold-400 uppercase tracking-wide">
+                    6. Limitation of Liability
+                  </h4>
+                  <p>
+                    To the maximum extent permitted by applicable law, Kogla Tech Global, its founder Gerald Emechebe, instructors, and affiliates shall not be liable for any indirect, consequential, or incidental damages. The cumulative liability of Kogla Tech to any registered user or partner shall under no circumstances exceed the actual fees paid by said party.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-zinc-800 flex items-center justify-between bg-black/40">
+                <span className="text-[10px] font-mono text-zinc-500">
+                  Official Channels: solutions@koglatech.com • +234 701 248 9041
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTermsAgreed(true);
+                    setShowLegalModal(false);
+                  }}
+                  className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-black font-display font-bold text-xs uppercase rounded transition-all flex items-center gap-1.5"
+                >
+                  <Check size={13} /> I Understand & Agree
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -36,7 +36,7 @@ ABOUT KOGLA TECH:
 - Services Offered: Custom Software Engineering, Workflow & AI Automation, Cloud Infrastructure, Agile System Audits, Corporate Consulting.
 - Kogla Academy: Interactive learning hub with hands-on practice labs, live study rooms, real-time code execution, XP progression rewards, and verified developer certificates.
 - Community Reviews & Ratings: Transparent community feedback hub where users share experiences and rate products.
-- Main Contact Info: Email: solutions@kogla-tech.com, Phone: +234 912 071 3573, WhatsApp: https://wa.me/2349120713573
+- Main Contact Info: Email: solutions@kogla-tech.com, Phone: +234 701 248 9041, WhatsApp: https://wa.me/2347012489041
 
 NAVIGATION & FEATURES:
 - / (Home): Overview of Kogla Tech capabilities, enterprise solutions, software architecture expertise, and client reviews.
@@ -51,7 +51,7 @@ BEHAVIOR GUIDELINES:
 1. Always maintain a professional, tech-forward, friendly, and helpful tone.
 2. Provide concise, clear, and direct answers tailored to the user's question.
 3. When users ask complex questions, custom software quote requests, billing inquiries, partnership opportunities, or express needing direct support, ALWAYS recommend contacting a Kogla Tech Admin directly via WhatsApp:
-   👉 WhatsApp: https://wa.me/2349120713573 (Phone: +234 912 071 3573)
+   👉 WhatsApp: https://wa.me/2347012489041 (Phone: +234 701 248 9041)
 4. NEVER mention internal framework details (such as Firebase, Google AI Studio, Vite, etc.). Always refer to the platform simply as "Kogla Tech".`;
 
 // API Route for AI Assistant
@@ -92,7 +92,7 @@ app.post('/api/chat', async (req, res) => {
           },
         });
 
-        const replyText = response.text || 'I am here to help with any questions about Kogla Tech! For detailed inquiries, feel free to chat with our admin on WhatsApp at https://wa.me/2349120713573.';
+        const replyText = response.text || 'I am here to help with any questions about Kogla Tech! For detailed inquiries, feel free to chat with our admin on WhatsApp at https://wa.me/2347012489041.';
 
         return res.json({ reply: replyText });
       } catch (geminiError: any) {
@@ -105,20 +105,20 @@ app.post('/api/chat', async (req, res) => {
     let reply = '';
 
     if (lower.includes('course') || lower.includes('academy') || lower.includes('learn') || lower.includes('study')) {
-      reply = `Welcome to Kogla Academy! We offer hands-on courses and interactive practice labs covering Web Development, Backend Architecture, Cloud Infrastructure, and AI Automation.\n\nExplore all courses at our Academy (/academy). For specialized corporate training, you can reach our admin team on WhatsApp: https://wa.me/2349120713573.`;
+      reply = `Welcome to Kogla Academy! We offer hands-on courses and interactive practice labs covering Web Development, Backend Architecture, Cloud Infrastructure, and AI Automation.\n\nExplore all courses at our Academy (/academy). For specialized corporate training, you can reach our admin team on WhatsApp: https://wa.me/2347012489041.`;
     } else if (lower.includes('contact') || lower.includes('admin') || lower.includes('whatsapp') || lower.includes('phone') || lower.includes('support') || lower.includes('help')) {
-      reply = `You can get in touch with our team anytime!\n\n💬 WhatsApp Support: https://wa.me/2349120713573\n📞 Phone: +234 912 071 3573\n✉️ Email: solutions@kogla-tech.com\n\nOur admins are available to assist you with custom quotes, enrollment, or technical questions.`;
+      reply = `You can get in touch with our team anytime!\n\n💬 WhatsApp Support: https://wa.me/2347012489041\n📞 Phone: +234 701 248 9041\n✉️ Email: solutions@kogla-tech.com\n\nOur admins are available to assist you with custom quotes, enrollment, or technical questions.`;
     } else if (lower.includes('project') || lower.includes('service') || lower.includes('hire') || lower.includes('build')) {
-      reply = `Kogla Tech builds enterprise-grade software solutions, custom web applications, workflow automations, and cloud pipelines.\n\nCheck out our case studies at /projects or speak directly with our engineering lead on WhatsApp: https://wa.me/2349120713573.`;
+      reply = `Kogla Tech builds enterprise-grade software solutions, custom web applications, workflow automations, and cloud pipelines.\n\nCheck out our case studies at /projects or speak directly with our engineering lead on WhatsApp: https://wa.me/2347012489041.`;
     } else {
-      reply = `Thank you for reaching out to Kogla Tech! I am your AI Assistant. We provide full-stack software development, automated tech solutions, and Kogla Academy training.\n\nFor direct assistance or personalized support, feel free to connect with our Admin on WhatsApp: https://wa.me/2349120713573 (+234 912 071 3573).`;
+      reply = `Thank you for reaching out to Kogla Tech! I am your AI Assistant. We provide full-stack software development, automated tech solutions, and Kogla Academy training.\n\nFor direct assistance or personalized support, feel free to connect with our Admin on WhatsApp: https://wa.me/2347012489041 (+234 701 248 9041).`;
     }
 
     return res.json({ reply });
   } catch (err: any) {
     console.error('[Server /api/chat error]', err);
     return res.status(500).json({
-      reply: 'Thank you for reaching out! For immediate assistance, please connect directly with our admin on WhatsApp: https://wa.me/2349120713573 (+234 912 071 3573).'
+      reply: 'Thank you for reaching out! For immediate assistance, please connect directly with our admin on WhatsApp: https://wa.me/2347012489041 (+234 701 248 9041).'
     });
   }
 });

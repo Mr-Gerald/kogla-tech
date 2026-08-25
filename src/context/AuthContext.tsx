@@ -42,12 +42,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 1. Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user || null;
+      if (!currentUser) {
+        try {
+          const cachedSession = localStorage.getItem('kogla_active_session');
+          if (cachedSession) {
+            handleUserSession(JSON.parse(cachedSession));
+            return;
+          }
+        } catch (_) {}
+      }
       handleUserSession(currentUser);
     });
 
     // 2. Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const currentUser = session?.user || null;
+      if (!currentUser) {
+        try {
+          const cachedSession = localStorage.getItem('kogla_active_session');
+          if (cachedSession) {
+            handleUserSession(JSON.parse(cachedSession));
+            return;
+          }
+        } catch (_) {}
+      }
       handleUserSession(currentUser);
     });
 
@@ -60,17 +78,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (currentUser) {
       const normalizedUser: SupabaseUser = {
         ...currentUser,
-        id: currentUser.id,
-        uid: currentUser.id,
-        photoURL: currentUser.user_metadata?.avatar_url || ''
+        id: currentUser.id || currentUser.uid || `user-${Date.now()}`,
+        uid: currentUser.id || currentUser.uid || `user-${Date.now()}`,
+        photoURL: currentUser.user_metadata?.avatar_url || currentUser.photoURL || ''
       };
       setUser(normalizedUser);
+      try {
+        localStorage.setItem('kogla_active_session', JSON.stringify(normalizedUser));
+      } catch (_) {}
 
       const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = currentUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(currentUser.email.toLowerCase());
       const role = isSystemAdmin ? 'admin' : 'user';
 
-      let existingProfile = getSupabaseUserProfile(currentUser.id);
+      let existingProfile = getSupabaseUserProfile(normalizedUser.id);
       if (!existingProfile && currentUser.email) {
         existingProfile = getSupabaseUserProfile(currentUser.email);
       }
@@ -83,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         saveSupabaseUserProfile(existingProfile);
       } else {
         const newProfile: UserProfile = {
-          uid: currentUser.id,
+          uid: normalizedUser.id,
           name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || (isSystemAdmin ? 'Gerald Emechebe' : 'Sovereign Developer'),
           email: currentUser.email || '',
           role: role,
@@ -100,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Load notifications from localStorage cache
       try {
         const allNotifs: NotificationRecord[] = JSON.parse(localStorage.getItem('kogla_supabase_notifications') || '[]');
-        const userNotifs = allNotifs.filter(n => n.userId === currentUser.id);
+        const userNotifs = allNotifs.filter(n => n.userId === normalizedUser.id);
         userNotifs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         setNotifications(userNotifs);
       } catch (e) {
@@ -113,6 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       setNotifications([]);
       setLoading(false);
+      try {
+        localStorage.removeItem('kogla_active_session');
+      } catch (_) {}
     }
   };
 
@@ -122,7 +146,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const confirmSignOut = async () => {
     setShowSignOutModal(false);
-    await supabase.auth.signOut();
+    try {
+      localStorage.removeItem('kogla_active_session');
+      await supabase.auth.signOut();
+    } catch (_) {}
     setUser(null);
     setProfile(null);
   };

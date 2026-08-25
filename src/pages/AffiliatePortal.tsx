@@ -91,6 +91,9 @@ export default function AffiliatePortal() {
         discountRate: 5,
         bankName: bankName || partner?.bankDetails?.bankName,
         accountNumber: accountNumber || partner?.bankDetails?.accountNumber,
+        cohortBatchName: config.cohortBatchName || 'COHORT CO-2026',
+        cohortStartDate: config.cohortStartDate ? new Date(config.cohortStartDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'September 24, 2026',
+        cohortEndDate: config.cohortEndDate ? new Date(config.cohortEndDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'December 18, 2026',
         logoUrl: config.logoUrl
       });
     } catch (err) {
@@ -211,14 +214,15 @@ export default function AffiliatePortal() {
 
           <div className="space-y-4 text-xs sm:text-sm leading-relaxed font-sans text-zinc-300">
             <p>
-              This Brand Ambassador & Creator Partnership Legal Agreement is entered into between <b>Kogla Tech Global</b> (hereinafter referred to as the <i>"Academy"</i>) and <b>{partner?.name || 'Ambassador Partner'}</b> (hereinafter referred to as the <i>"Ambassador"</i>).
+              This Brand Ambassador & Creator Partnership Legal Agreement is entered into between <b>Kogla Tech Global</b> (hereinafter referred to as the <i>"Academy"</i>, Contact: <code>solutions@koglatech.com</code> • <code>+234 701 248 9041</code>) and <b>{partner?.name || 'Ambassador Partner'}</b> (hereinafter referred to as the <i>"Ambassador"</i>).
             </p>
 
             <div className="bg-black/50 border border-zinc-800 p-4 rounded space-y-3 font-mono text-xs">
-              <h4 className="text-gold-400 font-bold uppercase tracking-wider">1. Commission Structure & Escalator Clause</h4>
+              <h4 className="text-gold-400 font-bold uppercase tracking-wider">1. Commission Structure & Cohort-Specific Escalator Clause</h4>
               <ul className="list-disc list-inside space-y-1 text-zinc-300">
-                <li><b>Tier 1 (Base Rate):</b> Ambassador earns a <b>6% commission</b> on the net tuition of the first 3 enrolled and verified students.</li>
-                <li><b>Tier 2 (Elevated Lifetime Rate):</b> Beginning with the <b>4th enrolled student</b> and indefinitely thereafter, the commission permanently elevates to <b>10%</b> on all subsequent student enrollments.</li>
+                <li><b>Tier 1 (Cohort Base Rate):</b> Ambassador earns a <b>6% commission</b> on the net tuition of the first 3 enrolled and verified students in the active cohort.</li>
+                <li><b>Tier 2 (Cohort Accelerator - 10% Rate):</b> Beginning with the <b>4th enrolled student</b> in that specific cohort, the commission elevates to <b>10%</b> on all subsequent enrollments for the duration of that cohort cycle.</li>
+                <li><b>Cohort Cycle Reset Policy:</b> Performance milestones apply per admission cohort. Each new official Academy intake resets the performance sprint, keeping campaigns vibrant and rewarding top seasonal producers.</li>
                 <li><b>Student Discount:</b> Every student registering with promo code <b className="text-gold-400">{partnerCode}</b> receives a <b>5% direct discount</b> on their tuition.</li>
               </ul>
             </div>
@@ -333,30 +337,30 @@ export default function AffiliatePortal() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono tracking-widest text-gold-500 uppercase font-bold">
-                COMMISSION TIER STATUS
+                COHORT COMMISSION STATUS
               </span>
               <span className="px-2.5 py-1 bg-gold-500/20 border border-gold-500/50 text-gold-400 font-mono font-bold text-xs rounded-full uppercase">
-                {isTier2 ? 'Tier 2: 10% Unlocked' : 'Tier 1: 6% Base'}
+                {isTier2 ? 'Cohort Accelerator: 10%' : 'Cohort Base: 6%'}
               </span>
             </div>
 
             <div>
               <div className="text-2xl sm:text-3xl font-display font-black text-white uppercase">
-                Current Rate: <span className="text-gold-400">{currentRate}%</span>
+                Active Rate: <span className="text-gold-400">{currentRate}%</span>
               </div>
               <p className="text-xs text-zinc-400 mt-1">
                 {isTier2 
-                  ? '🎉 Congratulations! You have permanently unlocked the 10% commission rate on all student enrollments.' 
-                  : `${3 - confirmedCount} more confirmed student${3 - confirmedCount === 1 ? '' : 's'} needed to unlock lifetime 10% commission.`}
+                  ? '🎉 Congratulations! You have unlocked the elevated 10% commission rate for all enrollments in this active cohort.' 
+                  : `${3 - confirmedCount} more confirmed student${3 - confirmedCount === 1 ? '' : 's'} in this cohort needed to unlock 10% rate.`}
               </p>
             </div>
 
             {/* PROGRESS BAR */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs font-mono text-zinc-400">
-                <span>Tier 1 (6%)</span>
-                <span>{confirmedCount} / 3 Confirmed</span>
-                <span>Tier 2 (10%)</span>
+                <span>Base (6%)</span>
+                <span>{confirmedCount} / 3 in Cohort</span>
+                <span>Accelerator (10%)</span>
               </div>
               <div className="w-full h-3 bg-zinc-900 border border-zinc-800 rounded-full overflow-hidden p-0.5">
                 <div 
@@ -367,8 +371,9 @@ export default function AffiliatePortal() {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-zinc-850 mt-4 text-[11px] font-mono text-zinc-400">
-            Next Level: <b>10% commission</b> on high-ticket tracks (e.g. ₦60,000 on Mobile Dev).
+          <div className="pt-4 border-t border-zinc-850 mt-4 text-[11px] font-mono text-zinc-400 flex items-center justify-between">
+            <span>Next Cohort Milestone: <b>10% per enrollment</b></span>
+            <span className="text-[10px] text-gold-400/80">Active Cohort Cycle</span>
           </div>
         </div>
 

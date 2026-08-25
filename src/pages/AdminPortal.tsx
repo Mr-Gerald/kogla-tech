@@ -53,7 +53,8 @@ import {
   Plus,
   Tag,
   ExternalLink,
-  Copy
+  Copy,
+  GraduationCap
 } from 'lucide-react';
 import { 
   getAllAffiliates, 
@@ -460,6 +461,9 @@ export default function AdminPortal() {
         tier1Rate: Number(agreeTier1Rate) || 6,
         tier2Rate: Number(agreeTier2Rate) || 10,
         discountRate: Number(agreeDiscountRate) || 5,
+        cohortBatchName: config.cohortBatchName || 'COHORT CO-2026',
+        cohortStartDate: config.cohortStartDate ? new Date(config.cohortStartDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'September 24, 2026',
+        cohortEndDate: config.cohortEndDate ? new Date(config.cohortEndDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'December 18, 2026',
         logoUrl: config.logoUrl
       });
       triggerSuccess(`Official Legal Agreement generated & Promo Code "${codeUpper}" registered for ${agreeAmbName}!`);
@@ -3139,6 +3143,140 @@ Kogla Tech Global Admissions & Partnerships`;
                       Telegram channel or group link.
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* GROUP 2.5: Cohort Scheduling & Admissions Status Engine */}
+              <div className="p-4 bg-black border border-gold-500/30 rounded-sm space-y-4 shadow-lg shadow-gold-500/5">
+                <div className="flex items-center justify-between pb-1 border-b border-gray-900">
+                  <h3 className="text-xs font-display font-bold text-gold-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <GraduationCap size={14} className="text-gold-400" /> Cohort Scheduling & Admissions Status Engine
+                  </h3>
+                  <span className="px-2 py-0.5 bg-gold-500/10 border border-gold-500/30 text-gold-400 text-[10px] font-mono rounded uppercase">
+                    Live Academy Status Control
+                  </span>
+                </div>
+
+                <div className="p-3 bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 font-mono rounded-sm leading-relaxed">
+                  ⚡ <b>Smart Admissions Rule:</b> Modifying cohort dates, badges, or countdown timers here updates the website homepage badges, course countdowns, enrollment modals, and Ambassador legal agreement PDFs instantly.
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] text-gold-400 font-bold uppercase tracking-wider mb-1 font-mono">
+                      Cohort Batch Name
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="COHORT CO-2026"
+                      value={siteForm.cohortBatchName || ''}
+                      onChange={(e) => setSiteForm({ ...siteForm, cohortBatchName: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gold-500/40 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Displayed on badges, headers & certificate trackers.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-gold-400 font-bold uppercase tracking-wider mb-1 font-mono">
+                      Admissions Status Label
+                    </label>
+                    <select 
+                      value={siteForm.cohortStatus || 'Admissions Open Now'}
+                      onChange={(e) => setSiteForm({ ...siteForm, cohortStatus: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gold-500/40 text-xs text-gold-300 rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    >
+                      <option value="Admissions Open Now">Admissions Open Now</option>
+                      <option value="Early Bird Registration Active">Early Bird Registration Active</option>
+                      <option value="Prep Sprint Active - Enrolling">Prep Sprint Active - Enrolling</option>
+                      <option value="Final 5 Seats Remaining">Final 5 Seats Remaining</option>
+                      <option value="In Progress - Next Intake Enrolling">In Progress - Next Intake Enrolling</option>
+                    </select>
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Real-time status shown on top bar and cards.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-gold-400 font-bold uppercase tracking-wider mb-1 font-mono">
+                      Official Start Date (Class Launch)
+                    </label>
+                    <input 
+                      type="date"
+                      required
+                      value={siteForm.cohortStartDate || '2026-09-24'}
+                      onChange={(e) => setSiteForm({ ...siteForm, cohortStartDate: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gold-500/40 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Target kickoff date: <b>{siteForm.cohortStartDate ? new Date(siteForm.cohortStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Sep 24, 2026'}</b>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4 pt-2 border-t border-gray-900">
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">
+                      Target Graduation Date
+                    </label>
+                    <input 
+                      type="date"
+                      value={siteForm.cohortEndDate || '2026-12-18'}
+                      onChange={(e) => setSiteForm({ ...siteForm, cohortEndDate: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Cohort completion / capstone milestone.
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col justify-center">
+                    <label className="flex items-center gap-2 text-xs font-mono text-zinc-300 cursor-pointer pt-2">
+                      <input 
+                        type="checkbox"
+                        checked={siteForm.showCountdownTimer ?? true}
+                        onChange={(e) => setSiteForm({ ...siteForm, showCountdownTimer: e.target.checked })}
+                        className="w-4 h-4 rounded text-gold-500 bg-black border-zinc-700 focus:ring-0 cursor-pointer"
+                      />
+                      <span>Show Live Countdown to Start Date</span>
+                    </label>
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Presents an interactive days/hours ticker on homepage.
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col justify-center">
+                    <label className="flex items-center gap-2 text-xs font-mono text-zinc-300 cursor-pointer pt-2">
+                      <input 
+                        type="checkbox"
+                        checked={siteForm.cohortPrepPhaseEnabled ?? true}
+                        onChange={(e) => setSiteForm({ ...siteForm, cohortPrepPhaseEnabled: e.target.checked })}
+                        className="w-4 h-4 rounded text-gold-500 bg-black border-zinc-700 focus:ring-0 cursor-pointer"
+                      />
+                      <span>Instant Sandbox & Prep Phase Access</span>
+                    </label>
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Grants enrolled students zero-day compiler and prep access.
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">
+                    Cohort Announcement Banner Text
+                  </label>
+                  <input 
+                    type="text"
+                    value={siteForm.cohortAnnouncementBanner || ''}
+                    onChange={(e) => setSiteForm({ ...siteForm, cohortAnnouncementBanner: e.target.value })}
+                    placeholder="Cohort admissions open for September 24, 2026. Interactive lab sandboxes activate upon enrollment."
+                    className="w-full p-2.5 bg-gray-950 border border-gray-800 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
+                  />
+                  <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                    Announcement ticker displayed across student and public headers.
+                  </span>
                 </div>
               </div>
 

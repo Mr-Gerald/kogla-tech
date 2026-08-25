@@ -36,11 +36,12 @@ import {
   Check
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { UserProfile, ReviewRecord } from '../types';
-import { getUserReferralCode } from '../lib/affiliates';
+import { UserProfile, ReviewRecord, AffiliatePartner } from '../types';
+import { getUserReferralCode, saveAffiliatePartner } from '../lib/affiliates';
 import { subscribeToReviews, deleteReview } from '../lib/reviews';
 import { makeSignatureTransparent } from '../lib/signatureProcessor';
 import { supabase } from '../lib/supabase';
+import { FileText, X, ShieldAlert } from 'lucide-react';
 
 type TabType = 'personal' | 'referrals' | 'security' | 'display' | 'notifications' | 'academy' | 'reviews' | 'bookmarks' | 'connected';
 
@@ -216,6 +217,52 @@ export default function Profile() {
   const [sendingVerification, setSendingVerification] = useState(false);
   const [verificationSentSuccess, setVerificationSentSuccess] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
+
+  // Referral Copy State
+  const [copiedCodeSuccess, setCopiedCodeSuccess] = useState(false);
+  const [copiedLinkSuccess, setCopiedLinkSuccess] = useState(false);
+  const [showAgreementModal, setShowAgreementModal] = useState(false);
+  const [activatingAmbassador, setActivatingAmbassador] = useState(false);
+  const [partnerSocialHandle, setPartnerSocialHandle] = useState('');
+  const [agreeTermsCheckbox, setAgreeTermsCheckbox] = useState(false);
+
+  const handleActivateAmbassador = async () => {
+    if (!user || !agreeTermsCheckbox) return;
+    setActivatingAmbassador(true);
+    try {
+      const code = getUserReferralCode(profile, user.uid);
+      const partnerData: AffiliatePartner = {
+        id: user.uid,
+        code: code,
+        name: profile?.name || user.email?.split('@')[0] || 'Ambassador Partner',
+        email: user.email || '',
+        instagramHandle: partnerSocialHandle.trim() || undefined,
+        tier: 1,
+        baseRate: 6,
+        boostedRate: 10,
+        discountOffered: 5,
+        totalReferrals: 0,
+        confirmedCount: 0,
+        totalEarned: 0,
+        totalPaidOut: 0,
+        pendingPayout: 0,
+        contractSigned: true,
+        contractSignedDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      await saveAffiliatePartner(partnerData);
+      await updateProfileData({
+        isAmbassador: true,
+        affiliateCode: code
+      });
+      setShowAgreementModal(false);
+    } catch (err) {
+      console.error('Failed to activate ambassador status:', err);
+    } finally {
+      setActivatingAmbassador(false);
+    }
+  };
 
   const handleSendVerificationEmail = async () => {
     const targetEmail = profile?.email || user?.email;
@@ -806,104 +853,160 @@ export default function Profile() {
                   <Tag size={18} className="text-gold-500" /> Ambassador & Referral Engine
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Generate your unique promo code, invite students to earn 6% &rarr; 10% lifetime commissions, and grant them a 5% discount.
+                  Generate your unique promo code, invite students to earn 6% &rarr; 10% cohort commissions, and grant them a 5% direct discount.
                 </p>
               </div>
 
-              {/* ACTIVE CODE & SHAREABLE LINK */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-4">
-                <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-bold block">
-                  YOUR PERSONAL ATTRIBUTION ASSETS
-                </span>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
-                      Your Unique Promo Code
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={getUserReferralCode(profile, user?.uid)}
-                        className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono font-bold uppercase select-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const code = getUserReferralCode(profile, user?.uid);
-                          navigator.clipboard.writeText(code);
-                          alert(`Promo code ${code} copied to clipboard!`);
-                        }}
-                        className="px-3 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded flex items-center gap-1 font-mono transition-all cursor-pointer shrink-0"
-                      >
-                        <Copy size={12} /> Copy
-                      </button>
+              {/* IF USER IS NOT YET AN AMBASSADOR, SHOW GATED ACTIVATION */}
+              {!profile?.isAmbassador && profile?.role !== 'affiliate' && profile?.role !== 'admin' ? (
+                <div className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 border border-gold-500/40 rounded-lg p-6 space-y-5 shadow-xl">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-bold px-2 py-0.5 bg-gold-500/10 border border-gold-500/30 rounded inline-block mb-2">
+                        Creator & Ambassador Pathway
+                      </span>
+                      <h4 className="text-base sm:text-lg font-display font-bold text-white uppercase">
+                        Become a Verified Kogla Tech Brand Ambassador
+                      </h4>
+                      <p className="text-xs text-zinc-300 font-sans mt-1 max-w-xl leading-relaxed">
+                        Read the legal partnership agreement to unlock your unique 5% student discount code, 6% baseline commissions, and 10% elevated cohort performance accelerators.
+                      </p>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
-                      Shareable 1-Click Referral Link
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={`${window.location.origin}/?ref=${getUserReferralCode(profile, user?.uid)}`}
-                        className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono select-all truncate"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const code = getUserReferralCode(profile, user?.uid);
-                          const url = `${window.location.origin}/?ref=${code}`;
-                          navigator.clipboard.writeText(url);
-                          alert(`Referral link copied to clipboard: ${url}`);
-                        }}
-                        className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded flex items-center gap-1 font-mono transition-all cursor-pointer shrink-0"
-                      >
-                        <Copy size={12} /> Link
-                      </button>
+                  {/* KEY PERKS */}
+                  <div className="grid sm:grid-cols-3 gap-3 font-mono">
+                    <div className="p-3 bg-zinc-950 border border-zinc-800 rounded">
+                      <span className="text-[10px] text-zinc-500 uppercase block">Student Discount</span>
+                      <div className="text-base font-bold text-emerald-400">5% OFF Tuition</div>
+                    </div>
+                    <div className="p-3 bg-zinc-950 border border-zinc-800 rounded">
+                      <span className="text-[10px] text-zinc-500 uppercase block">Cohort Base</span>
+                      <div className="text-base font-bold text-gold-400">6% Rate</div>
+                    </div>
+                    <div className="p-3 bg-zinc-950 border border-zinc-800 rounded">
+                      <span className="text-[10px] text-zinc-500 uppercase block">Cohort Accelerator</span>
+                      <div className="text-base font-bold text-gold-300">10% from 4th student</div>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* COMMISSION TIERS BREAKDOWN */}
-              <div className="grid sm:grid-cols-3 gap-4">
-                <div className="p-4 bg-zinc-900/70 border border-zinc-800 rounded space-y-1 font-mono">
-                  <span className="text-[10px] text-zinc-500 uppercase block">Student Incentive</span>
-                  <div className="text-xl font-bold text-emerald-400">5% OFF</div>
-                  <p className="text-[10px] text-zinc-400 font-sans">Direct tuition discount across all 11 academy tracks.</p>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAgreementModal(true)}
+                      className="px-6 py-3 bg-gold-500 hover:bg-gold-600 text-black font-display font-bold text-xs uppercase tracking-wider rounded flex items-center gap-2 shadow-lg shadow-gold-500/10 transition-all cursor-pointer"
+                    >
+                      <FileText size={14} /> Review Agreement & Activate Creator Code
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  {/* ACTIVE CODE & SHAREABLE LINK */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-bold block">
+                        YOUR PERSONAL ATTRIBUTION ASSETS
+                      </span>
+                      <span className="px-2 py-0.5 bg-emerald-950 border border-emerald-800 text-emerald-400 text-[10px] font-mono rounded uppercase font-bold flex items-center gap-1">
+                        <Check size={11} /> Agreement Active
+                      </span>
+                    </div>
 
-                <div className="p-4 bg-zinc-900/70 border border-zinc-800 rounded space-y-1 font-mono">
-                  <span className="text-[10px] text-zinc-500 uppercase block">Tier 1 Commission</span>
-                  <div className="text-xl font-bold text-gold-400">6% Rate</div>
-                  <p className="text-[10px] text-zinc-400 font-sans">Earned on first 3 verified student enrollments.</p>
-                </div>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                          Your Unique Promo Code
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={getUserReferralCode(profile, user?.uid)}
+                            className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono font-bold uppercase select-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const code = getUserReferralCode(profile, user?.uid);
+                              navigator.clipboard.writeText(code);
+                              setCopiedCodeSuccess(true);
+                              setTimeout(() => setCopiedCodeSuccess(false), 2500);
+                            }}
+                            className="px-3 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded flex items-center gap-1 font-mono transition-all cursor-pointer shrink-0"
+                          >
+                            {copiedCodeSuccess ? <Check size={12} /> : <Copy size={12} />}
+                            {copiedCodeSuccess ? 'Copied' : 'Copy'}
+                          </button>
+                        </div>
+                      </div>
 
-                <div className="p-4 bg-zinc-900/70 border border-zinc-800 rounded space-y-1 font-mono">
-                  <span className="text-[10px] text-zinc-500 uppercase block">Tier 2 Lifetime</span>
-                  <div className="text-xl font-bold text-gold-300">10% Boost</div>
-                  <p className="text-[10px] text-zinc-400 font-sans">Elevates permanently from the 4th student onward.</p>
-                </div>
-              </div>
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                          Shareable 1-Click Referral Link
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={`${window.location.origin}/?ref=${getUserReferralCode(profile, user?.uid)}`}
+                            className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono select-all truncate"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const code = getUserReferralCode(profile, user?.uid);
+                              const url = `${window.location.origin}/?ref=${code}`;
+                              navigator.clipboard.writeText(url);
+                              setCopiedLinkSuccess(true);
+                              setTimeout(() => setCopiedLinkSuccess(false), 2500);
+                            }}
+                            className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider rounded flex items-center gap-1 font-mono transition-all cursor-pointer shrink-0"
+                          >
+                            {copiedLinkSuccess ? <Check size={12} className="text-gold-400" /> : <Copy size={12} />}
+                            {copiedLinkSuccess ? 'Copied' : 'Link'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* QUICK LINK TO FULL PARTNER DASHBOARD */}
-              <div className="p-4 bg-black/60 border border-gold-500/30 rounded flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-white uppercase font-display">Deep Analytics & Payouts</h4>
-                  <p className="text-[11px] text-zinc-400">View real-time attribution logs and save your Nigerian bank account.</p>
-                </div>
-                <Link
-                  to="/affiliate-portal"
-                  className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded font-display flex items-center gap-1.5 transition-all shadow"
-                >
-                  Open Dashboard &rarr;
-                </Link>
-              </div>
+                  {/* COMMISSION TIERS BREAKDOWN */}
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <div className="p-4 bg-zinc-900/70 border border-zinc-800 rounded space-y-1 font-mono">
+                      <span className="text-[10px] text-zinc-500 uppercase block">Student Incentive</span>
+                      <div className="text-xl font-bold text-emerald-400">5% OFF</div>
+                      <p className="text-[10px] text-zinc-400 font-sans">Direct tuition discount across all 11 academy tracks.</p>
+                    </div>
+
+                    <div className="p-4 bg-zinc-900/70 border border-zinc-800 rounded space-y-1 font-mono">
+                      <span className="text-[10px] text-zinc-500 uppercase block">Cohort Base Rate</span>
+                      <div className="text-xl font-bold text-gold-400">6% Rate</div>
+                      <p className="text-[10px] text-zinc-400 font-sans">Earned on first 3 verified student enrollments in each cohort.</p>
+                    </div>
+
+                    <div className="p-4 bg-zinc-900/70 border border-zinc-800 rounded space-y-1 font-mono">
+                      <span className="text-[10px] text-zinc-500 uppercase block">Cohort Accelerator</span>
+                      <div className="text-xl font-bold text-gold-300">10% Rate</div>
+                      <p className="text-[10px] text-zinc-400 font-sans">Elevates from 4th student onward for that active cohort intake.</p>
+                    </div>
+                  </div>
+
+                  {/* QUICK LINK TO FULL PARTNER DASHBOARD */}
+                  <div className="p-4 bg-black/60 border border-gold-500/30 rounded flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-white uppercase font-display">Deep Analytics & Payouts</h4>
+                      <p className="text-[11px] text-zinc-400">View real-time attribution logs and save your Nigerian bank account.</p>
+                    </div>
+                    <Link
+                      to="/affiliate-portal"
+                      className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded font-display flex items-center gap-1.5 transition-all shadow"
+                    >
+                      Open Dashboard &rarr;
+                    </Link>
+                  </div>
+                </>
+              )}
             </motion.div>
           )}
 
@@ -1277,6 +1380,114 @@ export default function Profile() {
 
         </div>
       </div>
+
+      {/* AMBASSADOR CONTRACT & CODE ACTIVATION MODAL */}
+      <AnimatePresence>
+        {showAgreementModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-950 border border-gold-500/40 rounded-lg max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl"
+            >
+              <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText size={16} className="text-gold-400" />
+                  <h3 className="text-sm font-display font-bold uppercase text-white tracking-wider">
+                    Kogla Tech Creator & Ambassador Independent Contractor Agreement
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setShowAgreementModal(false)}
+                  className="text-zinc-400 hover:text-white p-1 rounded transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto space-y-4 text-xs text-zinc-300 leading-relaxed font-sans">
+                <div className="p-3 bg-gold-500/10 border border-gold-500/30 rounded text-gold-300 font-mono text-[11px]">
+                  <b>PARTNER AGREEMENT:</b> By accepting this agreement, you will be provisioned an official ambassador promo code granting 5% discount to students and earning you 6% base commissions with 10% cohort accelerators.
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-mono mb-1">
+                    Primary Social Handle / Channel (Optional)
+                  </label>
+                  <input 
+                    type="text" 
+                    value={partnerSocialHandle}
+                    onChange={(e) => setPartnerSocialHandle(e.target.value)}
+                    placeholder="@yourhandle or youtube.com/@channel" 
+                    className="w-full p-2.5 bg-black border border-zinc-800 focus:border-gold-500 focus:outline-none text-xs text-gold-300 rounded font-mono" 
+                  />
+                </div>
+
+                <div className="space-y-1.5 pt-2 border-t border-zinc-850">
+                  <h4 className="text-xs font-display font-bold text-gold-400 uppercase">
+                    1. Independent Contractor Status
+                  </h4>
+                  <p>
+                    The Ambassador acts solely as an independent contractor and not an employee, agent, or partner of Kogla Tech. The Ambassador has no power to bind Kogla Tech to legal commitments.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-display font-bold text-gold-400 uppercase">
+                    2. Commission Schedule & Cohort Optimization
+                  </h4>
+                  <p>
+                    Commissions are calculated as 6% of verified net tuition for the first 3 students per cohort, elevating to 10% from the 4th student onward during each cohort admissions window. Payouts are remitted to the Nigerian bank account configured in your portal.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-display font-bold text-gold-400 uppercase">
+                    3. Anti-Spam & Ethical Promotion
+                  </h4>
+                  <p>
+                    Ambassadors agree not to send unsolicited commercial emails (spam), misrepresent course credentials, or promise unauthorized employment guarantees.
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-zinc-850">
+                  <label className="flex items-start gap-2.5 cursor-pointer p-3 bg-black border border-zinc-800 rounded">
+                    <input 
+                      type="checkbox" 
+                      checked={agreeTermsCheckbox}
+                      onChange={(e) => setAgreeTermsCheckbox(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded text-gold-500 bg-zinc-900 border-zinc-700 focus:ring-0 cursor-pointer shrink-0"
+                    />
+                    <span className="text-[11px] text-zinc-300 leading-snug">
+                      I have read, understood, and agree to the Kogla Tech Independent Contractor Ambassador Agreement, Anti-Spam Code of Conduct, and Compensation Rules.
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-zinc-800 flex items-center justify-between bg-black/40">
+                <span className="text-[10px] font-mono text-zinc-500">
+                  Support: solutions@koglatech.com
+                </span>
+                <button
+                  type="button"
+                  disabled={!agreeTermsCheckbox || activatingAmbassador}
+                  onClick={handleActivateAmbassador}
+                  className={`px-4 py-2 font-display font-bold text-xs uppercase rounded transition-all flex items-center gap-1.5 ${
+                    agreeTermsCheckbox && !activatingAmbassador
+                      ? 'bg-gold-500 hover:bg-gold-600 text-black shadow-md cursor-pointer'
+                      : 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  {activatingAmbassador ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                  {activatingAmbassador ? 'Activating Code...' : 'Accept & Activate Code'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
