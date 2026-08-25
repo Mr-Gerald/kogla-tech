@@ -55,35 +55,83 @@ export default function Login() {
     setSuccessMsg('');
     setLoadingState(true);
 
-    if (!email || !password) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
       setErrorMsg('Please enter both email and password.');
       setLoadingState(false);
       return;
     }
 
+    const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
+    const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(trimmedEmail.toLowerCase());
+    const defaultRole = isSystemAdmin ? 'admin' : 'user';
+
     try {
-      // 1. Authenticate with Supabase Auth
+      // 1. Primary: Attempt sign in with Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: trimmedEmail,
         password: password
       });
 
-      if (error) throw error;
-      const user = data.user;
-      if (!user) throw new Error('Authentication session could not be established.');
+      let activeUser = data?.user;
 
-      const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
-      const isSystemAdmin = bootstrappedEmails.map(e => e.toLowerCase()).includes(email.trim().toLowerCase());
-      const role = isSystemAdmin ? 'admin' : 'user';
+      // 2. If login failed because account was not yet registered in Supabase Auth, attempt seamless signup
+      if (error) {
+        const errorMsgLower = (error.message || '').toLowerCase();
+        
+        if (
+          errorMsgLower.includes('invalid login credentials') ||
+          errorMsgLower.includes('invalid grant') ||
+          errorMsgLower.includes('user not found')
+        ) {
+          // Attempt seamless initialization on Supabase
+          const signUpRes = await supabase.auth.signUp({
+            email: trimmedEmail,
+            password: password,
+            options: {
+              data: {
+                name: isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0],
+                role: defaultRole
+              }
+            }
+          });
 
-      // 2. Ensure profile exists and is updated in Supabase profile store
-      let profile = getSupabaseUserProfile(user.id);
+          if (signUpRes.data?.user) {
+            activeUser = signUpRes.data.user;
+            if (signUpRes.data.session) {
+              await supabase.auth.setSession(signUpRes.data.session);
+            }
+          } else if (signUpRes.error) {
+            const signUpMsg = (signUpRes.error.message || '').toLowerCase();
+            if (signUpMsg.includes('already registered')) {
+              throw new Error('Incorrect password for this account. Please verify your password or use "Forgot password?" to reset it.');
+            } else {
+              throw signUpRes.error;
+            }
+          }
+        } else if (errorMsgLower.includes('email not confirmed')) {
+          throw new Error('Please check your email inbox to confirm your account, or check your spam folder.');
+        } else {
+          throw error;
+        }
+      }
+
+      if (!activeUser) {
+        throw new Error('Authentication session could not be established.');
+      }
+
+      // 3. Ensure master Supabase profile registry has this user
+      let profile = getSupabaseUserProfile(activeUser.id);
+      if (!profile) {
+        profile = getSupabaseUserProfile(trimmedEmail);
+      }
+
       if (!profile) {
         profile = {
-          uid: user.id,
-          name: user.user_metadata?.name || email.split('@')[0] || 'User',
-          email: email.trim(),
-          role: role,
+          uid: activeUser.id,
+          name: activeUser.user_metadata?.name || (isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0]),
+          email: trimmedEmail,
+          role: defaultRole,
           xp: 0,
           completedRooms: [],
           createdAt: new Date().toISOString(),
@@ -109,7 +157,7 @@ export default function Login() {
             navigate('/academy');
           }
         }
-      }, 1000);
+      }, 900);
 
     } catch (err: any) {
       console.error(err);

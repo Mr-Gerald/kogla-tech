@@ -40,8 +40,7 @@ import { UserProfile, ReviewRecord } from '../types';
 import { getUserReferralCode } from '../lib/affiliates';
 import { subscribeToReviews, deleteReview } from '../lib/reviews';
 import { makeSignatureTransparent } from '../lib/signatureProcessor';
-import { sendEmailVerification } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 type TabType = 'personal' | 'referrals' | 'security' | 'display' | 'notifications' | 'academy' | 'reviews' | 'bookmarks' | 'connected';
 
@@ -219,18 +218,23 @@ export default function Profile() {
   const [verificationError, setVerificationError] = useState<string | null>(null);
 
   const handleSendVerificationEmail = async () => {
-    if (!auth.currentUser) return;
+    const targetEmail = profile?.email || user?.email;
+    if (!targetEmail) return;
     setSendingVerification(true);
     setVerificationError(null);
     setVerificationSentSuccess(false);
     try {
-      await sendEmailVerification(auth.currentUser);
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: targetEmail
+      });
+      if (error) throw error;
       setVerificationSentSuccess(true);
       setTimeout(() => setVerificationSentSuccess(false), 8000);
     } catch (err: any) {
       console.error('Failed to send verification email:', err);
       if (err?.code === 'auth/too-many-requests' || err?.message?.includes('TOO_MANY_ATTEMPTS')) {
-        setVerificationError('Email dispatch rate limit reached for this project. Please wait a while before requesting again.');
+        setVerificationError('Email dispatch rate limit reached. Please wait a while before requesting again.');
       } else {
         setVerificationError(err?.message || 'Could not send verification email. Please try again later.');
       }

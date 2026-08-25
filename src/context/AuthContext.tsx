@@ -6,12 +6,14 @@ import { UserProfile, NotificationRecord } from '../types';
 
 interface SupabaseUser {
   id: string;
+  uid: string;
   email?: string;
   user_metadata?: {
     name?: string;
     avatar_url?: string;
   };
   email_confirmed_at?: string;
+  photoURL?: string;
 }
 
 interface AuthContextType {
@@ -55,8 +57,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleUserSession = async (currentUser: any) => {
-    setUser(currentUser);
     if (currentUser) {
+      const normalizedUser: SupabaseUser = {
+        ...currentUser,
+        id: currentUser.id,
+        uid: currentUser.id,
+        photoURL: currentUser.user_metadata?.avatar_url || ''
+      };
+      setUser(normalizedUser);
+
       const bootstrappedEmails = ['emechebegerald@gmail.com', 'admin@kogla-tech.com', 'admin@koglatech.com', 'solutions@koglatech.com'];
       const isSystemAdmin = currentUser.email && bootstrappedEmails.map(e => e.toLowerCase()).includes(currentUser.email.toLowerCase());
       const role = isSystemAdmin ? 'admin' : 'user';
@@ -75,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         const newProfile: UserProfile = {
           uid: currentUser.id,
-          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Sovereign Developer',
+          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || (isSystemAdmin ? 'Gerald Emechebe' : 'Sovereign Developer'),
           email: currentUser.email || '',
           role: role,
           xp: 0,
@@ -100,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setLoading(false);
     } else {
+      setUser(null);
       setProfile(null);
       setNotifications([]);
       setLoading(false);

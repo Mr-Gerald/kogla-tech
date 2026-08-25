@@ -1,23 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig, SiteConfig } from '../context/SiteConfigContext';
-import { db, safeFirestoreWrite } from '../lib/firebase';
-import { getSupabaseUserProfiles } from '../lib/supabase';
+import { getSupabaseUserProfiles, saveSupabaseUserProfile } from '../lib/supabase';
 import { motion } from 'motion/react';
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  onSnapshot 
-} from 'firebase/firestore';
 import { 
   getImageConfig, 
   saveImageConfig, 
   Inquiry, 
   ImageConfig,
-  DEFAULT_IMAGES 
+  DEFAULT_IMAGES,
+  getInquiries,
+  deleteInquiry,
+  updateInquiryStatus
 } from '../utils/storage';
 import { UserProfile, AffiliatePartner, ReferralLead, CertificateRecord } from '../types';
 import { Link } from 'react-router-dom';
@@ -136,13 +130,6 @@ export default function AdminPortal() {
     setIsSavingPricing(true);
     try {
       saveCustomPricingMap(coursePrices);
-      // Also persist to Firestore config/courses_pricing if available
-      try {
-        const pricingRef = doc(db, 'config', 'courses_pricing');
-        await setDoc(pricingRef, { pricing: coursePrices, updatedAt: new Date().toISOString() });
-      } catch (cloudErr) {
-        console.warn('Firestore pricing sync note:', cloudErr);
-      }
       triggerSuccess('All 11 course track tuition prices updated and synced globally across the platform!');
     } catch (err: any) {
       console.error('Save pricing error:', err);
@@ -315,34 +302,18 @@ export default function AdminPortal() {
     }
   };
 
-  // Load local state & Firestore Listeners on Auth load
+  // Load local state & database data on Auth load
   useEffect(() => {
     if (profile?.role === 'admin') {
-      // 1. Listen to dynamic child inquiries from Firestore
-      const inquiriesRef = collection(db, 'inquiries');
-      const unsubInquiries = onSnapshot(inquiriesRef, (snapshot) => {
-        const loaded: Inquiry[] = [];
-        snapshot.forEach((snap) => {
-          loaded.push(snap.data() as Inquiry);
-        });
-        // Sort stably on client side descending by timestamp
-        loaded.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        setInquiries(loaded);
-      }, (err) => {
-        console.error('Firestore inquiries sync failed:', err);
-      });
+      // 1. Load dynamic student inquiries
+      const loadedInqs = getInquiries();
+      loadedInqs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setInquiries(loadedInqs);
 
       // 2. Load registered profiles from Supabase profile store
       const loadedSupabaseUsers = getSupabaseUserProfiles();
       loadedSupabaseUsers.sort((a, b) => (b.xp || 0) - (a.xp || 0));
       setUsers(loadedSupabaseUsers);
-
-      const unsubUsers = () => {};
-
-      return () => {
-        unsubInquiries();
-        unsubUsers();
-      };
     }
   }, [profile]);
 
@@ -719,8 +690,8 @@ Kogla Tech Global Admissions & Partnerships`;
   const handleStatusChange = async (id: string, newStatus: Inquiry['status']) => {
     setIsUpdatingStatus(true);
     try {
-      const docRef = doc(db, 'inquiries', id);
-      await updateDoc(docRef, { status: newStatus });
+      const updatedList = updateInquiryStatus(id, newStatus);
+      setInquiries(updatedList);
       
       // Update local state references instantly too
       if (selectedInquiry && selectedInquiry.id === id) {
@@ -731,18 +702,20 @@ Kogla Tech Global Admissions & Partnerships`;
       const targetInq = inquiries.find(i => i.id === id);
       if (targetInq && targetInq.userId) {
         const autoNotifId = `auto-inq-${Date.now()}`;
-        const notifRef = doc(db, 'notifications', autoNotifId);
-        await setDoc(notifRef, {
+        const notif = {
           id: autoNotifId,
           userId: targetInq.userId,
           title: `Project State: ${newStatus}`,
           body: `Director status updated: Your intake request regarding "${targetInq.title}" is now set to ${newStatus}. An executive engineer will trace contact.`,
           read: false,
           timestamp: new Date().toISOString()
-        });
+        };
+        const allNotifs = JSON.parse(localStorage.getItem('kogla_supabase_notifications') || '[]');
+        allNotifs.push(notif);
+        localStorage.setItem('kogla_supabase_notifications', JSON.stringify(allNotifs));
       }
 
-      triggerSuccess(`Intake status updated successfully, and automated notification dispatched!`);
+      triggerSuccess(`Intake status updated successfully!`);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(`Failed updating status: ${err.message}`);
@@ -754,8 +727,12 @@ Kogla Tech Global Admissions & Partnerships`;
 
   const handleTogglePaid = async (userId: string, currentPaidState?: boolean) => {
     try {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, { isPaid: !currentPaidState, updatedAt: new Date().toISOString() });
+      const userToUpdate = users.find(u => u.uid === userId);
+      if (userToUpdate) {
+        const updated = { ...userToUpdate, isPaid: !currentPaidState, updatedAt: new Date().toISOString() };
+        saveSupabaseUserProfile(updated);
+        setUsers(prev => prev.map(u => u.uid === userId ? updated : u));
+      }
       if (selectedUser && selectedUser.uid === userId) {
         setSelectedUser({ ...selectedUser, isPaid: !currentPaidState });
       }
@@ -769,8 +746,8 @@ Kogla Tech Global Admissions & Partnerships`;
   const handleDelete = async (id: string) => {
     if (confirm('Verify: Permanently purge this database inquiries file?')) {
       try {
-        const docRef = doc(db, 'inquiries', id);
-        await deleteDoc(docRef);
+        deleteInquiry(id);
+        setInquiries(prev => prev.filter(i => i.id !== id));
         setSelectedInquiry(null);
         triggerSuccess('Intake record purged securely.');
       } catch (err: any) {
@@ -801,13 +778,13 @@ Kogla Tech Global Admissions & Partnerships`;
           localStorage.setItem('kogla_deleted_emails', JSON.stringify(deletedEmails));
         }
 
-        // 2. Remove from localStorage cache as well
+        // 2. Remove from Supabase profile registry
         try {
-          const rawUsers = localStorage.getItem('kogla_users_cache');
-          if (rawUsers) {
-            const parsed = JSON.parse(rawUsers);
+          const rawSupabase = localStorage.getItem('kogla_supabase_users');
+          if (rawSupabase) {
+            const parsed = JSON.parse(rawSupabase);
             const filtered = parsed.filter((u: any) => u.uid !== targetUid && (u.email || '').toLowerCase() !== targetEmail);
-            localStorage.setItem('kogla_users_cache', JSON.stringify(filtered));
+            localStorage.setItem('kogla_supabase_users', JSON.stringify(filtered));
           }
         } catch (_) {}
 
@@ -816,12 +793,6 @@ Kogla Tech Global Admissions & Partnerships`;
         if (selectedUser?.uid === targetUid) {
           setSelectedUser(null);
         }
-
-        // 4. Safe delete from Firestore
-        await safeFirestoreWrite(async () => {
-          const userRef = doc(db, 'users', targetUid);
-          await deleteDoc(userRef);
-        }, 1500);
 
         triggerSuccess(`User account "${targetUser.email}" permanently purged successfully. The user can now recreate an account.`);
       } catch (err: any) {
@@ -843,29 +814,33 @@ Kogla Tech Global Admissions & Partnerships`;
     e.preventDefault();
     if (!selectedUser) return;
     if (!notifTitle.trim() || !notifBody.trim()) {
-      alert('Notification Title and Description are required parameters.');
+      setErrorMsg('Notification Title and Description are required parameters.');
+      setTimeout(() => setErrorMsg(''), 4000);
       return;
     }
 
     setIsSendingNotif(true);
     try {
       const notifId = `sys-notif-${Date.now()}`;
-      const docRef = doc(db, 'notifications', notifId);
-      await setDoc(docRef, {
+      const notif = {
         id: notifId,
         userId: selectedUser.uid,
         title: notifTitle.trim(),
         body: notifBody.trim(),
         read: false,
         timestamp: new Date().toISOString()
-      });
+      };
+      const allNotifs = JSON.parse(localStorage.getItem('kogla_supabase_notifications') || '[]');
+      allNotifs.push(notif);
+      localStorage.setItem('kogla_supabase_notifications', JSON.stringify(allNotifs));
 
       setNotifTitle('');
       setNotifBody('');
       triggerSuccess(`Sovereign alert payload dispatched directly into ${selectedUser.name}'s account inbox!`);
     } catch (err: any) {
       console.error(err);
-      alert(`Dispatch error: ${err.message}`);
+      setErrorMsg(`Dispatch error: ${err.message}`);
+      setTimeout(() => setErrorMsg(''), 5000);
     } finally {
       setIsSendingNotif(false);
     }

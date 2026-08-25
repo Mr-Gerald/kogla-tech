@@ -50,14 +50,11 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.warn('[Firestore Log]', JSON.stringify(errInfo));
   return errInfo;
 }
 
 /**
  * Resilient helper that executes a Firestore write operation with a strict timeout guard.
- * If Firestore is quota-limited (resource-exhausted) or offline with endless backoff retries,
- * this function times out gracefully so user signup/login/UI actions NEVER freeze.
  */
 export async function safeFirestoreWrite<T>(
   writeOperation: () => Promise<T>,
@@ -68,7 +65,6 @@ export async function safeFirestoreWrite<T>(
     const timer = setTimeout(() => {
       if (!completed) {
         completed = true;
-        console.warn('[Firestore] Write operation timed out (quota limit or backoff active). Continuing locally.');
         resolve(false);
       }
     }, timeoutMs);
@@ -85,7 +81,6 @@ export async function safeFirestoreWrite<T>(
         if (!completed) {
           completed = true;
           clearTimeout(timer);
-          console.warn('[Firestore] Write operation notice:', err?.message || err);
           resolve(false);
         }
       });
@@ -105,7 +100,6 @@ export async function safeFirestoreRead<T>(
     const timer = setTimeout(() => {
       if (!completed) {
         completed = true;
-        console.warn('[Firestore] Read operation timed out (quota limit or offline). Returning fallback.');
         resolve(fallbackValue);
       }
     }, timeoutMs);
@@ -122,7 +116,6 @@ export async function safeFirestoreRead<T>(
         if (!completed) {
           completed = true;
           clearTimeout(timer);
-          console.warn('[Firestore] Read operation notice:', err?.message || err);
           resolve(fallbackValue);
         }
       });

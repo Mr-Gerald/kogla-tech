@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { formatUserError } from '../../lib/errorUtils';
 import { KeyRound, Mail, Loader2, CheckCircle } from 'lucide-react';
 
@@ -18,14 +17,19 @@ export default function ForgotPassword() {
     setSuccess(false);
     setLoadingState(true);
 
-    if (!email) {
+    const trimmed = email.trim();
+    if (!trimmed) {
       setErrorMsg('Please enter your email address.');
       setLoadingState(false);
       return;
     }
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: `${window.location.origin}/auth/login`
+      });
+      if (error) throw error;
+
       setSuccess(true);
       setLoadingState(false);
     } catch (err: any) {

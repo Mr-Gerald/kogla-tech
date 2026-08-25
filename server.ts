@@ -95,8 +95,8 @@ app.post('/api/chat', async (req, res) => {
         const replyText = response.text || 'I am here to help with any questions about Kogla Tech! For detailed inquiries, feel free to chat with our admin on WhatsApp at https://wa.me/2349120713573.';
 
         return res.json({ reply: replyText });
-      } catch (geminiError) {
-        console.error('[Gemini API Error]', geminiError);
+      } catch (geminiError: any) {
+        // Silently handle Gemini quota/rate-limit errors and fall back to local assistant
       }
     }
 
