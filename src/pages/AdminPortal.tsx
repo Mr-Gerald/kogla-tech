@@ -3412,7 +3412,6 @@ Kogla Tech Global Admissions & Partnerships`;
                       type="text"
                       required
                       placeholder="+234 701 248 9041"
-                      value={siteForm.whatsappPhone || ''}
                       onChange={(e) => {
                         const newPhone = e.target.value;
                         const cleanDigits = newPhone.replace(/[^0-9]/g, '');
@@ -3438,7 +3437,6 @@ Kogla Tech Global Admissions & Partnerships`;
                       type="text"
                       required
                       placeholder="+234 701 248 9041"
-                      value={siteForm.contactPhone}
                       onChange={(e) => setSiteForm({ ...siteForm, contactPhone: e.target.value })}
                       className="w-full p-2.5 bg-gray-950 border border-gold-500/50 text-xs text-white rounded-sm focus:outline-none focus:border-gold-500 font-mono"
                     />

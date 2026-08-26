@@ -72,16 +72,10 @@ const SiteConfigContext = createContext<SiteConfigContextType | undefined>(undef
 export function sanitizeSiteConfig(raw?: Partial<SiteConfig> | null): SiteConfig {
   const merged: SiteConfig = { ...DEFAULT_SITE_CONFIG, ...(raw || {}) };
 
-  // Strict Phone & WhatsApp Enforcement
-  if (!merged.contactPhone || merged.contactPhone.includes('912') || merged.contactPhone.includes('071 3573')) {
-    merged.contactPhone = '+234 701 248 9041';
-  }
-  if (!merged.whatsappPhone || merged.whatsappPhone.includes('912') || merged.whatsappPhone.includes('071 3573')) {
-    merged.whatsappPhone = '+234 701 248 9041';
-  }
-  if (!merged.whatsappLink || merged.whatsappLink.includes('912') || merged.whatsappLink.includes('0713573')) {
-    merged.whatsappLink = 'https://wa.me/2347012489041';
-  }
+  // Strict Phone & WhatsApp Enforcement (Always set to official +234 701 248 9041)
+  merged.contactPhone = '+234 701 248 9041';
+  merged.whatsappPhone = '+234 701 248 9041';
+  merged.whatsappLink = 'https://wa.me/2347012489041';
 
   // Strict Email Enforcement
   if (merged.contactEmail === 'solutions@kogla-tech.com' || !merged.contactEmail) {

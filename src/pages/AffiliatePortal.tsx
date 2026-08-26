@@ -105,6 +105,10 @@ export default function AffiliatePortal() {
   const referralUrl = `${window.location.origin}/?ref=${partnerCode}`;
 
   const handleDownloadAgreement = async () => {
+    if (!user) {
+      alert('Authentication Required: You must be signed in to your account to generate or download the official ambassador agreement contract.');
+      return;
+    }
     try {
       await generateAmbassadorAgreementPdf({
         ambassadorName: partner?.name || activateName || 'Creator Partner',
@@ -140,6 +144,10 @@ export default function AffiliatePortal() {
 
   const handleActivateCreatorProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      alert('Authentication Required: You must be signed in to your account to activate your creator partner profile.');
+      return;
+    }
     if (!activateTermsAgreed) return;
     setIsActivating(true);
 
@@ -259,6 +267,23 @@ export default function AffiliatePortal() {
   return (
     <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 max-w-7xl mx-auto text-gray-100 font-sans">
       
+      {/* MARQUEE BANNER FOR KOGLA REFERRALS (FASTEST) GLOBAL */}
+      <div className="mb-8 bg-gold-500 text-black overflow-hidden py-2 font-mono text-xs font-bold uppercase tracking-widest rounded shadow-md">
+        <div className="animate-marquee flex items-center gap-8">
+          <span>🚀 KOGLA REFERRALS (FASTEST) GLOBAL</span>
+          <span>•</span>
+          <span>EARN 6% TO 10% COMMISSIONS ON EVERY VERIFIED ENROLLMENT</span>
+          <span>•</span>
+          <span>OFFICIAL HOTLINE: +234 701 248 9041</span>
+          <span>•</span>
+          <span>STRICT ANTI-FRAUD & COMPLIANCE ENFORCED</span>
+          <span>•</span>
+          <span>🚀 KOGLA REFERRALS (FASTEST) GLOBAL</span>
+          <span>•</span>
+          <span>EARN 6% TO 10% COMMISSIONS ON EVERY VERIFIED ENROLLMENT</span>
+        </div>
+      </div>
+
       {!user && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -852,6 +877,65 @@ export default function AffiliatePortal() {
             {isSavingBank ? 'Saving...' : 'Save Bank Details'}
           </button>
         </form>
+      </div>
+
+      {/* OFFICIAL TERMS & CONDITIONS & FCCPC COMPLIANCE POLICY */}
+      <div className="mt-12 bg-zinc-950 border border-zinc-850 rounded-lg p-6 sm:p-8 space-y-6">
+        <div className="border-b border-zinc-850 pb-4">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-400 text-[10px] rounded-full uppercase tracking-widest font-mono mb-2">
+            <ShieldCheck size={12} /> Legal Compliance & Governance
+          </div>
+          <h3 className="text-xl font-display font-black uppercase text-white tracking-wide">
+            Referral Programme Terms, Conditions & FCCPC Compliance
+          </h3>
+          <p className="text-xs text-zinc-400 mt-1">
+            In accordance with Federal Competition and Consumer Protection Commission (FCCPC) guidelines, Kogla Tech Global enforces strict transparency, full price disclosure, and factually accurate marketing across all brand ambassador partnerships.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-xs text-zinc-300">
+          <div className="p-4 bg-black border border-zinc-900 rounded space-y-2">
+            <h4 className="font-display font-bold uppercase text-gold-400">1. Refunds & Chargebacks</h4>
+            <p className="text-zinc-400">
+              Commissions are accrued only on completed, verified student enrollments. If a referred student requests a refund or initiates a bank chargeback during or after the cohort window, the associated commission will be automatically deducted from pending payouts or future disbursements.
+            </p>
+          </div>
+
+          <div className="p-4 bg-black border border-zinc-900 rounded space-y-2">
+            <h4 className="font-display font-bold uppercase text-gold-400">2. Self-Referrals Prohibited</h4>
+            <p className="text-zinc-400">
+              Ambassadors are strictly prohibited from using their own referral promo links or codes to enroll themselves or dummy accounts. Self-referrals result in instant disqualification, forfeiture of all pending commissions, and permanent account termination.
+            </p>
+          </div>
+
+          <div className="p-4 bg-black border border-zinc-900 rounded space-y-2">
+            <h4 className="font-display font-bold uppercase text-gold-400">3. Anti-Fraud & Fake Signups</h4>
+            <p className="text-zinc-400">
+              Our automated anti-fraud engine actively checks IP addresses, device signatures, and email records. Fake registrations, automated click farms, or duplicate submissions will be flagged and permanently blocked without notice.
+            </p>
+          </div>
+
+          <div className="p-4 bg-black border border-zinc-900 rounded space-y-2">
+            <h4 className="font-display font-bold uppercase text-gold-400">4. Commission Timing & Payouts</h4>
+            <p className="text-zinc-400">
+              Approved commissions are processed bi-weekly (every 14 days) directly to the ambassador's verified Nigerian bank account (Opay / Commercial Banks) once payment verification is completed by finance administration. Minimum payout threshold is ₦10,000.
+            </p>
+          </div>
+
+          <div className="p-4 bg-black border border-zinc-900 rounded space-y-2">
+            <h4 className="font-display font-bold uppercase text-gold-400">5. Prohibited Advertising Claims</h4>
+            <p className="text-zinc-400">
+              Ambassadors must not make misleading earnings guarantees, false job placement promises, or deceptive claims regarding Kogla Tech courses. All promotions must accurately reflect standard tuition pricing and verifiable curriculum outcomes.
+            </p>
+          </div>
+
+          <div className="p-4 bg-black border border-zinc-900 rounded space-y-2">
+            <h4 className="font-display font-bold uppercase text-gold-400">6. Official Contact & Support</h4>
+            <p className="text-zinc-400">
+              For any partnership inquiries or compliance clarifications, reach out directly through official Academy channels: <span className="text-gold-400 font-mono">solutions@koglatech.com</span> or phone hotline <span className="text-gold-400 font-mono">+234 701 248 9041</span>.
+            </p>
+          </div>
+        </div>
       </div>
 
     </div>

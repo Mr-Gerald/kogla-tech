@@ -202,7 +202,11 @@ export async function createReferralLead(params: {
   tuitionAmount: number;
 }): Promise<ReferralLead> {
   const normCode = params.affiliateCode.trim().toUpperCase();
-  const partner = (await getAffiliateByCode(normCode)) || DEFAULT_AFFILIATES[0];
+  const partner = await getAffiliateByCode(normCode);
+
+  if (partner && partner.email && params.studentEmail.toLowerCase().trim() === partner.email.toLowerCase().trim()) {
+    throw new Error('Self-referrals are strictly prohibited under the Kogla Ambassador Terms & Conditions. You cannot refer yourself.');
+  }
 
   const discountPercent = partner?.discountOffered || 5;
   const discountApplied = Math.round((params.tuitionAmount * discountPercent) / 100);
