@@ -29,6 +29,7 @@ export default function Navbar() {
   const navItems = [
     { name: 'Home', path: '/' },
     { name: 'Academy', path: '/academy' },
+    { name: 'Monetize', path: '/monetize' },
     { name: 'About', path: '/about' },
     { name: 'Services', path: '/services' },
     { name: 'Projects', path: '/projects' },

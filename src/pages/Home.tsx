@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ArrowRight, Cpu, Shield, Zap, BookOpen, BarChart3, Globe, ChevronRight, Mail, Users, Building, Code, Smartphone, Layers, Cloud, Briefcase, Award, MessageSquare, Terminal, Eye, Star, MessageCircle, Send, Calendar, Clock, Sparkles } from 'lucide-react';
+import { ArrowRight, Cpu, Shield, Zap, BookOpen, BarChart3, Globe, ChevronRight, Mail, Users, Building, Code, Smartphone, Layers, Cloud, Briefcase, Award, MessageSquare, Terminal, Eye, Star, MessageCircle, Send, Calendar, Clock, Sparkles, DollarSign, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { getImageConfig, ImageConfig, addInquiry, DEFAULT_IMAGES } from '../utils/storage';
@@ -643,6 +643,125 @@ export default function Home() {
             </a>
           </div>
 
+        </div>
+      </motion.section>
+
+      {/* TECH MONETIZATION & REFERRAL WEALTH ENGINE SECTION */}
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.8 }}
+        id="monetization" 
+        className="py-24 px-6 bg-black border-t border-zinc-900 relative overflow-hidden"
+      >
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto space-y-12 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-850 pb-6">
+            <div className="space-y-2">
+              <span className="text-[10px] text-gold-500 font-mono font-bold tracking-widest uppercase block bg-gold-500/10 border border-gold-500/20 px-3 py-1 rounded-full w-fit">
+                Financial Sovereignty & High-Income Streams
+              </span>
+              <h2 className="text-2xl md:text-4xl font-display font-black text-white uppercase tracking-wider">
+                How to Make Money <span className="text-gold-500">From Tech</span>
+              </h2>
+              <p className="text-xs md:text-sm text-zinc-400 max-w-2xl font-sans">
+                Master high-ticket global freelancing, bug bounties, AI automation retainers, remote international jobs, and direct cash payouts via the Kogla Ambassador Referral System.
+              </p>
+            </div>
+
+            <div className="flex gap-3 shrink-0">
+              <Link
+                to="/monetize"
+                className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-mono text-xs uppercase tracking-wider rounded-sm flex items-center gap-1.5 transition-all"
+              >
+                Explore Full Guide <ArrowRight size={13} />
+              </Link>
+              <Link
+                to="/affiliate-portal"
+                className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-black font-display font-bold text-xs uppercase tracking-wider rounded-sm flex items-center gap-1.5 transition-all shadow-md shadow-gold-500/10"
+              >
+                <Zap size={13} className="fill-current" /> Referral Engine
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            {/* Card 1: Kogla Referral Partner */}
+            <div className="p-6 bg-zinc-950 border border-gold-500/30 hover:border-gold-500 rounded-lg space-y-4 transition-all group flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-mono px-2 py-0.5 bg-gold-500/20 text-gold-400 border border-gold-500/30 rounded uppercase font-bold">Fastest Cashflow</span>
+                  <span className="text-xs font-mono text-emerald-400 font-bold">6% – 10% / Sale</span>
+                </div>
+                <h3 className="text-base font-display font-bold text-white uppercase">Kogla Tech Referrals</h3>
+                <p className="text-xs text-zinc-400 font-sans leading-relaxed">
+                  Earn instant commissions whenever a student enrolls in a cohort using your custom promo code or affiliate link.
+                </p>
+              </div>
+              <Link to="/affiliate-portal" className="pt-4 border-t border-zinc-850 text-xs font-mono text-gold-400 font-bold uppercase flex items-center justify-between group-hover:text-gold-300">
+                <span>Join Ambassador Program</span>
+                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            {/* Card 2: International Freelancing */}
+            <div className="p-6 bg-zinc-950 border border-zinc-850 hover:border-zinc-700 rounded-lg space-y-4 transition-all group flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-mono px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded uppercase font-bold">USD Contracts</span>
+                  <span className="text-xs font-mono text-emerald-400 font-bold">$1,500 – $8,000</span>
+                </div>
+                <h3 className="text-base font-display font-bold text-white uppercase">Global Web & App Dev</h3>
+                <p className="text-xs text-zinc-400 font-sans leading-relaxed">
+                  Build custom React, Node.js, and cloud systems for businesses across the US, UK, and Europe via Upwork and direct outreach.
+                </p>
+              </div>
+              <Link to="/monetize" className="pt-4 border-t border-zinc-850 text-xs font-mono text-zinc-300 font-bold uppercase flex items-center justify-between group-hover:text-gold-400">
+                <span>View Freelance Blueprint</span>
+                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            {/* Card 3: Bug Bounty Hunting */}
+            <div className="p-6 bg-zinc-950 border border-zinc-850 hover:border-zinc-700 rounded-lg space-y-4 transition-all group flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-mono px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded uppercase font-bold">Cyber Defense</span>
+                  <span className="text-xs font-mono text-emerald-400 font-bold">$500 – $25,000+</span>
+                </div>
+                <h3 className="text-base font-display font-bold text-white uppercase">Ethical Bug Bounties</h3>
+                <p className="text-xs text-zinc-400 font-sans leading-relaxed">
+                  Hunt real-world vulnerabilities on HackerOne and Bugcrowd, legally reporting bugs to protect enterprise networks.
+                </p>
+              </div>
+              <Link to="/monetize" className="pt-4 border-t border-zinc-850 text-xs font-mono text-zinc-300 font-bold uppercase flex items-center justify-between group-hover:text-gold-400">
+                <span>View Security Roadmap</span>
+                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            {/* Card 4: AI Automation Agency */}
+            <div className="p-6 bg-zinc-950 border border-zinc-850 hover:border-zinc-700 rounded-lg space-y-4 transition-all group flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-mono px-2 py-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded uppercase font-bold">Recurring MRR</span>
+                  <span className="text-xs font-mono text-emerald-400 font-bold">$2,000 – $10k/mo</span>
+                </div>
+                <h3 className="text-base font-display font-bold text-white uppercase">AI Automation Agency</h3>
+                <p className="text-xs text-zinc-400 font-sans leading-relaxed">
+                  Design autonomous customer support, CRM lead engines, and workflow pipelines for corporate clients on monthly retainers.
+                </p>
+              </div>
+              <Link to="/monetize" className="pt-4 border-t border-zinc-850 text-xs font-mono text-zinc-300 font-bold uppercase flex items-center justify-between group-hover:text-gold-400">
+                <span>View Agency Blueprint</span>
+                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+          </div>
         </div>
       </motion.section>
 

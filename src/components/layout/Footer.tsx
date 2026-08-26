@@ -168,7 +168,17 @@ export default function Footer() {
           </h4>
           <ul className="space-y-1.5 font-sans text-[11px] text-gray-400">
             <li>
-              <Link to="/auth/login" className="hover:text-gold-500 transition-colors font-medium text-gold-500">
+              <Link to="/monetize" className="hover:text-gold-500 transition-colors font-medium text-gold-400 flex items-center gap-1">
+                💰 How to Make Money <ArrowUpRight size={10} />
+              </Link>
+            </li>
+            <li>
+              <Link to="/affiliate-portal" className="hover:text-gold-500 transition-colors font-medium text-gold-400 flex items-center gap-1">
+                🚀 Referral Dashboard <ArrowUpRight size={10} />
+              </Link>
+            </li>
+            <li>
+              <Link to="/auth/login" className="hover:text-gold-500 transition-colors">
                 Sign In
               </Link>
             </li>
