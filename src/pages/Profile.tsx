@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, 
@@ -47,7 +47,35 @@ type TabType = 'personal' | 'referrals' | 'security' | 'display' | 'notification
 
 export default function Profile() {
   const { user, profile, logout, resetPassword, updateProfileData } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>('personal');
+  const contentAreaRef = React.useRef<HTMLDivElement>(null);
+
+  // Tab change handler with smooth auto-scroll to section content
+  const handleTabSelect = (tabId: TabType) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId }, { replace: true });
+
+    // Smooth auto-scroll to content section
+    setTimeout(() => {
+      if (contentAreaRef.current) {
+        contentAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  };
+
+  // Sync active tab with URL query search parameters (e.g. /profile?tab=referrals)
+  useEffect(() => {
+    const urlTab = searchParams.get('tab') as TabType;
+    if (urlTab && ['personal', 'referrals', 'security', 'display', 'notifications', 'academy', 'reviews', 'bookmarks', 'connected'].includes(urlTab)) {
+      setActiveTab(urlTab);
+      setTimeout(() => {
+        if (contentAreaRef.current) {
+          contentAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+    }
+  }, [searchParams]);
 
   // Form State for Personal Details
   const [name, setName] = useState('');
@@ -501,7 +529,7 @@ export default function Profile() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
+                onClick={() => handleTabSelect(tab.id as TabType)}
                 className={`w-full text-left px-4 py-3 rounded-md flex items-center justify-between transition-all ${
                   isActive 
                     ? 'bg-gold-500 text-black font-bold shadow-md' 
@@ -528,7 +556,7 @@ export default function Profile() {
         </div>
 
         {/* MAIN TAB CONTENT AREA */}
-        <div className="md:col-span-3 bg-zinc-950 border border-zinc-850 rounded-lg p-6 shadow-xl">
+        <div ref={contentAreaRef} id="profile-tab-content" className="md:col-span-3 bg-zinc-950 border border-zinc-850 rounded-lg p-6 shadow-xl scroll-mt-24">
           
           {/* TAB 1: PERSONAL DETAILS */}
           {activeTab === 'personal' && (

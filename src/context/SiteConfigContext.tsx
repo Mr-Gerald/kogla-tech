@@ -33,7 +33,7 @@ export interface SiteConfig {
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   companyName: 'Kogla Tech',
-  logoUrl: '/logo512.png',
+  logoUrl: '',
   logoText: 'KOGLA TECH',
   contactEmail: 'solutions@koglatech.com',
   contactPhone: '+234 701 248 9041',
@@ -48,7 +48,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   footerCredits: 'Founded by Gerald Emechebe (Founder & CEO). All rights reserved.',
   fontSizeScale: 100,
   themeMode: 'dark',
-  faviconUrl: '/favicon.svg',
+  faviconUrl: '',
   // Default Cohort Settings (Target Start: September 24, 2026)
   cohortBatchName: 'COHORT CO-2026',
   cohortStatus: 'Admissions Open Now',
@@ -71,6 +71,14 @@ const SiteConfigContext = createContext<SiteConfigContextType | undefined>(undef
 
 export function sanitizeSiteConfig(raw?: Partial<SiteConfig> | null): SiteConfig {
   const merged: SiteConfig = { ...DEFAULT_SITE_CONFIG, ...(raw || {}) };
+
+  // Remove old synthetic defaults if present
+  if (merged.logoUrl === '/logo512.png') {
+    merged.logoUrl = '';
+  }
+  if (merged.faviconUrl === '/favicon.svg') {
+    merged.faviconUrl = '';
+  }
 
   // Strict Phone & WhatsApp Enforcement (Always set to official +234 701 248 9041)
   merged.contactPhone = '+234 701 248 9041';

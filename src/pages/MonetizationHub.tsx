@@ -31,6 +31,7 @@ import { formatNaira } from '../data/coursesPricing';
 export default function MonetizationHub() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeGuide, setActiveGuide] = useState<MonetizationGuide>(MONETIZATION_GUIDES[0]);
+  const guideDetailRef = React.useRef<HTMLDivElement>(null);
   
   // Interactive Calculator State
   const [calcUnits, setCalcUnits] = useState<number>(activeGuide.calculator?.defaultUnits || 5);
@@ -40,6 +41,11 @@ export default function MonetizationHub() {
     if (guide.calculator) {
       setCalcUnits(guide.calculator.defaultUnits);
     }
+    setTimeout(() => {
+      if (guideDetailRef.current) {
+        guideDetailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
   };
 
   const categories = [
@@ -186,7 +192,7 @@ export default function MonetizationHub() {
         </div>
 
         {/* RIGHT COLUMN: ACTIVE GUIDE DETAIL VIEW & INTERACTIVE SIMULATOR */}
-        <div className="lg:col-span-7 bg-zinc-950 border border-zinc-850 rounded-lg p-6 sm:p-8 shadow-xl space-y-6">
+        <div ref={guideDetailRef} className="lg:col-span-7 bg-zinc-950 border border-zinc-850 rounded-lg p-6 sm:p-8 shadow-xl space-y-6 scroll-mt-24">
           <div className="space-y-3 border-b border-zinc-850 pb-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 font-mono text-[10px] font-bold rounded uppercase">

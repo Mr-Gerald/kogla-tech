@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
 import { isSystemAdminEmail } from '../../lib/authUtils';
-import { ShieldCheck, Mail, Lock, Loader2, Key, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, Loader2, Key, ArrowRight, Eye, EyeOff, RefreshCw, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -18,10 +18,46 @@ export default function Login() {
   const [loadingState, setLoadingState] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [showResendBtn, setShowResendBtn] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
 
   // Check if there was a redirected path (e.g. /admin)
   const queryParams = new URLSearchParams(location.search);
   const targetRedirect = queryParams.get('redirect');
+
+  useEffect(() => {
+    const isVerifiedParam = queryParams.get('verified') === 'true';
+    const hasHashToken = location.hash.includes('access_token') || location.hash.includes('type=signup') || location.search.includes('type=signup');
+    
+    if (isVerifiedParam || hasHashToken) {
+      setSuccessMsg('Email Verified Successfully! Your account is active. Please enter your email and password below to sign in.');
+    }
+  }, [location]);
+
+  const handleResendVerification = async (targetEmail: string) => {
+    if (!targetEmail) {
+      setErrorMsg('Please enter your email address above to resend the verification link.');
+      return;
+    }
+    setResendLoading(true);
+    setResendMsg('');
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: targetEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/login?verified=true`
+        }
+      });
+      if (error) throw error;
+      setResendMsg(`A new verification link has been sent to ${targetEmail}! Please check your inbox and spam folder.`);
+    } catch (err: any) {
+      setResendMsg(`Verification link resend requested for ${targetEmail}. Please check your inbox or spam folder in a moment.`);
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setErrorMsg('');
@@ -54,6 +90,8 @@ export default function Login() {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
+    setShowResendBtn(false);
+    setResendMsg('');
     setLoadingState(true);
 
     const trimmedEmail = email.trim();
@@ -64,7 +102,6 @@ export default function Login() {
     }
 
     const isSystemAdmin = isSystemAdminEmail(trimmedEmail);
-    const defaultRole = isSystemAdmin ? 'admin' : 'user';
 
     try {
       // 1. Primary: Attempt sign in with Supabase Auth
@@ -73,105 +110,48 @@ export default function Login() {
         password: password
       });
 
-      let activeUser: any = data?.user;
-
-      // 2. If login failed because account was not yet registered in Supabase Auth, attempt seamless signup / initialization
       if (error) {
         const errorMsgLower = (error.message || '').toLowerCase();
         
         if (
+          errorMsgLower.includes('email not confirmed') ||
+          errorMsgLower.includes('email_not_confirmed') ||
+          errorMsgLower.includes('not verified') ||
+          errorMsgLower.includes('unconfirmed')
+        ) {
+          setShowResendBtn(true);
+          throw new Error(`Email Not Verified: Your email address (${trimmedEmail}) has not been verified yet. Please check your inbox and click the verification link sent by Kogla Tech before signing in.`);
+        }
+
+        if (
           errorMsgLower.includes('invalid login credentials') ||
           errorMsgLower.includes('invalid grant') ||
-          errorMsgLower.includes('user not found') ||
-          errorMsgLower.includes('email not confirmed') ||
-          isSystemAdmin
+          errorMsgLower.includes('user not found')
         ) {
-          try {
-            // Attempt seamless initialization on Supabase
-            const signUpRes = await supabase.auth.signUp({
-              email: trimmedEmail,
-              password: password,
-              options: {
-                data: {
-                  name: isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0],
-                  role: defaultRole
-                }
-              }
-            });
-
-            if (signUpRes.data?.user) {
-              activeUser = signUpRes.data.user;
-              if (signUpRes.data.session) {
-                await supabase.auth.setSession(signUpRes.data.session);
-              }
-            } else if (signUpRes.error) {
-              const signUpMsg = (signUpRes.error.message || '').toLowerCase();
-              if (signUpMsg.includes('already registered') || signUpMsg.includes('user already exists')) {
-                // Account exists in Supabase Auth but password was invalid
-                if (!isSystemAdmin) {
-                  throw new Error('Incorrect password for this account. Please verify your credentials or click "Forgot password?" to reset it.');
-                }
-              } else if (signUpMsg.includes('confirmation email') || signUpMsg.includes('rate limit') || signUpMsg.includes('smtp') || signUpMsg.includes('500')) {
-                // Built-in SMTP quota reached on Supabase project - allow instant local profile sign-in
-                const fallbackId = isSystemAdmin ? `admin_${Date.now()}` : `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-                activeUser = {
-                  id: fallbackId,
-                  uid: fallbackId,
-                  email: trimmedEmail,
-                  user_metadata: {
-                    name: isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0],
-                    role: defaultRole
-                  }
-                };
-              } else {
-                throw signUpRes.error;
-              }
-            }
-          } catch (signUpErr: any) {
-            const innerMsg = (signUpErr?.message || '').toLowerCase();
-            if (innerMsg.includes('confirmation email') || innerMsg.includes('rate limit') || isSystemAdmin) {
-              const fallbackId = isSystemAdmin ? `admin_${Date.now()}` : `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-              activeUser = {
-                id: fallbackId,
-                uid: fallbackId,
-                email: trimmedEmail,
-                user_metadata: {
-                  name: isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0],
-                  role: defaultRole
-                }
-              };
-            } else {
-              throw signUpErr;
-            }
-          }
-        } else {
-          throw error;
+          throw new Error('Invalid email address or password. Please verify your credentials and try again.');
         }
+
+        throw error;
       }
 
-      if (!activeUser && isSystemAdmin) {
-        const fallbackId = `admin_${Date.now()}`;
-        activeUser = {
-          id: fallbackId,
-          uid: fallbackId,
-          email: trimmedEmail,
-          user_metadata: {
-            name: 'Gerald Emechebe',
-            role: 'admin'
-          }
-        };
-      }
-
+      const activeUser = data?.user;
       if (!activeUser) {
-        throw new Error('Authentication session could not be established. Please check your credentials.');
+        throw new Error('Authentication session could not be established.');
       }
 
-      // 3. Ensure master Supabase profile registry has this user with correct role
+      // Check if user email is confirmed
+      if (!activeUser.email_confirmed_at && !isSystemAdmin && !data.session) {
+        setShowResendBtn(true);
+        throw new Error(`Email Verification Required: Please open the confirmation email sent to ${trimmedEmail} and click the link to verify your account.`);
+      }
+
+      // 2. Ensure master Supabase profile registry has this user with correct role
       let profile = getSupabaseUserProfile(activeUser.id);
       if (!profile) {
         profile = getSupabaseUserProfile(trimmedEmail);
       }
 
+      const defaultRole = isSystemAdmin ? 'admin' : 'user';
       if (!profile) {
         profile = {
           uid: activeUser.id || activeUser.uid,
@@ -216,7 +196,7 @@ export default function Login() {
       if (isSystemAdmin) {
         navigate('/admin');
       } else {
-        const redirectTo = targetRedirect || sessionStorage.getItem('studyRedirectTo') || '/academy';
+        const redirectTo = targetRedirect || sessionStorage.getItem('studyRedirectTo') || '/profile';
         if (sessionStorage.getItem('studyRedirectTo')) {
           sessionStorage.removeItem('studyRedirectTo');
         }
@@ -251,9 +231,31 @@ export default function Login() {
         </div>
 
         {errorMsg && (
-          <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-400 text-xs rounded-sm mb-6 flex items-start gap-2 max-h-48 overflow-y-auto">
-            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">Notice:</span>
-            <p className="text-[11px] leading-relaxed font-sans">{errorMsg}</p>
+          <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-300 text-xs rounded-sm mb-6 space-y-2 max-h-60 overflow-y-auto">
+            <div className="flex items-start gap-2">
+              <ShieldAlert size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] leading-relaxed font-sans">{errorMsg}</p>
+            </div>
+            {showResendBtn && (
+              <div className="pt-2 border-t border-red-500/20">
+                <button
+                  type="button"
+                  onClick={() => handleResendVerification(email.trim())}
+                  disabled={resendLoading}
+                  className="px-3 py-1.5 bg-gold-500 hover:bg-gold-400 text-black font-mono text-[11px] rounded flex items-center gap-1.5 transition-all font-bold cursor-pointer shadow"
+                >
+                  {resendLoading ? <Loader2 size={12} className="animate-spin text-black" /> : <RefreshCw size={12} />}
+                  <span>Resend Verification Link</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {resendMsg && (
+          <div className="p-3 bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs rounded-sm mb-6 flex items-start gap-2">
+            <CheckCircle2 size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+            <span className="font-mono text-[11px] leading-relaxed">{resendMsg}</span>
           </div>
         )}
 

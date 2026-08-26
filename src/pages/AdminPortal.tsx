@@ -3302,8 +3302,20 @@ Kogla Tech Global Admissions & Partnerships`;
               {/* GROUP 1: Brand & Logo */}
               <div className="p-4 bg-black border border-gray-900 rounded-sm space-y-4">
                 <h3 className="text-xs font-display font-medium text-gold-500 uppercase tracking-widest pb-1 border-b border-gray-900 flex items-center gap-1.5">
-                  <Sparkles size={12} /> Live Identity Branding
+                  <Sparkles size={12} /> Live Identity Branding & Favicon Management
                 </h3>
+
+                <div className="p-3 bg-gold-500/10 border border-gold-500/20 text-[11px] text-gold-300 font-mono rounded-sm leading-relaxed space-y-1.5">
+                  <p className="font-bold">
+                    📌 How to set your Official Logo ({`IMG_1745.jpeg`}) & Favicon:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-[10px] text-gray-300">
+                    <li><b>Header & Footer Logo:</b> Use "Upload Logo PNG/JPG" below to select your official emblem (<code className="text-gold-400">IMG_1745.jpeg</code>). It instantly replaces all header, footer, certificate, and legal agreement logos across the site.</li>
+                    <li><b>Browser Tab & Password Manager Favicon:</b> Use "Upload Favicon PNG/JPG" below with the same image file. Your live browser tabs will immediately display your official emblem.</li>
+                    <li><b>Google Search Indexing Note:</b> Google Search crawlers (<code className="text-gold-400">Googlebot-Image</code>) require a publicly accessible image web address (URL). For fast Google Search favicon display, paste a direct image URL (e.g. hosted on your domain or CDN) into "Active Browser Favicon URL", save, then request indexing in <b>Google Search Console</b>.</li>
+                  </ul>
+                </div>
+
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-mono">Company Legal Name</label>

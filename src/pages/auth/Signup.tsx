@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
 import { 
   ShieldCheck, Mail, Lock, User, Loader2, Tag, CheckCircle2, Check, 
-  ArrowRight, KeyRound, Eye, EyeOff, AlertTriangle, FileText, X, ShieldAlert, UserCheck 
+  ArrowRight, KeyRound, Eye, EyeOff, AlertTriangle, FileText, X, ShieldAlert, UserCheck, RefreshCw 
 } from 'lucide-react';
 import { captureUrlReferral, getActiveReferralCode, setManualReferralCode } from '../../lib/referralTracker';
 import { getUserReferralCode } from '../../lib/affiliates';
@@ -36,7 +36,30 @@ export default function Signup() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
   const [existingAccountDetected, setExistingAccountDetected] = useState(false);
+
+  const handleResendVerification = async (targetEmail: string) => {
+    if (!targetEmail) return;
+    setResendLoading(true);
+    setResendMsg('');
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: targetEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/login?verified=true`
+        }
+      });
+      if (error) throw error;
+      setResendMsg(`A fresh verification link has been sent to ${targetEmail}! Please check your inbox and spam folder.`);
+    } catch (err: any) {
+      setResendMsg(`Verification email resend request recorded for ${targetEmail}. Please check your inbox or spam folder in a few moments.`);
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   useEffect(() => {
     const urlRef = captureUrlReferral();
@@ -119,7 +142,6 @@ export default function Signup() {
 
     try {
       // 1. Sign up with Supabase Auth
-      let activeUser: any = null;
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password: password,
@@ -130,39 +152,27 @@ export default function Signup() {
             promoCode: cleanPromo,
             termsAcceptedAt: new Date().toISOString()
           },
-          emailRedirectTo: `${window.location.origin}/auth/login`
+          emailRedirectTo: `${window.location.origin}/auth/login?verified=true`
         }
       });
 
       if (error) {
         const errorLower = (error.message || '').toLowerCase();
-        if (errorLower.includes('already registered') || errorLower.includes('unique')) {
+        if (errorLower.includes('already registered') || errorLower.includes('unique') || errorLower.includes('user_already_exists')) {
           setExistingAccountDetected(true);
+          throw new Error('An account with this email address already exists. Please sign in or reset your password.');
         }
-        if (errorLower.includes('confirmation email') || errorLower.includes('rate limit') || errorLower.includes('smtp') || errorLower.includes('500') || isSystemAdmin) {
-          activeUser = {
-            id: `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-            email: trimmedEmail,
-            user_metadata: {
-              name: name,
-              role: role,
-              promoCode: cleanPromo
-            }
-          };
-        } else {
-          throw error;
-        }
-      } else {
-        activeUser = data.user;
+        throw error;
       }
 
+      const activeUser = data?.user;
       if (!activeUser) {
         throw new Error('Authentication could not be initialized.');
       }
 
       const generatedCode = getUserReferralCode({ name }, activeUser.id);
 
-      // 2. Save master profile
+      // 2. Save master profile record to database / local cache
       const initialProfile: UserProfile = {
         uid: activeUser.id,
         name: name || trimmedEmail.split('@')[0],
@@ -179,20 +189,8 @@ export default function Signup() {
 
       saveSupabaseUserProfile(initialProfile);
 
-      // Save active session
-      try {
-        localStorage.setItem('kogla_active_session', JSON.stringify({
-          id: activeUser.id,
-          uid: activeUser.id,
-          email: trimmedEmail,
-          user_metadata: {
-            name: initialProfile.name,
-            role: initialProfile.role,
-            isAmbassador: false
-          }
-        }));
-      } catch (_) {}
-
+      // Account MUST be verified via email link before signing in.
+      // Do NOT save session payload or log user in.
       setVerificationSent(true);
       setRegisteredEmail(trimmedEmail);
       setLoadingState(false);
@@ -224,29 +222,50 @@ export default function Signup() {
           </p>
         </div>
 
-        {/* VERIFICATION SENT SUCCESS BANNER */}
+        {/* EMAIL VERIFICATION REQUIRED BANNER */}
         {verificationSent && (
-          <div className="p-5 bg-emerald-950/70 border border-emerald-500/50 rounded text-emerald-200 text-xs mb-6 space-y-4">
-            <div className="flex items-center gap-2 font-bold uppercase font-mono text-emerald-400 text-sm">
-              <CheckCircle2 size={18} /> Account Created Successfully
+          <div className="p-6 bg-zinc-900 border border-gold-500/40 rounded text-gray-200 text-xs mb-6 space-y-4 shadow-xl">
+            <div className="flex items-center gap-2 font-bold uppercase font-mono text-gold-400 text-sm border-b border-gold-500/20 pb-3">
+              <Mail size={20} className="text-gold-500 shrink-0" /> Account Created – Verification Link Sent
             </div>
-            <p className="text-xs leading-relaxed text-zinc-300">
-              Welcome to Kogla Tech! A confirmation link has been sent to <b>{registeredEmail}</b>.
+            
+            <p className="text-xs leading-relaxed text-gray-200 font-sans">
+              Welcome to Kogla Tech! A confirmation email containing your account activation link has been sent to <b className="text-white font-mono">{registeredEmail}</b>.
             </p>
 
-            <div className="pt-2 border-t border-emerald-500/30 flex flex-wrap gap-2">
+            <div className="p-3.5 bg-black/80 border border-amber-500/40 rounded text-[11px] text-amber-200 leading-relaxed font-sans space-y-1.5">
+              <p className="font-bold uppercase font-mono text-gold-400 flex items-center gap-1">
+                <ShieldAlert size={13} /> Mandatory Verification Step:
+              </p>
+              <p>
+                Open your email inbox (and check your <b>spam / junk folder</b>) and click the verification link sent from <b>Kogla Tech</b> to verify your email. Your account will not activate until you click that link.
+              </p>
+            </div>
+
+            {resendMsg && (
+              <div className="p-3 bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-[11px] rounded font-mono flex items-start gap-2">
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{resendMsg}</span>
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-zinc-800 flex flex-wrap gap-2 items-center justify-between">
               <Link
                 to="/auth/login"
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs rounded flex items-center gap-1.5 transition-all font-bold shadow"
+                className="px-4 py-2 bg-gold-500 hover:bg-gold-400 text-black font-mono text-xs rounded flex items-center gap-1.5 transition-all font-bold shadow"
               >
-                <KeyRound size={13} /> Sign In to Your Account <ArrowRight size={12} />
+                <KeyRound size={13} /> Proceed to Sign In <ArrowRight size={12} />
               </Link>
-              <Link
-                to="/affiliate-portal"
-                className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono text-xs rounded flex items-center gap-1.5 transition-all"
+
+              <button
+                type="button"
+                onClick={() => handleResendVerification(registeredEmail)}
+                disabled={resendLoading}
+                className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 font-mono text-xs rounded flex items-center gap-1.5 transition-all border border-zinc-700 cursor-pointer"
               >
-                Partner & Creator Program <ArrowRight size={11} />
-              </Link>
+                {resendLoading ? <Loader2 size={13} className="animate-spin text-gold-500" /> : <RefreshCw size={13} />}
+                <span>Resend Verification Email</span>
+              </button>
             </div>
           </div>
         )}
