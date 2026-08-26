@@ -37,6 +37,8 @@ export async function safeSupabaseQuery<T>(
  * Master Profile Registry with dual-layer cloud + local persistence
  * to guarantee zero hidden accounts and 100% reliable visibility in the Admin Dashboard.
  */
+const lastWrittenProfileHashes: Record<string, string> = {};
+
 export function saveSupabaseUserProfile(profile: UserProfile): void {
   try {
     // 1. Update Local Storage Cache
@@ -56,8 +58,14 @@ export function saveSupabaseUserProfile(profile: UserProfile): void {
     }
     localStorage.setItem('kogla_supabase_users', JSON.stringify(profiles));
 
-    // 2. Dual-write to Cloud Firestore for cross-device visibility
+    // 2. Dual-write to Cloud Firestore only when profile data has actually changed
     if (profile.uid) {
+      const stateHash = `${profile.uid}|${profile.role}|${profile.xp}|${(profile.completedRooms || []).join(',')}|${profile.name}|${profile.avatarUrl}`;
+      if (lastWrittenProfileHashes[profile.uid] === stateHash) {
+        return; // State is identical, skip redundant write
+      }
+      lastWrittenProfileHashes[profile.uid] = stateHash;
+
       safeFirestoreWrite(async () => {
         const userRef = doc(db, 'users', profile.uid);
         await setDoc(userRef, {

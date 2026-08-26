@@ -57,16 +57,9 @@ export default function Signup() {
     setErrorMsg('');
     setGoogleLoading(true);
     try {
-      await signInWithGoogle();
-      
-      const session = await supabase.auth.getSession();
-      const gUser = session.data.session?.user;
+      const res = await signInWithGoogle();
+      const gUser = res?.user;
       const isSystemAdmin = isSystemAdminEmail(gUser?.email);
-
-      if (gUser) {
-        await syncSession(gUser);
-        window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: gUser }));
-      }
 
       setGoogleLoading(false);
       if (isSystemAdmin) {
@@ -82,7 +75,7 @@ export default function Signup() {
       }
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(formatUserError(err));
+      setErrorMsg(err?.message || formatUserError(err));
       setGoogleLoading(false);
     }
   };

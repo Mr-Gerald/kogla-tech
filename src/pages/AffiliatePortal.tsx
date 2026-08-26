@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
@@ -22,7 +23,9 @@ import {
   UserCheck,
   UserPlus,
   Loader2,
-  ShieldAlert
+  ShieldAlert,
+  Lock,
+  LogIn
 } from 'lucide-react';
 import { AffiliatePartner, ReferralLead } from '../types';
 import { getAffiliateByCode, getReferralsByCode, saveAffiliatePartner, getUserReferralCode } from '../lib/affiliates';
@@ -256,6 +259,34 @@ export default function AffiliatePortal() {
   return (
     <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 max-w-7xl mx-auto text-gray-100 font-sans">
       
+      {!user && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-10 p-6 sm:p-8 bg-zinc-950 border border-gold-500/40 rounded-lg shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6"
+        >
+          <div className="space-y-2 text-center md:text-left">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 text-[10px] rounded-full uppercase tracking-widest font-mono">
+              <Lock size={11} /> Authentication Required
+            </div>
+            <h2 className="text-xl sm:text-2xl font-display font-black uppercase text-white tracking-wide">
+              Sign In Required to Access Partner Dashboard
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 max-w-xl">
+              Please sign in with your Google account or email and password to activate your ambassador profile, track referral conversions, and manage automated commission payouts.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <Link
+              to="/login?redirect=/affiliate-portal"
+              className="px-6 py-3 bg-gold-500 hover:bg-gold-600 text-black font-display font-bold text-xs uppercase tracking-wider rounded-sm flex items-center gap-2 transition-all shadow-lg shadow-gold-500/10"
+            >
+              <LogIn size={15} /> Sign In Now
+            </Link>
+          </div>
+        </motion.div>
+      )}
+
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-end justify-between pb-8 mb-8 border-b border-zinc-900 gap-6">
         <div className="space-y-2">

@@ -27,17 +27,11 @@ export default function Login() {
     setErrorMsg('');
     setGoogleLoading(true);
     try {
-      await signInWithGoogle();
+      const res = await signInWithGoogle();
       setSuccessMsg('Google Authentication verified!');
       
-      const session = await supabase.auth.getSession();
-      const gUser = session.data.session?.user;
+      const gUser = res?.user;
       const isSystemAdmin = isSystemAdminEmail(gUser?.email);
-
-      if (gUser) {
-        await syncSession(gUser);
-        window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: gUser }));
-      }
 
       setGoogleLoading(false);
       if (isSystemAdmin) {
@@ -51,7 +45,7 @@ export default function Login() {
       }
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(formatUserError(err));
+      setErrorMsg(err?.message || formatUserError(err));
       setGoogleLoading(false);
     }
   };

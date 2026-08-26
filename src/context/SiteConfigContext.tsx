@@ -171,15 +171,21 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
   }, [config.themeMode]);
 
   useEffect(() => {
-    const favicon = config.faviconUrl || 'https://scontent.xx.fbcdn.net/v/t1.15752-9/679033424_1340416481327917_3114449704387631566_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=9f807c&_nc_ohc=QTFzuqvVyEwQ7kNvwEQ3HkO&_nc_oc=Adq0Aps1oCzdcFqAZAUORHxlDuik930FWgR7q_bG6Rrw_VSh-1RqFtChA7cCqPbZbATlZ4M_Wu3uMuKpC9WlPuHY&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.xx&oh=03_Q7cD5QFiQMxoovDD8V-pDwIuGMWsjPDrhbJXde89ezXPA-rM5w&oe=6A39344C';
-    let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
-    if (!link) {
-      link = document.createElement('link');
+    const favicon = config.faviconUrl?.trim() || config.logoUrl?.trim() || '/favicon.svg';
+    const iconLinks = document.querySelectorAll<HTMLLinkElement>(
+      "link[rel*='icon'], link[rel='apple-touch-icon'], link[rel='shortcut icon']"
+    );
+    if (iconLinks.length > 0) {
+      iconLinks.forEach(link => {
+        link.href = favicon;
+      });
+    } else {
+      const link = document.createElement('link');
       link.rel = 'icon';
-      document.getElementsByTagName('head')[0].appendChild(link);
+      link.href = favicon;
+      document.head.appendChild(link);
     }
-    link.href = favicon;
-  }, [config.faviconUrl]);
+  }, [config.faviconUrl, config.logoUrl]);
 
   const updateConfig = async (newConfig: Partial<SiteConfig>) => {
     const updated = sanitizeSiteConfig({ ...config, ...newConfig });
@@ -198,10 +204,8 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
       await setDoc(configRef, updated);
     } catch (err: any) {
       console.warn('[SiteConfig] Firestore site config setDoc notice:', err?.message);
-      if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
-        throw new Error('DATABASE_QUOTA_EXCEEDED');
-      }
-      throw err;
+      // If Firestore quota is exceeded, local storage has already saved successfully.
+      // Do not crash or block the UI.
     }
   };
 
@@ -231,10 +235,6 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
       await setDoc(imagesRef, cleanImages);
     } catch (err: any) {
       console.warn('[SiteConfig] Firestore images setDoc notice (local storage active):', err?.message);
-      if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota limit exceeded')) {
-        throw new Error('DATABASE_QUOTA_EXCEEDED');
-      }
-      throw err;
     }
   };
 

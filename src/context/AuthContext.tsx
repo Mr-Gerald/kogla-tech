@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut } from 'lucide-react';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile } from '../lib/supabase';
 import { UserProfile, NotificationRecord } from '../types';
 import { isSystemAdminEmail } from '../lib/authUtils';
@@ -62,11 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (existingProfile) {
+        let changed = false;
         if (isSystemAdmin && existingProfile.role !== 'admin') {
           existingProfile.role = 'admin';
+          changed = true;
         }
         setProfile(existingProfile);
-        saveSupabaseUserProfile(existingProfile);
+        if (changed) {
+          saveSupabaseUserProfile(existingProfile);
+        }
       } else {
         const newProfile: UserProfile = {
           uid: normalizedUser.id,
@@ -188,14 +194,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/academy`
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, provider);
+      if (result?.user) {
+        const gUser = result.user;
+        const normalizedUser: SupabaseUser = {
+          id: gUser.uid,
+          uid: gUser.uid,
+          email: gUser.email || '',
+          user_metadata: {
+            name: gUser.displayName || gUser.email?.split('@')[0] || 'User',
+            avatar_url: gUser.photoURL || ''
+          },
+          photoURL: gUser.photoURL || ''
+        };
+        await handleUserSession(normalizedUser);
+        window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: normalizedUser }));
+        return { user: normalizedUser };
       }
-    });
-    if (error) throw error;
-    return data;
+      return null;
+    } catch (err: any) {
+      console.warn('[Auth] Google sign in notice:', err);
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+        throw new Error('Google sign-in popup was closed before completion.');
+      }
+      if (err?.code === 'auth/popup-blocked') {
+        throw new Error('Sign-in popup was blocked by your browser. Please allow popups or use email & password.');
+      }
+      if (err?.code === 'auth/unauthorized-domain' || err?.code === 'auth/operation-not-allowed') {
+        throw new Error('Google Authentication is undergoing domain verification. Please sign in or create an account with your email and password below.');
+      }
+      throw new Error(err?.message || 'Google sign-in encountered an issue. Please sign in with email and password.');
+    }
   };
 
   const resetPassword = async (email: string) => {
