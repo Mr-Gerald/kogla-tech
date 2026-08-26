@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         const newProfile: UserProfile = {
           uid: normalizedUser.id,
-          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || (isSystemAdmin ? 'Gerald Emechebe' : 'Sovereign Developer'),
+          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || (isSystemAdmin ? 'Gerald Emechebe' : 'Member'),
           email: currentUser.email || '',
           role: role,
           xp: 0,
@@ -255,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               </div>
               <div className="text-center space-y-1">
                 <h3 className="text-white font-bold font-display text-base">Sign Out Confirmation</h3>
-                <p className="text-xs text-zinc-400">Are you sure you want to end your active Sovereign session?</p>
+                <p className="text-xs text-zinc-400">Are you sure you want to sign out of your account?</p>
               </div>
               <div className="flex gap-2 pt-2">
                 <button

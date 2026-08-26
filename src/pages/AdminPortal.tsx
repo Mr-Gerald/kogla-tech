@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig, SiteConfig } from '../context/SiteConfigContext';
-import { supabase, getSupabaseUserProfiles, saveSupabaseUserProfile } from '../lib/supabase';
+import { supabase, getSupabaseUserProfiles, saveSupabaseUserProfile, fetchFullUserRosterAsync } from '../lib/supabase';
 import { isSystemAdminEmail } from '../lib/authUtils';
 import { motion } from 'motion/react';
 import { 
@@ -57,7 +57,8 @@ import {
   Copy,
   GraduationCap,
   EyeOff,
-  Key
+  Key,
+  Download
 } from 'lucide-react';
 import { 
   getAllAffiliates, 
@@ -183,7 +184,7 @@ export default function AdminPortal() {
 
   // Agreement PDF Generator State (for generating contracts for incoming ambassadors)
   const [agreeAmbName, setAgreeAmbName] = useState('');
-  const [agreePromoCode, setAgreePromoCode] = useState('[YOUR_CODE]');
+  const [agreePromoCode, setAgreePromoCode] = useState('');
   const [agreeEmail, setAgreeEmail] = useState('');
   const [agreeHandle, setAgreeHandle] = useState('');
   const [agreeTier1Rate, setAgreeTier1Rate] = useState(6);
@@ -191,6 +192,7 @@ export default function AdminPortal() {
   const [agreeDiscountRate, setAgreeDiscountRate] = useState(5);
   const [isGeneratingAgreement, setIsGeneratingAgreement] = useState(false);
   const [lastGeneratedInfo, setLastGeneratedInfo] = useState<{name: string; email: string; code: string} | null>(null);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Certificates State
   const [certificates, setCertificates] = useState<CertificateRecord[]>([]);
@@ -313,6 +315,20 @@ export default function AdminPortal() {
     }
   };
 
+  // Load full user roster across cloud and local storage
+  const loadUsersData = async () => {
+    setLoadingUsers(true);
+    try {
+      const roster = await fetchFullUserRosterAsync();
+      roster.sort((a, b) => (b.xp || 0) - (a.xp || 0));
+      setUsers(roster);
+    } catch (err) {
+      console.warn('[Admin Portal] Error loading user roster:', err);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   // Load local state & database data on Auth load
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -321,10 +337,8 @@ export default function AdminPortal() {
       loadedInqs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setInquiries(loadedInqs);
 
-      // 2. Load registered profiles from Supabase profile store
-      const loadedSupabaseUsers = getSupabaseUserProfiles();
-      loadedSupabaseUsers.sort((a, b) => (b.xp || 0) - (a.xp || 0));
-      setUsers(loadedSupabaseUsers);
+      // 2. Load registered profiles from Cloud & Supabase profile store
+      loadUsersData();
     }
   }, [profile]);
 
@@ -360,6 +374,8 @@ export default function AdminPortal() {
       loadAffiliatesData();
     } else if (tab === 'certificates') {
       loadCertificatesData();
+    } else if (tab === 'users') {
+      loadUsersData();
     }
   }, [tab]);
 
@@ -432,14 +448,19 @@ export default function AdminPortal() {
 
   const handleGenerateAgreementCustom = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreeAmbName.trim() || !agreePromoCode.trim()) {
-      setErrorMsg('Please enter both the Ambassador Full Name and Assigned Promo Code.');
+    if (!agreeAmbName.trim()) {
+      setErrorMsg('Please enter the Ambassador Full Name.');
       return;
     }
 
     setIsGeneratingAgreement(true);
     try {
-      const codeUpper = agreePromoCode.trim().toUpperCase();
+      let codeUpper = agreePromoCode.trim().toUpperCase();
+      if (!codeUpper || codeUpper === '[YOUR_CODE]' || codeUpper.includes('YOUR_CODE')) {
+        const cleanLetters = agreeAmbName.replace(/[^a-zA-Z]/g, '').slice(0, 8).toUpperCase();
+        codeUpper = `${cleanLetters || 'KOGLA'}26`;
+        setAgreePromoCode(codeUpper);
+      }
       
       // Automatically save/register the affiliate partner in the database so their promo code is live & active right away!
       const partnerRecord: AffiliatePartner = {
@@ -501,7 +522,7 @@ export default function AdminPortal() {
 
 Attached is your official Kogla Tech Global Ambassador Agreement outlining commission tiers, settlement terms, and creator guidelines.
 
-To activate your promo code and claim your unique tracking link instantly, simply create a free student account on our website at ${window.location.origin}/profile, navigate to the Referral & Ambassador Code tab, and your personalized code (with 2 random digits) and live dashboard will be unlocked immediately!
+To activate your promo code and claim your unique tracking link instantly, simply sign up on our website at ${window.location.origin}/affiliate-portal where your personalized promo code and live attribution dashboard will be unlocked immediately!
 
 Welcome aboard,
 Kogla Tech Global Admissions & Partnerships`;
@@ -517,13 +538,37 @@ Hi ${lastGeneratedInfo?.name || 'Partner'},
 
 Attached is your official Kogla Tech Global Ambassador Agreement outlining commission tiers, settlement terms, and creator guidelines.
 
-To activate your promo code and claim your unique tracking link instantly, simply create a free student account on our website at ${window.location.origin}/profile, navigate to the Referral & Ambassador Code tab, and your personalized code (with 2 random digits) and live dashboard will be unlocked immediately!
+To activate your promo code and claim your unique tracking link instantly, simply sign up on our website at ${window.location.origin}/affiliate-portal where your personalized promo code and live attribution dashboard will be unlocked immediately!
 
 Welcome aboard,
 Kogla Tech Global Admissions & Partnerships`;
 
     navigator.clipboard.writeText(body);
     triggerSuccess('Email template & onboarding instructions copied to clipboard!');
+  };
+
+  const handleDownloadPartnerAgreementDirect = async (partner: AffiliatePartner) => {
+    try {
+      await generateAmbassadorAgreementPdf({
+        ambassadorName: partner.name,
+        promoCode: partner.code,
+        email: partner.email || '',
+        instagramHandle: partner.instagramHandle || '',
+        tier1Rate: partner.baseRate || 6,
+        tier2Rate: partner.boostedRate || 10,
+        discountRate: partner.discountOffered || 5,
+        bankName: partner.bankDetails?.bankName,
+        accountNumber: partner.bankDetails?.accountNumber,
+        cohortBatchName: config.cohortBatchName || 'COHORT CO-2026',
+        cohortStartDate: config.cohortStartDate ? new Date(config.cohortStartDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'September 24, 2026',
+        cohortEndDate: config.cohortEndDate ? new Date(config.cohortEndDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'December 18, 2026',
+        logoUrl: config.logoUrl
+      });
+      triggerSuccess(`Legal Agreement PDF downloaded for ${partner.name} (${partner.code})`);
+    } catch (err: any) {
+      console.error('Failed generating PDF:', err);
+      setErrorMsg(`Failed generating agreement PDF: ${err.message}`);
+    }
   };
 
 
@@ -750,7 +795,7 @@ Kogla Tech Global Admissions & Partnerships`;
       if (selectedUser && selectedUser.uid === userId) {
         setSelectedUser({ ...selectedUser, isPaid: !currentPaidState });
       }
-      triggerSuccess(`User paid clearance successfully updated to ${!currentPaidState ? 'PAID / APPROVED' : 'UNPAID'}!`);
+      triggerSuccess(`User paid access status updated to ${!currentPaidState ? 'PAID / APPROVED' : 'UNPAID'}!`);
     } catch (err: any) {
       setErrorMsg(`Failed updating user paid status: ${err.message}`);
       setTimeout(() => setErrorMsg(''), 5000);
@@ -850,7 +895,7 @@ Kogla Tech Global Admissions & Partnerships`;
 
       setNotifTitle('');
       setNotifBody('');
-      triggerSuccess(`Sovereign alert payload dispatched directly into ${selectedUser.name}'s account inbox!`);
+      triggerSuccess(`Notification successfully sent to ${selectedUser.name}!`);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(`Dispatch error: ${err.message}`);
@@ -904,7 +949,7 @@ Kogla Tech Global Admissions & Partnerships`;
       return;
     }
     if (!isSystemAdminEmail(trimmed)) {
-      setAdminAuthError('Access Denied: This email does not hold sovereign administrator privileges.');
+      setAdminAuthError('Access Denied: This email does not have administrator privileges.');
       setAdminAuthLoading(false);
       return;
     }
@@ -917,7 +962,7 @@ Kogla Tech Global Admissions & Partnerships`;
 
       let activeUser: any = data?.user;
       if (error) {
-        // Safe fallback sovereign admin initialization
+        // Safe fallback administrator initialization
         const fallbackId = `admin_${Date.now()}`;
         activeUser = {
           id: fallbackId,
@@ -955,10 +1000,10 @@ Kogla Tech Global Admissions & Partnerships`;
       await syncSession(activeUser);
       window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: activeUser }));
       setAdminAuthLoading(false);
-      triggerSuccess('Sovereign Administrator Verified. Access Granted.');
+      triggerSuccess('Administrator verified. Welcome back!');
     } catch (err: any) {
       console.error(err);
-      setAdminAuthError(err.message || 'Authentication failed. Please verify credentials.');
+      setAdminAuthError(err.message || 'Sign in failed. Please check your credentials.');
       setAdminAuthLoading(false);
     }
   };
@@ -973,9 +1018,9 @@ Kogla Tech Global Admissions & Partnerships`;
       if (gUser && isSystemAdminEmail(gUser.email)) {
         await syncSession(gUser);
         window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: gUser }));
-        triggerSuccess('Sovereign Administrator Verified via Google!');
+        triggerSuccess('Administrator verified via Google!');
       } else if (gUser) {
-        setAdminAuthError('Access Denied: The authenticated Google account does not hold administrator clearance.');
+        setAdminAuthError('Access Denied: The authenticated Google account does not have administrator access.');
       }
     } catch (err: any) {
       setAdminAuthError(err.message || 'Google authentication failed.');
@@ -987,9 +1032,9 @@ Kogla Tech Global Admissions & Partnerships`;
   // 1. Loading screen segment
   if (loading) {
     return (
-      <div className="pt-40 pb-40 text-center font-mono text-xs text-gray-500 flex flex-col items-center justify-center min-h-[50vh]">
+      <div className="pt-40 pb-40 text-center font-sans text-xs text-gray-400 flex flex-col items-center justify-center min-h-[50vh]">
         <Loader2 className="animate-spin text-gold-500 mb-3" size={20} />
-        Synchronizing system roles clearance keys...
+        Loading administrative console...
       </div>
     );
   }
@@ -1006,13 +1051,13 @@ Kogla Tech Global Admissions & Partnerships`;
               <Lock size={26} />
             </div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 text-gold-400 text-[9px] rounded-full uppercase tracking-widest font-mono mb-2">
-              <ShieldCheck size={11} /> Cryptographic Admin Clearance Required
+              <ShieldCheck size={11} /> Administrator Sign In
             </div>
             <h2 className="text-xl font-display font-bold uppercase text-white tracking-wider">
-              Administrative Terminal
+              Administrator Portal
             </h2>
             <p className="text-[11px] text-gray-400 mt-1 font-sans">
-              This environment is strictly isolated for authorized system administrators.
+              This area is reserved for authorized team administrators.
             </p>
           </div>
 
@@ -1020,7 +1065,7 @@ Kogla Tech Global Admissions & Partnerships`;
             <div className="space-y-4">
               <div className="p-4 bg-red-950/20 border border-red-500/30 rounded text-xs text-red-300 font-sans leading-relaxed">
                 <p className="font-bold font-mono text-[11px] text-red-400 uppercase mb-1">Access Restricted</p>
-                Currently authenticated as <span className="text-white font-mono font-semibold">{user.email}</span> (Standard User). This account does not possess administrative privileges.
+                Currently signed in as <span className="text-white font-mono font-semibold">{user.email}</span>. This account does not possess administrative privileges.
               </div>
               <button 
                 onClick={() => logout()}
@@ -1051,13 +1096,13 @@ Kogla Tech Global Admissions & Partnerships`;
                     value={adminLoginEmail}
                     onChange={(e) => setAdminLoginEmail(e.target.value)}
                     placeholder="emechebegerald@gmail.com" 
-                    className="w-full p-2.5 bg-black border border-zinc-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded font-mono placeholder:text-zinc-700" 
+                    className="w-full p-2.5 bg-black border border-zinc-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded font-sans placeholder:text-zinc-700" 
                   />
                 </div>
 
                 <div>
                   <label className="block text-[9px] text-gray-400 uppercase tracking-widest font-mono mb-1 flex items-center gap-1">
-                    <Lock size={10} /> Administrator Master Key / Password
+                    <Lock size={10} /> Administrator Password
                   </label>
                   <div className="relative">
                     <input 
@@ -1067,7 +1112,7 @@ Kogla Tech Global Admissions & Partnerships`;
                       value={adminLoginPassword}
                       onChange={(e) => setAdminLoginPassword(e.target.value)}
                       placeholder="••••••••" 
-                      className="w-full p-2.5 pr-10 bg-black border border-zinc-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded font-mono placeholder:text-zinc-700" 
+                      className="w-full p-2.5 pr-10 bg-black border border-zinc-800 focus:border-gold-500 focus:outline-none text-xs text-white rounded font-sans placeholder:text-zinc-700" 
                     />
                     <button
                       type="button"
@@ -1086,11 +1131,11 @@ Kogla Tech Global Admissions & Partnerships`;
                 >
                   {adminAuthLoading ? (
                     <>
-                      <Loader2 size={14} className="animate-spin" /> Verifying Sovereign Clearance...
+                      <Loader2 size={14} className="animate-spin" /> Signing In...
                     </>
                   ) : (
                     <>
-                      <Key size={14} /> Unlock Admin Dashboard
+                      <Key size={14} /> Sign In to Admin Dashboard
                     </>
                   )}
                 </button>
@@ -1117,12 +1162,12 @@ Kogla Tech Global Admissions & Partnerships`;
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
-                <span>Authorize with Google Admin Email</span>
+                <span>Continue with Google Admin Email</span>
               </button>
 
               <div className="pt-3 border-t border-zinc-900 text-center">
-                <p className="text-[10px] text-zinc-500 font-mono">
-                  Administrative privileges are restricted to designated Sovereign Master Accounts. Student registrations cannot access this console.
+                <p className="text-[10px] text-zinc-500 font-sans">
+                  Administrative privileges are restricted to designated administrator accounts.
                 </p>
               </div>
             </div>
@@ -1156,7 +1201,7 @@ Kogla Tech Global Admissions & Partnerships`;
             Operations command console
           </h1>
           <p className="text-xs text-gray-400 mt-1 max-w-xl">
-            Audit live incoming client requests, dispatch system alerts to student account databases, and calibrate background theme panels dynamically.
+            Audit live incoming client requests, dispatch system notifications to user accounts, and calibrate background theme panels dynamically.
           </p>
         </div>
 
@@ -1561,19 +1606,38 @@ Kogla Tech Global Admissions & Partnerships`;
                     type="text"
                     required
                     value={agreeAmbName}
-                    onChange={(e) => setAgreeAmbName(e.target.value)}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      setAgreeAmbName(newName);
+                      if (!agreePromoCode || agreePromoCode === '[YOUR_CODE]' || agreePromoCode.endsWith('26')) {
+                        const clean = newName.replace(/[^a-zA-Z]/g, '').slice(0, 8).toUpperCase();
+                        if (clean) setAgreePromoCode(`${clean}26`);
+                      }
+                    }}
                     placeholder="e.g. Joy Okafor"
                     className="w-full p-2.5 bg-black border border-zinc-800 rounded text-white focus:border-gold-500 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase text-zinc-400 mb-1">Assigned Promo Code *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] uppercase text-zinc-400">Assigned Promo Code *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const clean = (agreeAmbName || 'KOGLA').replace(/[^a-zA-Z]/g, '').slice(0, 8).toUpperCase();
+                        setAgreePromoCode(`${clean || 'PARTNER'}26`);
+                      }}
+                      className="text-[9px] text-gold-400 hover:text-gold-300 font-mono underline cursor-pointer"
+                    >
+                      Auto-Generate
+                    </button>
+                  </div>
                   <input
                     type="text"
                     required
                     value={agreePromoCode}
                     onChange={(e) => setAgreePromoCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. JOYTECH"
+                    placeholder="e.g. JOY26"
                     className="w-full p-2.5 bg-black border border-zinc-800 rounded text-gold-400 font-bold uppercase focus:border-gold-500 outline-none"
                   />
                 </div>
@@ -1835,6 +1899,118 @@ Kogla Tech Global Admissions & Partnerships`;
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* ACTIVE AMBASSADORS ROSTER TABLE */}
+          <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-850 pb-3 font-mono">
+              <span className="text-xs font-display font-semibold text-gold-400 uppercase tracking-wider">
+                Active Ambassadors Roster & Legal Agreements Tracker
+              </span>
+              <span className="text-[10px] text-zinc-400 uppercase">
+                {affiliates.length} Registered Ambassadors
+              </span>
+            </div>
+
+            {affiliates.length === 0 ? (
+              <div className="p-10 text-center text-zinc-500 font-mono text-xs">
+                No ambassadors registered yet. Use the form above to add a creator or invite them to sign up.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-[10px] uppercase text-zinc-500">
+                      <th className="pb-3 pr-3">Ambassador</th>
+                      <th className="pb-3 px-3">Promo Code</th>
+                      <th className="pb-3 px-3">Tier & Rates</th>
+                      <th className="pb-3 px-3">Confirmed Referrals</th>
+                      <th className="pb-3 px-3">Legal Agreement Status</th>
+                      <th className="pb-3 pl-3 text-right">Admin Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-850">
+                    {affiliates.map((aff) => {
+                      const affReferrals = referrals.filter(r => r.affiliateCode?.toUpperCase() === aff.code?.toUpperCase());
+                      const confirmed = affReferrals.filter(r => r.status === 'confirmed' || r.status === 'paid_out').length;
+                      const isTier2 = confirmed >= 3;
+                      const earned = affReferrals
+                        .filter(r => r.status === 'confirmed' || r.status === 'paid_out')
+                        .reduce((sum, r) => sum + r.commissionAmount, 0);
+
+                      return (
+                        <tr key={aff.code || aff.id} className="hover:bg-zinc-900/40 transition-colors">
+                          <td className="py-4 pr-3">
+                            <span className="font-bold text-white font-sans text-sm block">{aff.name}</span>
+                            <span className="text-[10px] text-zinc-400">{aff.email || 'No email provided'}</span>
+                            {aff.instagramHandle && (
+                              <span className="text-[10px] text-gold-400 block">{aff.instagramHandle}</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-3">
+                            <span className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 font-bold rounded text-xs">
+                              {aff.code}
+                            </span>
+                          </td>
+                          <td className="py-4 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              isTier2 ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40' : 'bg-zinc-800 text-zinc-300'
+                            }`}>
+                              {isTier2 ? 'Tier 2 (10% Rate)' : 'Tier 1 (6% Rate)'}
+                            </span>
+                            <span className="block text-[9px] text-zinc-500 mt-0.5">5% Student Discount</span>
+                          </td>
+                          <td className="py-4 px-3">
+                            <span className="text-white font-bold">{confirmed}</span>
+                            <span className="text-zinc-500 text-[10px]"> / {affReferrals.length} total</span>
+                            <span className="block text-[10px] text-emerald-400">{formatNaira(earned)} earned</span>
+                          </td>
+                          <td className="py-4 px-3">
+                            {aff.agreementDownloaded ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10px] rounded">
+                                <CheckCircle2 size={11} /> Downloaded {aff.agreementDownloadedAt ? `(${new Date(aff.agreementDownloadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})` : ''}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-950/60 border border-amber-500/30 text-amber-300 text-[10px] rounded">
+                                <Clock size={11} /> Pending Download
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 pl-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleDownloadPartnerAgreementDirect(aff)}
+                                className="px-3 py-1.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all shadow flex items-center gap-1 cursor-pointer"
+                                title="Download the customized legal agreement PDF for this ambassador"
+                              >
+                                <Download size={11} /> Agreement PDF
+                              </button>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`${window.location.origin}/?ref=${aff.code}`);
+                                  triggerSuccess(`Tracking link for ${aff.code} copied!`);
+                                }}
+                                className="p-1.5 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded transition-colors cursor-pointer"
+                                title="Copy tracking link"
+                              >
+                                <Copy size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSingleAffiliate(aff.code, aff.name)}
+                                className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-950/40 rounded transition-colors cursor-pointer"
+                                title="Delete ambassador"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2436,9 +2612,21 @@ Kogla Tech Global Admissions & Partnerships`;
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-gray-950 border border-gray-800 rounded-sm">
               <div className="p-4 border-b border-gray-800 bg-black/40 flex items-center justify-between font-mono">
-                <span className="text-xs font-display font-semibold text-gold-500 uppercase tracking-wider">
-                  Registered developer accounts roster
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-display font-semibold text-gold-500 uppercase tracking-wider">
+                    Registered developer accounts roster
+                  </span>
+                  <button
+                    type="button"
+                    onClick={loadUsersData}
+                    disabled={loadingUsers}
+                    className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-gold-400 text-[10px] uppercase font-mono rounded flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Sync and pull latest registrations from cloud database"
+                  >
+                    <RefreshCw size={11} className={loadingUsers ? 'animate-spin text-gold-400' : ''} />
+                    {loadingUsers ? 'Syncing...' : 'Sync Cloud'}
+                  </button>
+                </div>
                 <span className="text-[9px] text-gray-500 uppercase">
                   {users.length} Registered Accounts
                 </span>
@@ -2538,11 +2726,11 @@ Kogla Tech Global Admissions & Partnerships`;
                     <span className="text-gray-300 text-[9px]">{selectedUser.uid.substring(0, 16)}...</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Clearance Level:</span>
+                    <span>Role / Level:</span>
                     <span className="text-white uppercase font-bold">{selectedUser.role || 'User'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Rooms Mastered:</span>
+                    <span>Rooms Completed:</span>
                     <span className="text-cyan-400 font-bold">{selectedUser.completedRooms?.length || 0} Completed</span>
                   </div>
                   <div className="flex justify-between">
@@ -2553,12 +2741,12 @@ Kogla Tech Global Admissions & Partnerships`;
                   </div>
                 </div>
 
-                {/* Academy Paid Clearance Approval Toggle */}
+                {/* Academy Paid Status Approval Toggle */}
                 <div className="pt-2 pb-4 border-b border-gray-900 space-y-3 font-mono text-[10px]">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Academy Paid Status:</span>
                     <span className={`px-2 py-0.5 rounded-sm font-bold uppercase ${selectedUser.isPaid ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
-                      {selectedUser.isPaid ? '✓ PAID & APPROVED' : 'LOCKED (UNPAID)'}
+                      {selectedUser.isPaid ? '✓ PAID & APPROVED' : 'UNPAID'}
                     </span>
                   </div>
                   <button 
@@ -2569,7 +2757,7 @@ Kogla Tech Global Admissions & Partnerships`;
                         : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-black'
                     }`}
                   >
-                    {selectedUser.isPaid ? 'Revoke Paid Clearance' : 'Approve & Grant Paid Clearance'}
+                    {selectedUser.isPaid ? 'Revoke Paid Access' : 'Approve & Grant Paid Access'}
                   </button>
 
                   {/* DANGER ZONE: PERMANENT DELETE */}
@@ -2578,7 +2766,7 @@ Kogla Tech Global Admissions & Partnerships`;
                       Danger Zone • Permanent Deletion
                     </span>
                     <p className="text-[10px] text-zinc-400 leading-tight">
-                      Permanently wipes this user's profile and unlocks this email so it can be registered again.
+                      Permanently removes this user's profile and allows this email to register again.
                     </p>
                     <button 
                       type="button"
@@ -2595,34 +2783,34 @@ Kogla Tech Global Admissions & Partnerships`;
                   <div className="flex items-center gap-1.5 border-b border-gray-900 pb-2">
                     <Bell size={13} className="text-gold-500" />
                     <h4 className="text-xs font-display font-bold text-white uppercase tracking-wider">
-                      Transmit Sovereign Notification
+                      Send Notification
                     </h4>
                   </div>
-                  <p className="text-[10px] text-gray-500 font-mono leading-relaxed">
-                    Instantly broadcast raw system warnings, badges, or special guidance alerts directly into this student's notification system log.
+                  <p className="text-[10px] text-gray-400 font-sans leading-relaxed">
+                    Send updates, badges, or announcements directly to this student's notification center.
                   </p>
 
                   <div>
-                    <label className="block text-[9px] text-gray-400 uppercase tracking-wider font-mono mb-1">Alert Headline Title</label>
+                    <label className="block text-[9px] text-gray-400 uppercase tracking-wider font-mono mb-1">Notification Title</label>
                     <input 
                       type="text"
                       required
-                      placeholder="e.g. Cyber Program Level Verified"
+                      placeholder="e.g. Course Milestone Verified"
                       value={notifTitle}
                       onChange={(e) => setNotifTitle(e.target.value)}
-                      className="w-full text-xs p-2.5 bg-black border border-gray-800 text-white rounded-sm placeholder:text-gray-700 font-mono focus:border-gold-500 focus:outline-none"
+                      className="w-full text-xs p-2.5 bg-black border border-gray-800 text-white rounded-sm placeholder:text-gray-700 font-sans focus:border-gold-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[9px] text-gray-400 uppercase tracking-wider font-mono mb-1">Payload Content (Instructions)</label>
+                    <label className="block text-[9px] text-gray-400 uppercase tracking-wider font-mono mb-1">Notification Message</label>
                     <textarea 
                       required
                       rows={3}
-                      placeholder="e.g. Well done! Your advanced exploit scripts has completed bypass constraints... +200 XP Awarded."
+                      placeholder="e.g. Congratulations! You have successfully completed this module. +200 XP has been added to your profile."
                       value={notifBody}
                       onChange={(e) => setNotifBody(e.target.value)}
-                      className="w-full text-xs p-2.5 bg-black border border-gray-800 text-white rounded-sm placeholder:text-gray-700 font-mono focus:border-gold-500 focus:outline-none resize-none"
+                      className="w-full text-xs p-2.5 bg-black border border-gray-800 text-white rounded-sm placeholder:text-gray-700 font-sans focus:border-gold-500 focus:outline-none resize-none"
                     />
                   </div>
 
@@ -2633,11 +2821,11 @@ Kogla Tech Global Admissions & Partnerships`;
                   >
                     {isSendingNotif ? (
                       <>
-                        <Loader2 size={13} className="animate-spin" /> Transmitting...
+                        <Loader2 size={13} className="animate-spin" /> Sending...
                       </>
                     ) : (
                       <>
-                        <Send size={11} /> Deploy Alert Payload
+                        <Send size={11} /> Send Notification
                       </>
                     )}
                   </button>

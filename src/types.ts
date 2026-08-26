@@ -120,6 +120,8 @@ export interface AffiliatePartner {
   };
   contractSigned: boolean;
   contractSignedDate?: string;
+  agreementDownloaded?: boolean;
+  agreementDownloadedAt?: string;
   createdAt: string;
   updatedAt?: string;
 }

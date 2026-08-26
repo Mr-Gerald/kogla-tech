@@ -54,9 +54,23 @@ service cloud.firestore {
       return data.uid is string && data.uid.size() <= 128 &&
              data.name is string && data.name.size() <= 128 &&
              data.email is string && data.email.size() <= 128 &&
-             data.role in ["user", "admin"] &&
+             data.role in ["user", "admin", "affiliate"] &&
              (!data.keys().hasAll(["completedRooms"]) || (data.completedRooms is list && data.completedRooms.size() <= 200)) &&
              (!data.keys().hasAll(["xp"]) || (data.xp is int && data.xp >= 0 && data.xp <= 1000000));
+    }
+
+    function isValidAffiliateShape(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.code is string && data.code.size() <= 64 &&
+             data.name is string && data.name.size() <= 128 &&
+             data.email is string && data.email.size() <= 128;
+    }
+
+    function isValidReferralShape(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.affiliateCode is string && data.affiliateCode.size() <= 64 &&
+             data.studentName is string && data.studentName.size() <= 128 &&
+             data.studentEmail is string && data.studentEmail.size() <= 128;
     }
 
     function isValidInquiryShape(data) {
@@ -106,17 +120,38 @@ service cloud.firestore {
       allow create: if isSignedIn() && 
                     isOwner(userId) && 
                     isValidUserShape(incoming()) && 
-                    (incoming().role == "user" || (incoming().role == "admin" && isBootstrappedAdmin(incoming().email))); // Prevent privilege escalation except for bootstrapped admin accounts
+                    (incoming().role in ["user", "affiliate"] || (incoming().role == "admin" && isBootstrappedAdmin(incoming().email))); // Prevent privilege escalation except for bootstrapped admin accounts
                     
       allow update: if (isOwner(userId) || isAdmin()) && 
                     isValidUserShape(incoming()) && (
                       isAdmin() || (
-                        (incoming().role == existing().role || (incoming().role == "admin" && isBootstrappedAdmin(incoming().email))) && // Prevent normal users changing role unless they are the bootstrapped admin
+                        (incoming().role == existing().role || (incoming().role == "admin" && isBootstrappedAdmin(incoming().email))) && 
                         incoming().uid == existing().uid &&
                         incoming().email == existing().email
                       )
                     );
       allow delete: if isAdmin();
+    }
+
+    // AFFILIATES COLLECTION
+    match /affiliates/{affiliateCode} {
+      allow read, list: if true; // Publicly readable for promo code validation and partner portal
+      allow create: if isValidAffiliateShape(incoming());
+      allow update: if isValidAffiliateShape(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // REFERRALS COLLECTION
+    match /referrals/{referralId} {
+      allow read, list: if true; // Read for partner real-time dashboard and admin verification
+      allow create: if isValidReferralShape(incoming());
+      allow update, delete: if isAdmin();
+    }
+
+    // CERTIFICATES COLLECTION
+    match /certificates/{certificateId} {
+      allow read, list: if true; // Dual verification public registry
+      allow write: if isAdmin();
     }
 
     // INQUIRIES COLLECTION

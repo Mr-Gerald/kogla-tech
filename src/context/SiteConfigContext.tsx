@@ -33,7 +33,7 @@ export interface SiteConfig {
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   companyName: 'Kogla Tech',
-  logoUrl: 'https://scontent.xx.fbcdn.net/v/t1.15752-9/679033424_1340416481327917_3114449704387631566_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=9f807c&_nc_ohc=QTFzuqvVyEwQ7kNvwEQ3HkO&_nc_oc=Adq0Aps1oCzdcFqAZAUORHxlDuik930FWgR7q_bG6Rrw_VSh-1RqFtChA7cCqPbZbATlZ4M_Wu3uMuKpC9WlPuHY&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.xx&oh=03_Q7cD5QFiQMxoovDD8V-pDwIuGMWsjPDrhbJXde89ezXPA-rM5w&oe=6A39344C',
+  logoUrl: '/logo512.png',
   logoText: 'KOGLA TECH',
   contactEmail: 'solutions@koglatech.com',
   contactPhone: '+234 701 248 9041',
@@ -44,11 +44,11 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   heroHeadline: 'Empowering the Next Generation of African Developers',
   heroSubheadline: 'Expert software engineering, workflow automation, and immersive academic training hubs crafted for global competitiveness.',
   aboutHeadline: 'Engineered for High-Stakes Operations',
-  aboutText: 'We design custom enterprise-grade platforms, establish agile automation pipelines, and host real-time developer sandboxes. Operating from Lagos, we trace the future of computing across Africa.',
-  footerCredits: 'Kogla Tech. All system execution logs reserved.',
+  aboutText: 'Founded by Gerald Emechebe (Founder & CEO), we engineer custom enterprise-grade platforms, establish agile automation pipelines, and host real-time developer sandboxes for global competitiveness.',
+  footerCredits: 'Founded by Gerald Emechebe (Founder & CEO). All rights reserved.',
   fontSizeScale: 100,
   themeMode: 'dark',
-  faviconUrl: 'https://scontent.xx.fbcdn.net/v/t1.15752-9/679033424_1340416481327917_3114449704387631566_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=9f807c&_nc_ohc=QTFzuqvVyEwQ7kNvwEQ3HkO&_nc_oc=Adq0Aps1oCzdcFqAZAUORHxlDuik930FWgR7q_bG6Rrw_VSh-1RqFtChA7cCqPbZbATlZ4M_Wu3uMuKpC9WlPuHY&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.xx&oh=03_Q7cD5QFiQMxoovDD8V-pDwIuGMWsjPDrhbJXde89ezXPA-rM5w&oe=6A39344C',
+  faviconUrl: '/favicon.svg',
   // Default Cohort Settings (Target Start: September 24, 2026)
   cohortBatchName: 'COHORT CO-2026',
   cohortStatus: 'Admissions Open Now',

@@ -216,7 +216,7 @@ export default function Login() {
       });
       window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: activeUser }));
 
-      setSuccessMsg(isSystemAdmin ? 'Sovereign Administrator Verified. Opening Console...' : 'Login successful. Redirecting...');
+      setSuccessMsg(isSystemAdmin ? 'Welcome back! Opening Admin Dashboard...' : 'Login successful. Redirecting...');
       
       setLoadingState(false);
       if (isSystemAdmin) {
@@ -246,19 +246,19 @@ export default function Login() {
       >
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] rounded-full uppercase tracking-widest font-mono mb-4">
-            <Key size={11} /> Secure Account Access
+            <Key size={11} /> Welcome Back
           </div>
           <h1 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-wider">
-            Log In
+            Sign In
           </h1>
-          <p className="text-[10px] text-gray-400 font-mono mt-1">
-            Sign in to access your sovereign portal, academy courses, and admin console.
+          <p className="text-[11px] text-gray-400 font-sans mt-1">
+            Sign in to access your dashboard, academy courses, and learning resources.
           </p>
         </div>
 
         {errorMsg && (
           <div className="p-3 bg-red-950/40 border border-red-500/20 text-red-400 text-xs rounded-sm mb-6 flex items-start gap-2 max-h-48 overflow-y-auto">
-            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">Error:</span>
+            <span className="font-bold text-[10px] font-mono text-red-500 uppercase shrink-0 mt-0.5">Notice:</span>
             <p className="text-[11px] leading-relaxed font-sans">{errorMsg}</p>
           </div>
         )}
@@ -299,7 +299,7 @@ export default function Login() {
               />
             </svg>
           )}
-          <span>{googleLoading ? 'Authenticating...' : 'Sign in with Google'}</span>
+          <span>{googleLoading ? 'Signing in...' : 'Sign in with Google'}</span>
         </button>
 
         <div className="relative my-6 text-center">
@@ -366,11 +366,11 @@ export default function Login() {
           >
             {loadingState ? (
               <>
-                <Loader2 size={14} className="animate-spin" /> Authenticating Credentials...
+                <Loader2 size={14} className="animate-spin" /> Signing In...
               </>
             ) : (
               <>
-                <Key size={14} /> Sign In to Portal
+                <Key size={14} /> Sign In
               </>
             )}
           </button>

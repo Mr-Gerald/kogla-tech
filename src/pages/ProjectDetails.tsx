@@ -143,8 +143,8 @@ export default function ProjectDetails() {
             <span className="text-white">{details.timeline}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500 uppercase">Security Clearance</span>
-            <span className="text-gold-500">LEVEL-4 (COMPLIANT)</span>
+            <span className="text-gray-500 uppercase">Compliance Standard</span>
+            <span className="text-gold-500">ISO 27001 / ENTERPRISE READY</span>
           </div>
         </div>
       </div>

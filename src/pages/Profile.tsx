@@ -666,110 +666,11 @@ export default function Profile() {
                   </div>
                 </div>
 
-                {/* Digital Signature Upload Block */}
-                <div className="bg-zinc-900/70 border border-zinc-800 p-4 rounded-md space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-[10px] text-zinc-300 uppercase tracking-widest font-mono font-bold flex items-center gap-1.5">
-                      <Award size={13} className="text-gold-400" /> Digital Signature (For Official Certificates & Contracts)
-                    </label>
-                    <span className="text-[10px] text-zinc-500 font-mono">PNG / Transparent Recommended</span>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    {/* Signature Preview Box */}
-                    <div 
-                      className="relative shrink-0 w-36 h-16 border border-zinc-800 rounded flex items-center justify-center p-2 overflow-hidden shadow-inner"
-                      style={{
-                        backgroundColor: '#09090b',
-                        backgroundImage: 'radial-gradient(#27272a 1px, transparent 1px)',
-                        backgroundSize: '10px 10px'
-                      }}
-                    >
-                      {signatureUrl ? (
-                        <img 
-                          src={signatureUrl} 
-                          alt="Signature Preview" 
-                          className="max-h-full max-w-full object-contain drop-shadow"
-                        />
-                      ) : (
-                        <span className="text-[10px] text-zinc-500 font-mono italic">No signature uploaded</span>
-                      )}
-                    </div>
-
-                    {/* Upload button & URL input */}
-                    <div className="flex-1 w-full space-y-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => signatureInputRef.current?.click()}
-                          disabled={uploadingSig}
-                          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-gold-400 font-bold text-xs uppercase font-mono rounded inline-flex items-center gap-2 transition-all border border-gold-500/30 shadow cursor-pointer"
-                        >
-                          {uploadingSig ? (
-                            <>
-                              <Loader2 size={13} className="animate-spin" /> Processing Transparent Signature...
-                            </>
-                          ) : (
-                            <>
-                              <Upload size={13} /> Upload Signature File
-                            </>
-                          )}
-                        </button>
-
-                        {signatureUrl && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                setUploadingSig(true);
-                                try {
-                                  const cleaned = await makeSignatureTransparent(signatureUrl, { mode: 'gold', autoCrop: true });
-                                  setSignatureUrl(cleaned);
-                                } catch (_) {}
-                                setUploadingSig(false);
-                              }}
-                              className="px-2.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-gold-400 border border-gold-500/30 text-xs font-mono rounded flex items-center gap-1 cursor-pointer"
-                              title="Make 100% Transparent"
-                            >
-                              <Sparkles size={11} /> Clean Background
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setSignatureUrl('')}
-                              className="px-2.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-mono rounded cursor-pointer"
-                              title="Remove Signature"
-                            >
-                              Remove
-                            </button>
-                          </>
-                        )}
-                      </div>
-
-                      <div className="relative">
-                        <input
-                          type="url"
-                          placeholder="Or paste signature image URL (https://...)"
-                          value={signatureUrl}
-                          onChange={(e) => setSignatureUrl(e.target.value)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-gold-500 font-mono"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Hidden File Inputs for DP & Signature */}
+                {/* Hidden File Input for DP */}
                 <input 
                   type="file" 
                   ref={fileInputRef} 
                   onChange={handleDeviceDpUpload} 
-                  accept="image/*" 
-                  className="hidden" 
-                />
-                <input 
-                  type="file" 
-                  ref={signatureInputRef} 
-                  onChange={handleDeviceSignatureUpload} 
                   accept="image/*" 
                   className="hidden" 
                 />

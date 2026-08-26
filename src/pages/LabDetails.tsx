@@ -178,8 +178,8 @@ export default function LabDetails() {
                 <p className="text-gray-400 text-xs leading-relaxed">{exp.desc}</p>
               </div>
               <div className="mt-4 pt-3 border-t border-gray-900 text-[10px] font-mono text-gray-500 flex items-center justify-between">
-                <span>Security Clearance Required</span>
-                <span className="text-gold-500">LEVEL-4</span>
+                <span>Access Level</span>
+                <span className="text-gold-500">Enterprise Verified</span>
               </div>
             </div>
           ))}

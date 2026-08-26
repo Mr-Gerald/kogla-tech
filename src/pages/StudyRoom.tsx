@@ -22,7 +22,8 @@ import {
   RefreshCw,
   Clock,
   ExternalLink,
-  MessageCircle
+  MessageCircle,
+  KeyRound
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig } from '../context/SiteConfigContext';
@@ -342,13 +343,13 @@ export default function StudyRoom() {
           </div>
           <div className="space-y-2">
             <span className="text-[10px] text-gold-500 font-mono font-bold tracking-widest uppercase bg-gold-500/10 border border-gold-500/20 px-3 py-1 rounded-full">
-              Academy Study Online • Premium Clearance Required
+              Academy Study Room • Enrollment Required
             </span>
             <h1 className="text-2xl font-display font-bold text-white uppercase tracking-wider">
               {activePath?.title || 'Academy Study Module'}
             </h1>
             <p className="text-xs text-gray-300 leading-relaxed font-sans max-w-md mx-auto">
-              All academy study rooms and interactive online labs are set to <strong>premium</strong>. Only paid users approved by administrators from the admin portal can access this workspace.
+              This interactive study room is part of our accredited curriculum. Enrolled students who have registered and confirmed access can view and complete modules in this workspace.
             </p>
           </div>
 
@@ -503,23 +504,23 @@ export default function StudyRoom() {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-400" />
             <Lock className="text-emerald-500 mx-auto mb-5" size={42} />
             <h2 className="text-lg font-display font-medium uppercase tracking-wider text-white mb-2">
-              Sovereign Clearance Keys Required
+              Sign In Required
             </h2>
             <p className="text-xs text-zinc-400 font-sans leading-relaxed mb-6">
-              In accordance with security governance frameworks, academy classrooms, workstation terminals, and live testing servers are strictly reserved for logged-in operators.
+              Please sign in to your Kogla Tech account or register a profile to access interactive technical labs and course workspaces.
             </p>
             <div className="flex flex-col gap-2.5">
               <Link 
                 to="/auth/login" 
                 className="py-2.5 bg-[#10b981] hover:bg-[#059669] font-bold text-black text-xs uppercase tracking-widest font-display rounded transition-all text-center flex items-center justify-center gap-2 shadow-md shadow-emerald-950/20"
               >
-                <TerminalIcon size={12} /> Decrypt with entry keys
+                <KeyRound size={12} /> Sign In to Access
               </Link>
               <Link 
                 to="/auth/signup" 
                 className="py-2.5 bg-transparent hover:bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs uppercase tracking-widest font-mono rounded transition-all text-center flex items-center justify-center gap-1.5"
               >
-                <UserPlus size={12} /> Register new academic profile
+                <UserPlus size={12} /> Create Account
               </Link>
             </div>
           </motion.div>
@@ -565,10 +566,10 @@ export default function StudyRoom() {
                 {/* Progress Card */}
                 <div className="p-5 bg-zinc-950 border border-zinc-850 rounded-lg relative overflow-hidden flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] text-zinc-500 font-mono uppercase block font-bold mb-1">Curriculum Secured Meter</span>
+                    <span className="text-[10px] text-zinc-500 font-mono uppercase block font-bold mb-1">Course Progress Meter</span>
                     <div className="flex justify-between items-end mb-2.5">
-                      <span className="text-white text-base font-semibold font-sans">{progressPercentage}% Clearance</span>
-                      <span className="text-[10px] text-zinc-400 font-mono font-medium">{completedRoomsCount} of {totalRooms} Cleared</span>
+                      <span className="text-white text-base font-semibold font-sans">{progressPercentage}% Completed</span>
+                      <span className="text-[10px] text-zinc-400 font-mono font-medium">{completedRoomsCount} of {totalRooms} Completed</span>
                     </div>
                   </div>
                   <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
@@ -581,20 +582,20 @@ export default function StudyRoom() {
 
                 {/* Account XP Valuations */}
                 <div className="p-5 bg-zinc-950 border border-zinc-850 rounded-lg">
-                  <span className="text-[10px] text-zinc-500 font-mono uppercase block font-bold mb-1">Accrued Study Metrics</span>
+                  <span className="text-[10px] text-zinc-500 font-mono uppercase block font-bold mb-1">Earned Study Points</span>
                   <span className="text-xl font-mono font-semibold text-[#10b981] block">
-                    {profile.xp || 0} XP Valued Credits
+                    {profile.xp || 0} XP Points
                   </span>
-                  <p className="text-[9px] text-zinc-500 font-mono mt-1 uppercase">Rewards tracked in remote cloud state servers.</p>
+                  <p className="text-[9px] text-zinc-500 font-mono mt-1 uppercase">Points saved automatically to your profile.</p>
                 </div>
 
                 {/* Academic Profile certificate */}
                 <div className="p-5 bg-zinc-950 border border-zinc-850 rounded-lg">
-                  <span className="text-[10px] text-zinc-500 font-mono uppercase block font-bold mb-1">Clearance Accreditation Level</span>
+                  <span className="text-[10px] text-zinc-500 font-mono uppercase block font-bold mb-1">Certification Status</span>
                   <span className="text-sm font-sans font-semibold text-white block uppercase">
-                    {progressPercentage === 100 ? '👑 Certified Lead Architect' : '⚡ Active Operations Auditor'}
+                    {progressPercentage === 100 ? '👑 Certified Lead Architect' : '⚡ Enrolled Student'}
                   </span>
-                  <p className="text-[9px] text-zinc-500 font-mono mt-2 uppercase select-none">ID Ref: {profile.name} (Accredited L4-ENG)</p>
+                  <p className="text-[9px] text-zinc-500 font-mono mt-2 uppercase select-none">Student: {profile.name}</p>
                 </div>
               </div>
 

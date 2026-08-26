@@ -617,7 +617,7 @@ export default function Home() {
               </div>
               <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Specialized Corporate Academy</h3>
               <p className="text-xs text-gray-400 leading-relaxed font-sans">
-                Up-skill your technical workforce directly. Secure premium group clearances for our Level-4 sovereign training sandboxes, aligning your developers with advanced cybersecurity modules, AI pipeline instrumentation techniques, and zero-defect systems workflows.
+                Up-skill your technical workforce directly. Enroll your engineering teams into our hands-on training cohorts, aligning your developers with advanced cloud security modules, AI pipeline engineering, and zero-defect systems workflows.
               </p>
             </div>
 

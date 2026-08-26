@@ -20,40 +20,40 @@ export default function About() {
     {
       icon: <Cpu size={20} className="text-gold-500" />,
       title: "Enterprise Solutions Engineering",
-      desc: "Our Solutions division engineers secure sovereign cloud architectures, bespoke ERP adapters, and high-performance Web 19/mobile platforms designed to perform flawlessly under maximum transactional volume."
+      desc: "Our Solutions division engineers resilient cloud architectures, bespoke ERP adapters, and high-performance web and mobile platforms designed to perform flawlessly under maximum transactional volume."
     },
     {
       icon: <BookOpen size={20} className="text-gold-500" />,
       title: "Advanced Tech Academy",
-      desc: "Kogla Tech Academy serves as an elite talent refinery, producing world-class engineers through rigorous, curriculum-intensive cohorts. Our graduates are deployed across modern distributed systems environments globally."
+      desc: "Kogla Tech Academy nurtures top-tier engineering talent through rigorous, hands-on, curriculum-intensive cohorts. Our graduates excel across modern distributed systems environments globally."
     },
     {
       icon: <Shield size={20} className="text-gold-500" />,
       title: "Zero-Trust Cybersecurity Labs",
-      desc: "Operating directly at system margins, our Security division leverages eBPF telemetry hooks and post-quantum cryptography key-encapsulation algorithms to secure high-value nodes and client cloud perimeters."
+      desc: "Operating with security-first principles, our Security division leverages eBPF telemetry hooks and advanced encryption standards to protect critical digital assets and enterprise perimeters."
     },
     {
       icon: <Layers size={20} className="text-gold-500" />,
       title: "AI Research & Cognitive Automation",
-      desc: "From LLM parallelization and AWQ/FP8 weight optimizations to autonomous agentic schedulers with transaction-safe rollbacks, our labs push forward cutting-edge operational intelligence models."
+      desc: "From LLM parallelization and inference optimizations to intelligent agentic schedulers with transaction-safe rollbacks, our labs build practical, enterprise-grade AI applications."
     }
   ];
 
   const metrics = [
     { label: "Active Collaborations", value: "1,000+" },
     { label: "Certified Engineers", value: "250+" },
-    { label: "Sovereign Node Ingress", value: "1.2 Tbps" },
+    { label: "Network Throughput", value: "1.2 Tbps" },
     { label: "Deployment Success SLA", value: "99.999%" }
   ];
 
   const values = [
     {
       title: "Architectural Integrity",
-      desc: "We completely reject generic templates, low-fidelity code sandboxes, and unoptimized logic. Every system we build represents pristine craftsmanship, extreme type-safety, and optimized performance profiles."
+      desc: "We prioritize clean architecture, maintainable software, and optimized logic. Every system we build represents disciplined craftsmanship, strong type-safety, and dependable performance."
     },
     {
-      title: "Sovereign & Compliant Operations",
-      desc: "We build secure data systems keeping crucial resources separated matching stringent regulations (GDPR, ISO 27001), ensuring client intellectual data yields maximal utility without exposure risks."
+      title: "Compliant & Secure Operations",
+      desc: "We build secure data systems matching global regulations (GDPR, ISO 27001), ensuring client intellectual assets and user privacy are comprehensively protected."
     },
     {
       title: "Hyper-Velocity Execution",
@@ -107,8 +107,8 @@ export default function About() {
               <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Globe size={14} className="text-gold-500" /> The Mission
               </h3>
-              <p className="text-gray-400 text-xs leading-relaxed font-mono">
-                To build, secure, and accelerate global enterprise runtime systems. We bridge standard technological applications with high-velocity, sovereign computing pipelines, cultivating a highly technical network of elite system architects globally.
+              <p className="text-gray-400 text-xs leading-relaxed font-sans">
+                To build, secure, and accelerate global enterprise software systems. We combine practical engineering with modern cloud pipelines, cultivating a collaborative network of top system architects globally.
               </p>
             </div>
 
@@ -116,8 +116,8 @@ export default function About() {
               <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-2">
                 <TrendingUp size={14} className="text-gold-500" /> The Vision
               </h3>
-              <p className="text-gray-400 text-xs leading-relaxed font-mono">
-                To continuously scale our high-impact sovereign model across international technology clusters, transforming legacy administrative operations into robust autonomous frameworks while setting the standard for Level-4 compliance interfaces.
+              <p className="text-gray-400 text-xs leading-relaxed font-sans">
+                To continuously scale our high-impact technology model across international hubs, transforming legacy workflows into robust, scalable frameworks with high compliance standards.
               </p>
             </div>
           </div>
@@ -131,6 +131,42 @@ export default function About() {
               <div className="text-[9px] md:text-[10px] text-gray-500 font-mono tracking-widest uppercase">{metric.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Executive Leadership Section */}
+        <div className="p-8 bg-zinc-950 border border-gold-500/20 rounded-sm space-y-6">
+          <div className="space-y-1 border-b border-zinc-900 pb-4">
+            <span className="text-[9px] font-mono text-gold-500 bg-gold-400/5 px-2 py-0.5 border border-gold-500/10 rounded-sm uppercase tracking-widest font-bold">
+              Executive Leadership
+            </span>
+            <h3 className="text-xl md:text-2xl font-display font-bold text-white uppercase tracking-wider">
+              Leadership & Executive Governance
+            </h3>
+            <p className="text-xs text-gray-400 font-sans">
+              Directed with uncompromising standards for architectural precision, zero-trust security, and global digital impact.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-12 gap-6 items-center">
+            <div className="md:col-span-8 space-y-3">
+              <div className="space-y-1">
+                <div className="text-lg md:text-xl font-display font-bold text-white uppercase tracking-wide">
+                  Gerald Emechebe
+                </div>
+                <div className="text-xs font-mono text-gold-400 tracking-wider uppercase font-bold">
+                  Founder & Chief Executive Officer (CEO)
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed font-sans">
+                As Founder & CEO of Kogla Tech Global, Gerald Emechebe steers the enterprise’s worldwide strategic roadmap, spearheading its dual mission: engineering zero-compromise bespoke software infrastructure for global businesses and running premier, high-rigor talent accelerators for tomorrow’s elite engineers.
+              </p>
+            </div>
+            <div className="md:col-span-4 p-4 bg-black/70 border border-zinc-850 rounded text-center space-y-2">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Corporate Mandate</div>
+              <div className="text-xs font-display font-bold text-white uppercase">Global Technological Excellence</div>
+              <div className="text-[10px] font-mono text-gold-400/90">Kogla Tech Global</div>
+            </div>
+          </div>
         </div>
 
         {/* Operational Pillars Grid */}
@@ -243,14 +279,14 @@ export default function About() {
         <div className="p-6 bg-black border border-gray-900 rounded-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 font-mono text-xs text-gray-400">
           <div className="space-y-1 max-w-2xl">
             <div className="flex items-center gap-1.5 text-white font-bold text-[10px] uppercase tracking-widest">
-              <Shield size={12} className="text-gold-500" /> Operational Compliance Code: COG-SEC-77
+              <Shield size={12} className="text-gold-500" /> Security & Compliance Framework
             </div>
-            <p className="text-[10px] text-gray-500 leading-relaxed">
-              Kogla Tech operates under level-4 secure network protocols. Critical databases are distributed and insulated from public routes. Standard communications are wrapped in post-quantum lattice-key tunnels (Kyber v1), matching global GDPR & sovereign data governance directives perfectly.
+            <p className="text-[10px] text-gray-400 leading-relaxed font-sans">
+              Kogla Tech operates under modern enterprise security protocols. Databases and cloud services adhere strictly to global GDPR, ISO 27001, and data privacy governance standards.
             </p>
           </div>
-          <span className="shrink-0 px-3 py-1 bg-gold-500/15 border border-gold-500/40 text-gold-500 text-[10px] uppercase font-bold tracking-widest rounded-sm">
-            SECURE INFRASTRUCTURE ACTIVE
+          <span className="shrink-0 px-3 py-1 bg-gold-500/15 border border-gold-500/40 text-gold-500 text-[10px] uppercase font-bold tracking-widest rounded-sm font-mono">
+            ENTERPRISE COMPLIANT
           </span>
         </div>
 

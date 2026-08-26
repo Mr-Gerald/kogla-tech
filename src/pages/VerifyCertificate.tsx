@@ -98,7 +98,7 @@ export default function VerifyCertificate() {
       {loading ? (
         <div className="p-12 text-center bg-zinc-950 border border-zinc-900 rounded-lg">
           <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-xs font-mono uppercase text-zinc-400">Authenticating credential against Kogla registry...</p>
+          <p className="text-xs font-mono uppercase text-zinc-400">Verifying certificate details...</p>
         </div>
       ) : certificate ? (
         <div className="space-y-8">

@@ -58,7 +58,14 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
   });
 
   const name = data.ambassadorName?.trim() || 'Ambassador Partner';
-  const code = (data.promoCode?.trim() || 'CREATOR').toUpperCase();
+  
+  // Smart promo code resolution: eliminate any placeholder artifacts
+  let rawCode = (data.promoCode || '').trim().toUpperCase();
+  if (!rawCode || rawCode === '[YOUR_CODE]' || rawCode.includes('YOUR_CODE') || rawCode === 'YOUR_CODE' || rawCode === 'PROMO_CODE') {
+    const cleanLetters = name.replace(/[^a-zA-Z]/g, '').slice(0, 8).toUpperCase();
+    rawCode = `${cleanLetters || 'KOGLA'}26`;
+  }
+  const code = rawCode;
   const dateStr = data.agreementDate || new Date().toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'long',
