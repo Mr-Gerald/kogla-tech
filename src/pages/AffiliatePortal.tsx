@@ -28,7 +28,7 @@ import {
   LogIn
 } from 'lucide-react';
 import { AffiliatePartner, ReferralLead } from '../types';
-import { getAffiliateByCode, getReferralsByCode, saveAffiliatePartner, getUserReferralCode } from '../lib/affiliates';
+import { getAffiliateByCode, getReferralsByCode, saveAffiliatePartner, getUserReferralCode, formatPromoCodeInput, isValidPromoCode } from '../lib/affiliates';
 import { formatNaira } from '../data/coursesPricing';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig } from '../context/SiteConfigContext';
@@ -264,53 +264,83 @@ export default function AffiliatePortal() {
     .filter(r => r.status === 'paid_out')
     .reduce((sum, r) => sum + r.commissionAmount, 0);
 
-  return (
-    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 max-w-7xl mx-auto text-gray-100 font-sans">
-      
-      {/* MARQUEE BANNER FOR KOGLA REFERRALS (FASTEST) GLOBAL */}
-      <div className="mb-8 bg-gold-500 text-black overflow-hidden py-2 font-mono text-xs font-bold uppercase tracking-widest rounded shadow-md">
-        <div className="animate-marquee flex items-center gap-8">
-          <span>🚀 KOGLA REFERRALS (FASTEST) GLOBAL</span>
-          <span>•</span>
-          <span>EARN 6% TO 10% COMMISSIONS ON EVERY VERIFIED ENROLLMENT</span>
-          <span>•</span>
-          <span>OFFICIAL HOTLINE: +234 701 248 9041</span>
-          <span>•</span>
-          <span>STRICT ANTI-FRAUD & COMPLIANCE ENFORCED</span>
-          <span>•</span>
-          <span>🚀 KOGLA REFERRALS (FASTEST) GLOBAL</span>
-          <span>•</span>
-          <span>EARN 6% TO 10% COMMISSIONS ON EVERY VERIFIED ENROLLMENT</span>
+  if (!user) {
+    return (
+      <div className="min-h-screen pt-32 pb-24 px-4 sm:px-6 max-w-4xl mx-auto text-gray-100 font-sans">
+        {/* MARQUEE BANNER FOR KOGLA REFERRALS */}
+        <div className="mb-10 bg-gold-500 text-black overflow-hidden py-2 font-mono text-xs font-bold uppercase tracking-widest rounded shadow-md">
+          <div className="animate-marquee flex items-center gap-8">
+            <span>🚀 KOGLA REFERRALS (FASTEST) GLOBAL</span>
+            <span>•</span>
+            <span>EARN 6% TO 10% COMMISSIONS ON EVERY VERIFIED ENROLLMENT</span>
+            <span>•</span>
+            <span>OFFICIAL HOTLINE: +234 701 248 9041</span>
+            <span>•</span>
+            <span>STRICT ANTI-FRAUD & COMPLIANCE ENFORCED</span>
+          </div>
         </div>
-      </div>
 
-      {!user && (
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-10 p-6 sm:p-8 bg-zinc-950 border border-gold-500/40 rounded-lg shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6"
+          transition={{ duration: 0.4 }}
+          className="p-8 sm:p-12 bg-zinc-950 border border-gold-500/30 rounded-lg shadow-2xl text-center space-y-8 relative overflow-hidden"
         >
-          <div className="space-y-2 text-center md:text-left">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 text-[10px] rounded-full uppercase tracking-widest font-mono">
-              <Lock size={11} /> Authentication Required
-            </div>
-            <h2 className="text-xl sm:text-2xl font-display font-black uppercase text-white tracking-wide">
-              Sign In Required to Access Partner Dashboard
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-400 max-w-xl">
-              Please sign in with your Google account or email and password to activate your ambassador profile, track referral conversions, and manage automated commission payouts.
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-400 text-xs rounded-full uppercase tracking-widest font-mono">
+            <Lock size={13} /> Authentication &amp; Identity Verification Required
+          </div>
+
+          <div className="space-y-3 max-w-2xl mx-auto">
+            <h1 className="text-3xl sm:text-4xl font-display font-black uppercase text-white tracking-tight">
+              Partner &amp; Ambassador <span className="text-gold-500">Access Restricted</span>
+            </h1>
+            <p className="text-sm sm:text-base text-zinc-400 leading-relaxed font-sans">
+              To prevent fraudulent claims, safeguard student attribution, and legally bind official partnership contracts, you must be signed in to your verified Kogla Tech account before accessing the Partner Dashboard or downloading the Ambassador Agreement.
             </p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+
+          <div className="grid sm:grid-cols-3 gap-4 max-w-2xl mx-auto text-left py-4">
+            <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded">
+              <div className="text-gold-400 font-mono text-xs font-bold uppercase mb-1">6% Base Rate</div>
+              <div className="text-[11px] text-zinc-400">Earn ₦30k–₦60k per verified student enrollment</div>
+            </div>
+            <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded">
+              <div className="text-emerald-400 font-mono text-xs font-bold uppercase mb-1">10% Accelerator</div>
+              <div className="text-[11px] text-zinc-400">Unlocked automatically on your 3rd verified student</div>
+            </div>
+            <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded">
+              <div className="text-cyan-400 font-mono text-xs font-bold uppercase mb-1">Weekly Payouts</div>
+              <div className="text-[11px] text-zinc-400">Direct electronic bank transfers &amp; PDF contracts</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
             <Link
-              to="/login?redirect=/affiliate-portal"
-              className="px-6 py-3 bg-gold-500 hover:bg-gold-600 text-black font-display font-bold text-xs uppercase tracking-wider rounded-sm flex items-center gap-2 transition-all shadow-lg shadow-gold-500/10"
+              to="/auth/login?redirect=/affiliate-portal"
+              className="w-full sm:w-auto px-8 py-3.5 bg-gold-500 hover:bg-gold-600 active:scale-95 text-black font-display font-bold text-xs uppercase tracking-widest rounded transition-all shadow-lg shadow-gold-500/10 flex items-center justify-center gap-2"
             >
-              <LogIn size={15} /> Sign In Now
+              <LogIn size={16} /> Sign In to Access Dashboard
+            </Link>
+            <Link
+              to="/auth/signup?redirect=/affiliate-portal"
+              className="w-full sm:w-auto px-8 py-3.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-mono font-bold text-xs uppercase tracking-widest rounded transition-all flex items-center justify-center gap-2"
+            >
+              <UserPlus size={16} className="text-gold-400" /> Create Partner Account
             </Link>
           </div>
+
+          <p className="text-[10px] text-zinc-500 font-mono">
+            For admissions and enterprise partnerships: <span className="text-gold-400 font-bold">+234 701 248 9041</span> • <span className="text-zinc-400">solutions@koglatech.com</span>
+          </p>
         </motion.div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 max-w-7xl mx-auto text-gray-100 font-sans">
 
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row md:items-end justify-between pb-8 mb-8 border-b border-zinc-900 gap-6">
@@ -403,30 +433,44 @@ export default function AffiliatePortal() {
               </div>
 
               <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                  Social Handle / Channel (IG / X / TikTok / YouTube)
+                </label>
+                <input
+                  type="text"
+                  value={activateHandle}
+                  onChange={(e) => {
+                    const handle = e.target.value;
+                    setActivateHandle(handle);
+                    // Auto-suggest promo code from handle if user hasn't explicitly typed a custom one
+                    if (!activateCustomCode || activateCustomCode === partnerCode) {
+                      const letters = handle.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 8);
+                      if (letters.length >= 2) {
+                        setActivateCustomCode(`${letters}24`);
+                      }
+                    }
+                  }}
+                  placeholder="@yourhandle or channel"
+                  className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-zinc-300 font-mono"
+                />
+              </div>
+
+              <div>
                 <label className="block text-[10px] font-mono uppercase text-gold-400 mb-1">
-                  Custom Promo Code *
+                  Custom Promo Code * (Letters + max 2 numbers)
                 </label>
                 <input
                   type="text"
                   required
                   value={activateCustomCode}
-                  onChange={(e) => setActivateCustomCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. SHIRLEY"
+                  onChange={(e) => setActivateCustomCode(formatPromoCodeInput(e.target.value))}
+                  placeholder="e.g. HANDLE24"
+                  maxLength={14}
                   className="w-full p-2.5 bg-black border border-gold-500/40 rounded focus:border-gold-500 focus:outline-none text-xs text-gold-400 font-mono font-bold uppercase"
                 />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
-                  Social Handle / Channel
-                </label>
-                <input
-                  type="text"
-                  value={activateHandle}
-                  onChange={(e) => setActivateHandle(e.target.value)}
-                  placeholder="@yourhandle"
-                  className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-zinc-300 font-mono"
-                />
+                <p className="text-[10px] text-zinc-500 font-mono mt-1">
+                  Enforces letters with maximum 2 digits (e.g. <b>{profile?.nickname ? profile.nickname.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6) : 'CREATOR'}24</b>)
+                </p>
               </div>
             </div>
 

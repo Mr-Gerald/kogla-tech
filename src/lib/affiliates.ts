@@ -452,14 +452,48 @@ export async function saveAffiliatePartner(partner: AffiliatePartner): Promise<b
 }
 
 /**
- * Generates or retrieves a unique referral code for a user, including 2 random digits after the name.
+ * Formats a promo code input to enforce uppercase letters and at most 2 trailing numbers.
+ */
+export function formatPromoCodeInput(input: string): string {
+  if (!input) return '';
+  const upper = input.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const letters = upper.replace(/[0-9]/g, '').slice(0, 10);
+  const numbers = upper.replace(/[^0-9]/g, '').slice(0, 2);
+  return `${letters}${numbers}`;
+}
+
+/**
+ * Validates whether a promo code satisfies the requirement of letters with at most 2 numbers.
+ */
+export function isValidPromoCode(code: string): boolean {
+  if (!code) return false;
+  const norm = code.trim().toUpperCase();
+  return /^[A-Z]{2,12}[0-9]{0,2}$/.test(norm);
+}
+
+/**
+ * Generates or retrieves a unique referral code for a user based on nickname, IG/social handle, or name with max 2 numbers.
  */
 export function getUserReferralCode(profile?: any, uid?: string): string {
+  if (profile?.affiliateCode) return profile.affiliateCode;
   if (profile?.referralCode) return profile.referralCode;
-  const nameBase = profile?.name ? profile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) : (uid ? uid.slice(0, 6).toUpperCase() : 'KOGLA');
-  const seed = uid ? uid.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : Math.floor(Math.random() * 90);
+
+  // Extract from nickname, IG handle, social handle, or name
+  const rawCandidate = 
+    profile?.nickname || 
+    profile?.instagramHandle || 
+    profile?.socialHandle || 
+    profile?.handle || 
+    profile?.name ||
+    '';
+
+  const cleanLetters = rawCandidate.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 8);
+  const nameBase = cleanLetters.length >= 2 ? cleanLetters : (uid ? uid.replace(/[^A-Za-z]/g, '').slice(0, 6).toUpperCase() : 'KOGLA');
+  const safeBase = nameBase.length >= 2 ? nameBase : 'KOGLA';
+
+  const seed = uid ? uid.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) : Math.floor(Math.random() * 90);
   const rand2 = 10 + (seed % 90);
-  return `${nameBase}${rand2}`;
+  return `${safeBase}${rand2}`;
 }
 
 

@@ -38,12 +38,14 @@ export default function Signup() {
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
+  const [resendError, setResendError] = useState<string | null>(null);
   const [existingAccountDetected, setExistingAccountDetected] = useState(false);
 
   const handleResendVerification = async (targetEmail: string) => {
     if (!targetEmail) return;
     setResendLoading(true);
     setResendMsg('');
+    setResendError(null);
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
@@ -52,10 +54,14 @@ export default function Signup() {
           emailRedirectTo: `${window.location.origin}/auth/login?verified=true`
         }
       });
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       setResendMsg(`A fresh verification link has been sent to ${targetEmail}! Please check your inbox and spam folder.`);
     } catch (err: any) {
-      setResendMsg(`Verification email resend request recorded for ${targetEmail}. Please check your inbox or spam folder in a few moments.`);
+      console.error('[Supabase Auth Resend Error]', err);
+      const msg = err?.message || err?.error_description || String(err);
+      setResendError(`Email server error: "${msg}". Check your Supabase Auth SMTP logs or use the Diagnostics tool in Admin Portal.`);
     } finally {
       setResendLoading(false);
     }
@@ -68,6 +74,13 @@ export default function Signup() {
       setPromoCode(activeRef);
     }
   }, []);
+
+  // Automatically scroll to the top of the viewport when verification is sent or an error occurs
+  useEffect(() => {
+    if (verificationSent || errorMsg) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [verificationSent, errorMsg]);
 
   const passwordsMatch = password.length > 0 && password === confirmPassword;
   const isFormValid = name.trim().length > 0 && 
@@ -142,6 +155,7 @@ export default function Signup() {
 
     try {
       // 1. Sign up with Supabase Auth
+
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password: password,
@@ -162,10 +176,16 @@ export default function Signup() {
           setExistingAccountDetected(true);
           throw new Error('An account with this email address already exists. Please sign in or reset your password.');
         }
+
+        if (errorLower.includes('confirmation email') || errorLower.includes('smtp') || errorLower.includes('rate limit')) {
+          throw new Error(`Verification Email Failed to Send: "${error.message}". Account creation halted. To fix this permanently, configure your Custom SMTP settings (solutions@koglatech.com) in your Supabase Dashboard under Project Settings -> Authentication -> SMTP Settings.`);
+        }
+
         throw error;
       }
 
       const activeUser = data?.user;
+
       if (!activeUser) {
         throw new Error('Authentication could not be initialized.');
       }
@@ -189,8 +209,23 @@ export default function Signup() {
 
       saveSupabaseUserProfile(initialProfile);
 
-      // Account MUST be verified via email link before signing in.
-      // Do NOT save session payload or log user in.
+      if (isSystemAdmin) {
+        try {
+          const sessionPayload = {
+            id: activeUser.id,
+            uid: activeUser.id,
+            email: trimmedEmail,
+            user_metadata: {
+              name: initialProfile.name,
+              role: initialProfile.role,
+              isAmbassador: false
+            }
+          };
+          localStorage.setItem('kogla_active_session', JSON.stringify(sessionPayload));
+          await syncSession(sessionPayload);
+        } catch (_) {}
+      }
+
       setVerificationSent(true);
       setRegisteredEmail(trimmedEmail);
       setLoadingState(false);
@@ -246,6 +281,13 @@ export default function Signup() {
               <div className="p-3 bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-[11px] rounded font-mono flex items-start gap-2">
                 <CheckCircle2 size={15} className="text-emerald-400 shrink-0 mt-0.5" />
                 <span className="leading-relaxed">{resendMsg}</span>
+              </div>
+            )}
+
+            {resendError && (
+              <div className="p-3 bg-red-950/80 border border-red-500/50 text-red-300 text-[11px] rounded font-mono flex items-start gap-2">
+                <ShieldAlert size={15} className="text-red-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{resendError}</span>
               </div>
             )}
 

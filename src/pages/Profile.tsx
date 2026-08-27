@@ -33,11 +33,14 @@ import {
   Image as ImageIcon,
   Tag,
   Copy,
-  Check
+  Check,
+  Edit2,
+  Save,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, ReviewRecord, AffiliatePartner } from '../types';
-import { getUserReferralCode, saveAffiliatePartner } from '../lib/affiliates';
+import { getUserReferralCode, saveAffiliatePartner, formatPromoCodeInput, isValidPromoCode, deleteAffiliatePartner } from '../lib/affiliates';
 import { subscribeToReviews, deleteReview } from '../lib/reviews';
 import { makeSignatureTransparent } from '../lib/signatureProcessor';
 import { supabase } from '../lib/supabase';
@@ -252,13 +255,30 @@ export default function Profile() {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [activatingAmbassador, setActivatingAmbassador] = useState(false);
   const [partnerSocialHandle, setPartnerSocialHandle] = useState('');
+  const [customPromoInModal, setCustomPromoInModal] = useState('');
   const [agreeTermsCheckbox, setAgreeTermsCheckbox] = useState(false);
+
+  // Direct Promo Code In-line Editing State
+  const [isEditingPromo, setIsEditingPromo] = useState(false);
+  const [editedPromoCode, setEditedPromoCode] = useState('');
+  const [savingPromoCode, setSavingPromoCode] = useState(false);
+  const [promoEditSuccess, setPromoEditSuccess] = useState(false);
+  const [promoEditError, setPromoEditError] = useState<string | null>(null);
+
+  // Initialize custom promo code from user profile / nickname / IG
+  useEffect(() => {
+    if (showAgreementModal && !customPromoInModal) {
+      setCustomPromoInModal(getUserReferralCode(profile, user?.uid));
+    }
+  }, [showAgreementModal, profile, user]);
 
   const handleActivateAmbassador = async () => {
     if (!user || !agreeTermsCheckbox) return;
     setActivatingAmbassador(true);
     try {
-      const code = getUserReferralCode(profile, user.uid);
+      const codeCandidate = customPromoInModal.trim() ? formatPromoCodeInput(customPromoInModal) : getUserReferralCode(profile, user.uid);
+      const code = isValidPromoCode(codeCandidate) ? codeCandidate : getUserReferralCode(profile, user.uid);
+      
       const partnerData: AffiliatePartner = {
         id: user.uid,
         code: code,
@@ -289,6 +309,59 @@ export default function Profile() {
       console.error('Failed to activate ambassador status:', err);
     } finally {
       setActivatingAmbassador(false);
+    }
+  };
+
+  const handleSaveCustomPromoCode = async () => {
+    const formatted = formatPromoCodeInput(editedPromoCode);
+    if (!isValidPromoCode(formatted)) {
+      setPromoEditError('Promo code must contain letters and at most 2 numbers (e.g. KOGLA24, ALEX99, HERTECH)');
+      return;
+    }
+
+    setSavingPromoCode(true);
+    setPromoEditError(null);
+
+    try {
+      const currentCode = getUserReferralCode(profile, user?.uid);
+      if (currentCode !== formatted) {
+        await deleteAffiliatePartner(currentCode).catch(() => {});
+      }
+
+      const partnerData: AffiliatePartner = {
+        id: user?.uid || `part_${Date.now()}`,
+        code: formatted,
+        name: profile?.name || user?.email?.split('@')[0] || 'Ambassador Partner',
+        email: user?.email || '',
+        instagramHandle: profile?.instagramHandle || partnerSocialHandle.trim() || undefined,
+        tier: 1,
+        baseRate: 6,
+        boostedRate: 10,
+        discountOffered: 5,
+        totalReferrals: 0,
+        confirmedCount: 0,
+        totalEarned: 0,
+        totalPaidOut: 0,
+        pendingPayout: 0,
+        contractSigned: true,
+        contractSignedDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      await saveAffiliatePartner(partnerData);
+      await updateProfileData({
+        affiliateCode: formatted,
+        isAmbassador: true
+      });
+
+      setPromoEditSuccess(true);
+      setIsEditingPromo(false);
+      setTimeout(() => setPromoEditSuccess(false), 3000);
+    } catch (err: any) {
+      setPromoEditError(err.message || 'Failed to update promo code.');
+    } finally {
+      setSavingPromoCode(false);
     }
   };
 
@@ -844,30 +917,99 @@ export default function Profile() {
 
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
-                          Your Unique Promo Code
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            readOnly
-                            value={getUserReferralCode(profile, user?.uid)}
-                            className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono font-bold uppercase select-all"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const code = getUserReferralCode(profile, user?.uid);
-                              navigator.clipboard.writeText(code);
-                              setCopiedCodeSuccess(true);
-                              setTimeout(() => setCopiedCodeSuccess(false), 2500);
-                            }}
-                            className="px-3 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded flex items-center gap-1 font-mono transition-all cursor-pointer shrink-0"
-                          >
-                            {copiedCodeSuccess ? <Check size={12} /> : <Copy size={12} />}
-                            {copiedCodeSuccess ? 'Copied' : 'Copy'}
-                          </button>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[10px] font-mono uppercase text-zinc-400">
+                            Your Unique Promo Code
+                          </label>
+                          {!isEditingPromo ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditedPromoCode(getUserReferralCode(profile, user?.uid));
+                                setIsEditingPromo(true);
+                                setPromoEditError(null);
+                              }}
+                              className="text-[10px] text-gold-400 hover:text-gold-300 font-mono flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                              <Edit2 size={10} /> Edit Code
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsEditingPromo(false);
+                                setPromoEditError(null);
+                              }}
+                              className="text-[10px] text-zinc-400 hover:text-white font-mono cursor-pointer transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          )}
                         </div>
+
+                        {isEditingPromo ? (
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={editedPromoCode}
+                                onChange={(e) => {
+                                  const val = formatPromoCodeInput(e.target.value);
+                                  setEditedPromoCode(val);
+                                  setPromoEditError(null);
+                                }}
+                                placeholder="e.g. NICKNAME24"
+                                maxLength={14}
+                                className="w-full bg-black border border-gold-500/60 rounded px-3 py-2 text-xs text-gold-400 font-mono font-bold uppercase focus:outline-none focus:border-gold-400"
+                              />
+                              <button
+                                type="button"
+                                disabled={savingPromoCode}
+                                onClick={handleSaveCustomPromoCode}
+                                className="px-3 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded flex items-center gap-1 font-mono transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                              >
+                                {savingPromoCode ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                                Save
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-zinc-400 font-mono">
+                              Rule: Letters with max 2 numbers (e.g. <b>{profile?.nickname ? profile.nickname.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6) : 'KOGLA'}24</b>)
+                            </p>
+                            {promoEditError && (
+                              <p className="text-[10px] text-red-400 font-mono flex items-center gap-1">
+                                <AlertCircle size={10} /> {promoEditError}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={getUserReferralCode(profile, user?.uid)}
+                              className="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-gold-400 font-mono font-bold uppercase select-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const code = getUserReferralCode(profile, user?.uid);
+                                navigator.clipboard.writeText(code);
+                                setCopiedCodeSuccess(true);
+                                setTimeout(() => setCopiedCodeSuccess(false), 2500);
+                              }}
+                              className="px-3 py-2 bg-gold-500 hover:bg-gold-600 text-black font-bold text-xs uppercase tracking-wider rounded flex items-center gap-1 font-mono transition-all cursor-pointer shrink-0"
+                            >
+                              {copiedCodeSuccess ? <Check size={12} /> : <Copy size={12} />}
+                              {copiedCodeSuccess ? 'Copied' : 'Copy'}
+                            </button>
+                          </div>
+                        )}
+
+                        {promoEditSuccess && (
+                          <p className="text-[10px] text-emerald-400 font-mono mt-1 flex items-center gap-1">
+                            <Check size={11} /> Promo code updated successfully!
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1340,17 +1482,42 @@ export default function Profile() {
                   <b>PARTNER AGREEMENT:</b> By accepting this agreement, you will be provisioned an official ambassador promo code granting 5% discount to students and earning you 6% base commissions with 10% cohort accelerators.
                 </div>
 
-                <div>
-                  <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-mono mb-1">
-                    Primary Social Handle / Channel (Optional)
-                  </label>
-                  <input 
-                    type="text" 
-                    value={partnerSocialHandle}
-                    onChange={(e) => setPartnerSocialHandle(e.target.value)}
-                    placeholder="@yourhandle or youtube.com/@channel" 
-                    className="w-full p-2.5 bg-black border border-zinc-800 focus:border-gold-500 focus:outline-none text-xs text-gold-300 rounded font-mono" 
-                  />
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-mono mb-1">
+                      Primary Social Handle / Channel (Optional)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={partnerSocialHandle}
+                      onChange={(e) => {
+                        const h = e.target.value;
+                        setPartnerSocialHandle(h);
+                        // Auto-suggest promo code if user hasn't explicitly set one
+                        if (!customPromoInModal || customPromoInModal === getUserReferralCode(profile, user?.uid)) {
+                          const letters = h.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 8);
+                          if (letters.length >= 2) {
+                            setCustomPromoInModal(`${letters}24`);
+                          }
+                        }
+                      }}
+                      placeholder="@yourhandle or youtube.com/@channel" 
+                      className="w-full p-2.5 bg-black border border-zinc-800 focus:border-gold-500 focus:outline-none text-xs text-gold-300 rounded font-mono" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-gold-400 uppercase tracking-widest font-mono mb-1">
+                      Custom Promo Code (Max letters + max 2 numbers)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={customPromoInModal}
+                      onChange={(e) => setCustomPromoInModal(formatPromoCodeInput(e.target.value))}
+                      placeholder="e.g. HANDLE24" 
+                      className="w-full p-2.5 bg-black border border-gold-500/50 focus:border-gold-400 focus:outline-none text-xs text-gold-400 font-mono font-bold uppercase rounded" 
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1.5 pt-2 border-t border-zinc-850">

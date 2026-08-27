@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig, SiteConfig } from '../context/SiteConfigContext';
-import { supabase, getSupabaseUserProfiles, saveSupabaseUserProfile, fetchFullUserRosterAsync } from '../lib/supabase';
+import { supabase, getSupabaseUserProfiles, saveSupabaseUserProfile, fetchFullUserRosterAsync, deleteSupabaseUserProfile } from '../lib/supabase';
 import { isSystemAdminEmail } from '../lib/authUtils';
 import { motion } from 'motion/react';
 import { 
@@ -58,7 +58,14 @@ import {
   GraduationCap,
   EyeOff,
   Key,
-  Download
+  Download,
+  Activity,
+  Server,
+  ShieldAlert,
+  Bug,
+  Info,
+  AlertTriangle,
+  Radio
 } from 'lucide-react';
 import { 
   getAllAffiliates, 
@@ -110,7 +117,139 @@ export default function AdminPortal() {
 
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [tab, setTab] = useState<'leads' | 'affiliates' | 'pricing' | 'certificates' | 'users' | 'images' | 'settings'>('leads');
+  const [tab, setTab] = useState<'leads' | 'affiliates' | 'pricing' | 'certificates' | 'users' | 'images' | 'settings' | 'diagnostics'>('leads');
+
+  // Email & SMTP Diagnostics State
+  const [diagEmail, setDiagEmail] = useState(user?.email || 'solutions@koglatech.com');
+  const [diagAction, setDiagAction] = useState<'signup_resend' | 'reset_password' | 'magic_link' | 'signup_simulation'>('signup_resend');
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagResult, setDiagResult] = useState<{
+    timestamp: string;
+    action: string;
+    targetEmail: string;
+    status: 'success' | 'error';
+    errorCode?: string;
+    errorMessage?: string;
+    rawResponse?: any;
+    explanation?: string;
+    solutionTips?: string[];
+  } | null>(null);
+
+  const runEmailDiagnostics = async () => {
+    if (!diagEmail.trim()) {
+      alert('Please enter a target email to test.');
+      return;
+    }
+
+    setDiagLoading(true);
+    setDiagResult(null);
+
+    const emailToTest = diagEmail.trim();
+    const timestamp = new Date().toLocaleTimeString();
+
+    try {
+      let rawRes: any = null;
+
+      if (diagAction === 'signup_resend') {
+        const res = await supabase.auth.resend({
+          type: 'signup',
+          email: emailToTest,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/login?verified=true`
+          }
+        });
+        rawRes = res;
+        if (res.error) throw res.error;
+      } else if (diagAction === 'reset_password') {
+        const res = await supabase.auth.resetPasswordForEmail(emailToTest, {
+          redirectTo: `${window.location.origin}/auth/reset-password`
+        });
+        rawRes = res;
+        if (res.error) throw res.error;
+      } else if (diagAction === 'magic_link') {
+        const res = await supabase.auth.signInWithOtp({
+          email: emailToTest,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/login`
+          }
+        });
+        rawRes = res;
+        if (res.error) throw res.error;
+      } else if (diagAction === 'signup_simulation') {
+        const randomPass = `DiagTest!${Math.floor(1000 + Math.random() * 9000)}`;
+        const res = await supabase.auth.signUp({
+          email: emailToTest,
+          password: randomPass,
+          options: {
+            data: { name: 'Diagnostic Test User', role: 'user' },
+            emailRedirectTo: `${window.location.origin}/auth/login?verified=true`
+          }
+        });
+        rawRes = res;
+        if (res.error) throw res.error;
+      }
+
+      setDiagResult({
+        timestamp,
+        action: diagAction,
+        targetEmail: emailToTest,
+        status: 'success',
+        rawResponse: rawRes || { status: 200, message: 'Request accepted by Supabase Auth engine' },
+        explanation: 'Supabase Auth processed the email dispatch command without any rejection from the client/API layer.',
+        solutionTips: [
+          'If the email is not in your inbox within 60 seconds:',
+          '1. Check your SPAM / Junk folder.',
+          '2. In Zoho Mail (solutions@koglatech.com), check the "Sent" folder to confirm Zoho processed the outbound delivery.',
+          '3. Check Supabase Auth Logs to see the live SMTP response logs.'
+        ]
+      });
+    } catch (err: any) {
+      console.error('[Diagnostic Tool Catch]', err);
+      const errMsg = err?.message || err?.error_description || String(err);
+      const errCode = err?.code || err?.status || 'AUTH_DISPATCH_ERROR';
+
+      let explanation = 'Supabase Auth or the Zoho SMTP server rejected the email dispatch request.';
+      const tips: string[] = [];
+
+      const lowerMsg = errMsg.toLowerCase();
+      if (lowerMsg.includes('rate limit') || lowerMsg.includes('429')) {
+        explanation = 'Rate limit reached: Supabase default built-in mailer has a strict limit of 3 emails/hour. To send without rate limits, enable Custom SMTP in Supabase.';
+        tips.push('Go to Supabase Dashboard -> Authentication -> SMTP Settings.');
+        tips.push('Turn ON "Enable Custom SMTP" with host "smtppro.zoho.com" and port 587.');
+      } else if (lowerMsg.includes('535') || lowerMsg.includes('authentication') || lowerMsg.includes('bad credentials')) {
+        explanation = 'Zoho SMTP Authentication Failed (Code 535). The username or password configured in Supabase was rejected by Zoho.';
+        tips.push('Generate a dedicated App Password at accounts.zoho.com -> Security -> App Passwords.');
+        tips.push('Paste the 16-character App Password into Supabase SMTP password field.');
+        tips.push('Ensure "SMTP Access" is enabled in Zoho Mail Settings -> Mail Accounts.');
+      } else if (lowerMsg.includes('nxdomain') || lowerMsg.includes('lookup') || lowerMsg.includes('smtpro')) {
+        explanation = 'DNS Lookup Failed (NXDOMAIN): There is a typo in the SMTP Host name.';
+        tips.push('Check the host in Supabase: it must be "smtppro.zoho.com" (with double "pp", not "smtpro.zoho.com").');
+      } else if (lowerMsg.includes('user not found') || lowerMsg.includes('user_not_found')) {
+        explanation = 'User not found in Supabase Auth table for resend action.';
+        tips.push('Try using "Full Registration Simulation" or register this email address first.');
+      } else if (lowerMsg.includes('signups not allowed')) {
+        explanation = 'Signups are disabled in your Supabase Auth provider settings.';
+        tips.push('Go to Supabase Dashboard -> Authentication -> Providers -> Email and turn on "Allow new users to sign up".');
+      } else {
+        tips.push('Open Supabase Auth Logs (link below) for the raw server stack trace.');
+        tips.push('Verify that "Confirm email" is toggled ON under Authentication -> Providers -> Email.');
+      }
+
+      setDiagResult({
+        timestamp,
+        action: diagAction,
+        targetEmail: emailToTest,
+        status: 'error',
+        errorCode: String(errCode),
+        errorMessage: errMsg,
+        rawResponse: err,
+        explanation,
+        solutionTips: tips
+      });
+    } finally {
+      setDiagLoading(false);
+    }
+  };
 
   // Course Pricing Editor State
   const [coursePrices, setCoursePrices] = useState<Record<string, { onlinePrice: number; physicalPrice: number }>>({});
@@ -819,41 +958,26 @@ Kogla Tech Global Admissions & Partnerships`;
 
   const handleDeleteUserById = async (targetUser: any) => {
     if (!targetUser) return;
-    if (confirm(`CRITICAL WARNING: Permanently delete user account "${targetUser.name}" (${targetUser.email})? This action will purge their profile data and allow this email to be registered afresh.`)) {
+    if (confirm(`CRITICAL WARNING: Permanently delete user account "${targetUser.name}" (${targetUser.email})? This action will purge their profile data from both cloud and local storage, allowing this email to be registered afresh.`)) {
       try {
         const targetUid = targetUser.uid;
-        const targetEmail = (targetUser.email || '').toLowerCase();
+        const targetEmail = (targetUser.email || '').toLowerCase().trim();
 
-        // 1. Immediately store in persistent deletion sets so they never reappear on refresh
-        const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
-        if (targetUid && !deletedUids.includes(targetUid)) {
-          deletedUids.push(targetUid);
-          localStorage.setItem('kogla_deleted_uids', JSON.stringify(deletedUids));
-        }
+        // 1. Permanently delete from local cache and Cloud Firestore
+        await deleteSupabaseUserProfile(targetUid, targetEmail);
 
-        const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
-        if (targetEmail && !deletedEmails.includes(targetEmail)) {
-          deletedEmails.push(targetEmail);
-          localStorage.setItem('kogla_deleted_emails', JSON.stringify(deletedEmails));
-        }
-
-        // 2. Remove from Supabase profile registry
-        try {
-          const rawSupabase = localStorage.getItem('kogla_supabase_users');
-          if (rawSupabase) {
-            const parsed = JSON.parse(rawSupabase);
-            const filtered = parsed.filter((u: any) => u.uid !== targetUid && (u.email || '').toLowerCase() !== targetEmail);
-            localStorage.setItem('kogla_supabase_users', JSON.stringify(filtered));
-          }
-        } catch (_) {}
-
-        // 3. Update React state immediately
-        setUsers(prev => prev.filter(u => u.uid !== targetUid && (u.email || '').toLowerCase() !== targetEmail));
+        // 2. Update React state immediately
+        setUsers(prev => prev.filter(u => u.uid !== targetUid && (u.email || '').toLowerCase().trim() !== targetEmail));
         if (selectedUser?.uid === targetUid) {
           setSelectedUser(null);
         }
 
         triggerSuccess(`User account "${targetUser.email}" permanently purged successfully. The user can now recreate an account.`);
+        
+        // 3. Resync roster
+        setTimeout(() => {
+          loadUsersData();
+        }, 500);
       } catch (err: any) {
         console.error(err);
         setErrorMsg(`Failed to delete user account: ${err.message}`);
@@ -1317,6 +1441,16 @@ Kogla Tech Global Admissions & Partnerships`;
           }`}
         >
           <Settings size={13} /> Dynamic Site Settings
+        </button>
+        <button 
+          onClick={() => setTab('diagnostics')}
+          className={`flex-1 md:flex-none px-4 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+            tab === 'diagnostics' 
+              ? 'bg-amber-500 text-black font-bold' 
+              : 'text-amber-400 hover:text-white hover:bg-amber-950/40'
+          }`}
+        >
+          <Activity size={13} /> SMTP & Email Diagnostics
         </button>
       </div>
 
@@ -3806,6 +3940,350 @@ Kogla Tech Global Admissions & Partnerships`;
 
             </form>
 
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tab 8: SMTP & Email Delivery Diagnostics */}
+      {tab === 'diagnostics' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-8"
+        >
+          {/* Header Banner */}
+          <div className="p-6 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-amber-500/30 rounded-sm shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] uppercase tracking-widest font-mono rounded-full mb-2">
+                <Radio size={11} className="animate-pulse" /> Live Mail System Inspector
+              </div>
+              <h2 className="text-xl font-bold font-display text-white uppercase tracking-wider">
+                SMTP & Email Delivery Diagnostics
+              </h2>
+              <p className="text-xs text-zinc-400 mt-1 max-w-2xl font-sans">
+                Execute live dispatch tests against Supabase Auth and your Zoho Mail SMTP server (<span className="text-amber-400 font-mono">solutions@koglatech.com</span>) to inspect raw server responses and troubleshoot delivery.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <a
+                href="https://supabase.com/dashboard/project/venvcnrqcafizslpwail/logs/auth-logs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-mono rounded flex items-center gap-1.5 border border-zinc-700 transition-colors"
+              >
+                <Server size={13} className="text-emerald-400" /> Supabase Auth Logs <ExternalLink size={11} />
+              </a>
+              <a
+                href="https://supabase.com/dashboard/project/venvcnrqcafizslpwail/auth/smtp"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-mono rounded flex items-center gap-1.5 border border-amber-500/40 transition-colors"
+              >
+                <Settings size={13} /> Supabase SMTP Settings <ExternalLink size={11} />
+              </a>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-12 gap-8">
+            {/* Left Column: Interactive Diagnostic Tester */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="p-6 bg-zinc-950 border border-zinc-850 rounded-sm shadow-lg space-y-5">
+                <div className="flex items-center justify-between border-b border-zinc-850 pb-3">
+                  <h3 className="text-xs font-bold font-mono text-zinc-200 uppercase tracking-wider flex items-center gap-2">
+                    <Activity size={14} className="text-amber-400" /> Interactive Mail Dispatch Tester
+                  </h3>
+                  <span className="text-[10px] font-mono text-zinc-500">Live API Endpoint</span>
+                </div>
+
+                {/* Target Email Input */}
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1.5">
+                    Target Recipient Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={diagEmail}
+                    onChange={(e) => setDiagEmail(e.target.value)}
+                    placeholder="e.g. emechebegerald@gmail.com or solutions@koglatech.com"
+                    className="w-full px-3.5 py-2.5 bg-black border border-zinc-800 rounded text-xs text-zinc-100 font-mono focus:outline-none focus:border-amber-400"
+                  />
+                  <p className="text-[10px] text-zinc-500 font-mono mt-1">
+                    Enter the email address you want to test sending to.
+                  </p>
+                </div>
+
+                {/* Action Type Selector */}
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1.5">
+                    Select Test Action Type
+                  </label>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {[
+                      {
+                        id: 'signup_resend',
+                        label: 'Resend Verification Email',
+                        desc: 'Calls supabase.auth.resend({ type: "signup" })'
+                      },
+                      {
+                        id: 'reset_password',
+                        label: 'Send Password Reset',
+                        desc: 'Calls resetPasswordForEmail()'
+                      },
+                      {
+                        id: 'magic_link',
+                        label: 'Send Magic Link / OTP',
+                        desc: 'Calls signInWithOtp()'
+                      },
+                      {
+                        id: 'signup_simulation',
+                        label: 'Test User Registration',
+                        desc: 'Simulates full signUp() dispatch'
+                      }
+                    ].map((act) => (
+                      <button
+                        key={act.id}
+                        type="button"
+                        onClick={() => setDiagAction(act.id as any)}
+                        className={`p-3 text-left rounded border transition-all cursor-pointer ${
+                          diagAction === act.id
+                            ? 'bg-amber-500/10 border-amber-500 text-amber-300'
+                            : 'bg-black/60 border-zinc-850 hover:border-zinc-700 text-zinc-400'
+                        }`}
+                      >
+                        <div className="text-xs font-mono font-bold">{act.label}</div>
+                        <div className="text-[10px] font-mono text-zinc-500 mt-0.5">{act.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Submit button */}
+                <button
+                  type="button"
+                  disabled={diagLoading || !diagEmail.trim()}
+                  onClick={runEmailDiagnostics}
+                  className="w-full py-3 bg-amber-500 hover:bg-amber-400 active:scale-[0.99] disabled:opacity-50 text-black font-bold text-xs font-mono uppercase tracking-wider rounded flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/10"
+                >
+                  {diagLoading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Executing Dispatch Request...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={14} /> Run Live Diagnostic Test
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Diagnostic Result Display */}
+              {diagResult && (
+                <div className={`p-6 rounded-sm border shadow-xl space-y-4 ${
+                  diagResult.status === 'success'
+                    ? 'bg-emerald-950/20 border-emerald-500/40'
+                    : 'bg-red-950/30 border-red-500/40'
+                }`}>
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                    <div className="flex items-center gap-2">
+                      {diagResult.status === 'success' ? (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold rounded">
+                          <CheckCircle2 size={14} className="text-emerald-400" /> STATUS: 200 OK (DISPATCHED)
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/20 text-red-300 font-mono text-xs font-bold rounded">
+                          <ShieldAlert size={14} className="text-red-400" /> ERROR: {diagResult.errorCode || 'DISPATCH_REJECTED'}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-400">{diagResult.timestamp}</span>
+                  </div>
+
+                  {/* Summary Explanation */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold font-mono text-zinc-200">
+                      Target: <span className="text-amber-400">{diagResult.targetEmail}</span> | Action: <span className="text-zinc-300">{diagResult.action}</span>
+                    </p>
+                    <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                      {diagResult.explanation}
+                    </p>
+                    {diagResult.errorMessage && (
+                      <div className="p-3 bg-black/80 border border-red-500/30 rounded text-red-300 font-mono text-xs overflow-x-auto">
+                        <span className="text-red-500 font-bold uppercase text-[10px] block mb-1">Server Error Message:</span>
+                        {diagResult.errorMessage}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actionable Tips */}
+                  {diagResult.solutionTips && diagResult.solutionTips.length > 0 && (
+                    <div className="p-3.5 bg-black/60 border border-zinc-800 rounded space-y-1.5">
+                      <p className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
+                        <Info size={11} /> Troubleshooting Action Steps:
+                      </p>
+                      <ul className="text-xs text-zinc-300 font-sans space-y-1 pl-4 list-disc">
+                        {diagResult.solutionTips.map((tip, idx) => (
+                          <li key={idx}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Raw Server Response Payload */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-mono uppercase text-zinc-400">
+                        Raw Server Response JSON
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(JSON.stringify(diagResult.rawResponse, null, 2));
+                          triggerSuccess('Raw response payload copied to clipboard');
+                        }}
+                        className="text-[10px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Copy size={10} /> Copy JSON
+                      </button>
+                    </div>
+                    <pre className="p-3 bg-black border border-zinc-850 rounded text-[11px] font-mono text-emerald-400 max-h-48 overflow-y-auto whitespace-pre-wrap break-all">
+                      {JSON.stringify(diagResult.rawResponse, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Direct Logs & Verification Checklist */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Quick Navigation Cards */}
+              <div className="p-5 bg-zinc-950 border border-zinc-850 rounded-sm shadow-lg space-y-4">
+                <h3 className="text-xs font-bold font-mono text-zinc-200 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-850 pb-3">
+                  <Server size={14} className="text-cyan-400" /> Direct Cloud Log Inspection Links
+                </h3>
+                <p className="text-[11px] text-zinc-400 font-sans">
+                  Click any link below to directly open the exact server log console for real-time investigation:
+                </p>
+
+                <div className="space-y-2.5">
+                  <a
+                    href="https://supabase.com/dashboard/project/venvcnrqcafizslpwail/logs/auth-logs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded flex items-center justify-between group transition-colors cursor-pointer"
+                  >
+                    <div>
+                      <div className="text-xs font-mono font-bold text-white group-hover:text-amber-400 flex items-center gap-1.5">
+                        <Bug size={13} className="text-amber-400" /> Supabase Auth Logs
+                      </div>
+                      <div className="text-[10px] text-zinc-400 font-sans mt-0.5">
+                        Shows live GoTrue SMTP connection handshakes & rejected emails.
+                      </div>
+                    </div>
+                    <ExternalLink size={13} className="text-zinc-500 group-hover:text-amber-400 shrink-0 ml-2" />
+                  </a>
+
+                  <a
+                    href="https://supabase.com/dashboard/project/venvcnrqcafizslpwail/auth/smtp"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded flex items-center justify-between group transition-colors cursor-pointer"
+                  >
+                    <div>
+                      <div className="text-xs font-mono font-bold text-white group-hover:text-amber-400 flex items-center gap-1.5">
+                        <Settings size={13} className="text-gold-400" /> Supabase SMTP Settings
+                      </div>
+                      <div className="text-[10px] text-zinc-400 font-sans mt-0.5">
+                        Configure Host (smtppro.zoho.com), Port 587, and App Password.
+                      </div>
+                    </div>
+                    <ExternalLink size={13} className="text-zinc-500 group-hover:text-amber-400 shrink-0 ml-2" />
+                  </a>
+
+                  <a
+                    href="https://mailadmin.zoho.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded flex items-center justify-between group transition-colors cursor-pointer"
+                  >
+                    <div>
+                      <div className="text-xs font-mono font-bold text-white group-hover:text-amber-400 flex items-center gap-1.5">
+                        <Mail size={13} className="text-blue-400" /> Zoho Mail Admin Console
+                      </div>
+                      <div className="text-[10px] text-zinc-400 font-sans mt-0.5">
+                        Audit Logs & Outbound Delivery Queue for solutions@koglatech.com.
+                      </div>
+                    </div>
+                    <ExternalLink size={13} className="text-zinc-500 group-hover:text-amber-400 shrink-0 ml-2" />
+                  </a>
+
+                  <a
+                    href="https://accounts.zoho.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded flex items-center justify-between group transition-colors cursor-pointer"
+                  >
+                    <div>
+                      <div className="text-xs font-mono font-bold text-white group-hover:text-amber-400 flex items-center gap-1.5">
+                        <Lock size={13} className="text-purple-400" /> Zoho App Passwords
+                      </div>
+                      <div className="text-[10px] text-zinc-400 font-sans mt-0.5">
+                        Generate 16-character dedicated SMTP credentials.
+                      </div>
+                    </div>
+                    <ExternalLink size={13} className="text-zinc-500 group-hover:text-amber-400 shrink-0 ml-2" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Exact Configuration Values Reference Card */}
+              <div className="p-5 bg-zinc-950 border border-zinc-850 rounded-sm shadow-lg space-y-4">
+                <h3 className="text-xs font-bold font-mono text-zinc-200 uppercase tracking-wider flex items-center gap-2 border-b border-zinc-850 pb-3">
+                  <ShieldCheck size={14} className="text-gold-400" /> Exact Zoho SMTP Settings
+                </h3>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[11px] font-mono text-left">
+                    <tbody className="divide-y divide-zinc-850 text-zinc-300">
+                      <tr>
+                        <td className="py-1.5 text-zinc-500">Sender Email</td>
+                        <td className="py-1.5 text-gold-400 font-bold">solutions@koglatech.com</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 text-zinc-500">Sender Name</td>
+                        <td className="py-1.5 text-white">Kogla Tech</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 text-zinc-500">SMTP Host</td>
+                        <td className="py-1.5 text-emerald-400 font-bold">smtppro.zoho.com</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 text-zinc-500">SMTP Port</td>
+                        <td className="py-1.5 text-amber-400 font-bold">587 (STARTTLS)</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 text-zinc-500">Username</td>
+                        <td className="py-1.5 text-zinc-200">solutions@koglatech.com</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 text-zinc-500">Password</td>
+                        <td className="py-1.5 text-zinc-400">Zoho 16-char App Password</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="p-3 bg-amber-950/30 border border-amber-500/30 rounded text-[11px] text-amber-200 font-sans space-y-1">
+                  <p className="font-bold font-mono flex items-center gap-1 text-amber-300">
+                    <AlertTriangle size={12} /> Supabase Email Confirmation Toggle:
+                  </p>
+                  <p>
+                    Ensure <b>"Confirm email"</b> is toggled <b>ON</b> in Supabase under <i>Authentication &gt; Providers &gt; Email</i>. If this toggle is OFF, Supabase skips sending emails completely!
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </motion.div>
       )}
