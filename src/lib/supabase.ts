@@ -71,6 +71,8 @@ export function saveSupabaseUserProfile(profile: UserProfile): void {
     const updatedProfile: UserProfile = { 
       ...profile,
       email: normEmail || profile.email,
+      emailVerified: profile.emailVerified ?? false,
+      emailConfirmedAt: profile.emailConfirmedAt || undefined,
       updatedAt: new Date().toISOString() 
     };
 
@@ -83,7 +85,7 @@ export function saveSupabaseUserProfile(profile: UserProfile): void {
 
     // 2. Dual-write to Cloud Firestore only when profile data has actually changed
     if (profile.uid) {
-      const stateHash = `${profile.uid}|${profile.role}|${profile.xp}|${(profile.completedRooms || []).join(',')}|${profile.name}|${profile.avatarUrl}|${profile.isPaid}`;
+      const stateHash = `${profile.uid}|${profile.role}|${profile.xp}|${(profile.completedRooms || []).join(',')}|${profile.name}|${profile.avatarUrl}|${profile.isPaid}|${profile.emailVerified}|${profile.emailConfirmedAt}`;
       if (lastWrittenProfileHashes[profile.uid] === stateHash) {
         return; // State is identical, skip redundant write
       }
@@ -100,6 +102,9 @@ export function saveSupabaseUserProfile(profile: UserProfile): void {
           completedRooms: profile.completedRooms || [],
           avatarUrl: profile.avatarUrl || '',
           isPaid: !!profile.isPaid,
+          emailVerified: !!profile.emailVerified,
+          emailConfirmedAt: profile.emailConfirmedAt || null,
+          createdAt: profile.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }, { merge: true });
       }).catch(() => {});

@@ -19,6 +19,7 @@ import Reviews from './pages/Reviews';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
+import VerifyEmailCallback from './pages/auth/VerifyEmailCallback';
 import CourseDetails from './pages/CourseDetails';
 import ServiceWorkflow from './pages/ServiceWorkflow';
 import ProjectDetails from './pages/ProjectDetails';
@@ -53,6 +54,8 @@ export default function App() {
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/auth/signup" element={<Signup />} />
                 <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+                <Route path="/auth/verify-email" element={<VerifyEmailCallback />} />
+                <Route path="/auth/callback" element={<VerifyEmailCallback />} />
                 <Route path="/academy/:slug" element={<CourseDetails />} />
                 <Route path="/services/:slug" element={<ServiceWorkflow />} />
                 <Route path="/projects/:slug" element={<ProjectDetails />} />

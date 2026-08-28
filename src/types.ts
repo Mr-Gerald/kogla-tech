@@ -28,6 +28,8 @@ export interface UserProfile {
   referredBy?: string | null;
   preferences?: UserPreferences;
   savedItems?: string[];
+  emailVerified?: boolean;
+  emailConfirmedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

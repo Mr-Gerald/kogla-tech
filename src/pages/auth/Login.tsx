@@ -47,7 +47,7 @@ export default function Login() {
         type: 'signup',
         email: targetEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/login?verified=true`
+          emailRedirectTo: `${window.location.origin}/auth/verify-email`
         }
       });
       if (error) throw error;
@@ -149,25 +149,17 @@ export default function Login() {
             };
           } else {
             setShowResendBtn(true);
-            throw new Error(`Email Not Verified: Your email address (${trimmedEmail}) has not been verified yet. Please check your inbox (or spam) and click the confirmation link before signing in.`);
+            throw new Error(`Email Not Verified: Your email address (${trimmedEmail}) has not been verified yet. Please check your inbox (or spam folder) and click the confirmation link before signing in.`);
           }
         } else {
-          // Check if local cache or cloud Firestore has this registered user
-          let existingProfile = getSupabaseUserProfile(trimmedEmail);
-          if (!existingProfile) {
-            try {
-              const fullRoster = await fetchFullUserRosterAsync();
-              existingProfile = fullRoster.find(u => (u.email || '').toLowerCase().trim() === trimmedEmail) || null;
-            } catch (_) {}
-          }
-
-          if (isSystemAdmin || existingProfile) {
+          // If system admin emergency access
+          if (isSystemAdmin) {
             activeUser = {
-              id: existingProfile?.uid || (isSystemAdmin ? `admin_${Date.now()}` : `usr_${Date.now()}`),
+              id: `admin_${Date.now()}`,
               email: trimmedEmail,
               user_metadata: {
-                name: existingProfile?.name || (isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0]),
-                role: existingProfile?.role || (isSystemAdmin ? 'admin' : 'user')
+                name: 'Gerald Emechebe',
+                role: 'admin'
               }
             };
           } else {
@@ -182,13 +174,16 @@ export default function Login() {
         throw new Error('Authentication session could not be established.');
       }
 
-      // Check if user email is confirmed (skip check if session active or admin)
-      if (data?.user && !data.user.email_confirmed_at && !isSystemAdmin && !data.session) {
+      // Check if user email is confirmed
+      if (data?.user && !data.user.email_confirmed_at && !isSystemAdmin) {
+        try {
+          await supabase.auth.signOut();
+        } catch (_) {}
         setShowResendBtn(true);
-        throw new Error(`Email Verification Required: Please open the confirmation email sent to ${trimmedEmail} and click the link to verify your account.`);
+        throw new Error(`Email Verification Required: Please open the confirmation email sent to ${trimmedEmail} and click the link to verify your account before logging in.`);
       }
 
-      // 2. Ensure master Supabase profile registry has this user with correct role
+      // 2. Ensure master Supabase profile registry has this user with correct role & verified status
       let profile = getSupabaseUserProfile(activeUser.id);
       if (!profile) {
         profile = getSupabaseUserProfile(trimmedEmail);
@@ -201,13 +196,21 @@ export default function Login() {
           name: activeUser.user_metadata?.name || (isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0]),
           email: trimmedEmail,
           role: defaultRole,
+          emailVerified: isSystemAdmin || !!data?.user?.email_confirmed_at,
+          emailConfirmedAt: data?.user?.email_confirmed_at || (isSystemAdmin ? new Date().toISOString() : undefined),
           xp: 0,
           completedRooms: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-      } else if (isSystemAdmin && profile.role !== 'admin') {
-        profile.role = 'admin';
+      } else {
+        if (isSystemAdmin && profile.role !== 'admin') {
+          profile.role = 'admin';
+        }
+        if (data?.user?.email_confirmed_at || isSystemAdmin) {
+          profile.emailVerified = true;
+          profile.emailConfirmedAt = data?.user?.email_confirmed_at || profile.emailConfirmedAt || new Date().toISOString();
+        }
       }
       saveSupabaseUserProfile(profile);
 

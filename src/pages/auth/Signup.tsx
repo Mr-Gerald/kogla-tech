@@ -51,7 +51,7 @@ export default function Signup() {
         type: 'signup',
         email: targetEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/login?verified=true`
+          emailRedirectTo: `${window.location.origin}/auth/verify-email`
         }
       });
       if (error) {
@@ -166,7 +166,7 @@ export default function Signup() {
             promoCode: cleanPromo,
             termsAcceptedAt: new Date().toISOString()
           },
-          emailRedirectTo: `${window.location.origin}/auth/login?verified=true`
+          emailRedirectTo: `${window.location.origin}/auth/verify-email`
         }
       });
 
@@ -203,6 +203,8 @@ export default function Signup() {
         xp: 0,
         completedRooms: [],
         referredBy: cleanPromo || null,
+        emailVerified: isSystemAdmin ? true : false,
+        emailConfirmedAt: isSystemAdmin ? new Date().toISOString() : undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

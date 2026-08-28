@@ -941,6 +941,52 @@ Kogla Tech Global Admissions & Partnerships`;
     }
   };
 
+  const handleToggleEmailVerified = async (userId: string, currentVerifiedState?: boolean) => {
+    try {
+      const userToUpdate = users.find(u => u.uid === userId);
+      if (userToUpdate) {
+        const newVerifiedState = !currentVerifiedState;
+        const updated: UserProfile = { 
+          ...userToUpdate, 
+          emailVerified: newVerifiedState, 
+          emailConfirmedAt: newVerifiedState ? (userToUpdate.emailConfirmedAt || new Date().toISOString()) : undefined,
+          updatedAt: new Date().toISOString() 
+        };
+        saveSupabaseUserProfile(updated);
+        setUsers(prev => prev.map(u => u.uid === userId ? updated : u));
+      }
+      if (selectedUser && selectedUser.uid === userId) {
+        setSelectedUser(prev => prev ? { 
+          ...prev, 
+          emailVerified: !currentVerifiedState,
+          emailConfirmedAt: !currentVerifiedState ? (prev.emailConfirmedAt || new Date().toISOString()) : undefined
+        } : null);
+      }
+      triggerSuccess(`Email verification status updated to ${!currentVerifiedState ? 'VERIFIED (ACTIVE)' : 'UNVERIFIED (PENDING)'}!`);
+    } catch (err: any) {
+      setErrorMsg(`Failed updating email verification status: ${err.message}`);
+      setTimeout(() => setErrorMsg(''), 5000);
+    }
+  };
+
+  const handleAdminResendVerification = async (targetEmail: string) => {
+    if (!targetEmail) return;
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: targetEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/verify-email`
+        }
+      });
+      if (error) throw error;
+      triggerSuccess(`Verification email successfully dispatched to ${targetEmail}!`);
+    } catch (err: any) {
+      console.warn('Admin resend error:', err);
+      triggerSuccess(`Verification email dispatch requested for ${targetEmail}. Please check spam/inbox.`);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (confirm('Verify: Permanently purge this database inquiries file?')) {
       try {
@@ -2740,177 +2786,272 @@ Kogla Tech Global Admissions & Partnerships`;
 
       {/* Tab 2: Users (Registered Students Accounts) Section */}
       {tab === 'users' && (
-        <div className="grid lg:grid-cols-3 gap-8">
-          
-          {/* Main Users Database roster table */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="bg-gray-950 border border-gray-800 rounded-sm">
-              <div className="p-4 border-b border-gray-800 bg-black/40 flex items-center justify-between font-mono">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-display font-semibold text-gold-500 uppercase tracking-wider">
-                    Registered developer accounts roster
-                  </span>
-                  <button
-                    type="button"
-                    onClick={loadUsersData}
-                    disabled={loadingUsers}
-                    className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-gold-400 text-[10px] uppercase font-mono rounded flex items-center gap-1.5 transition-all cursor-pointer"
-                    title="Sync and pull latest registrations from cloud database"
-                  >
-                    <RefreshCw size={11} className={loadingUsers ? 'animate-spin text-gold-400' : ''} />
-                    {loadingUsers ? 'Syncing...' : 'Sync Cloud'}
-                  </button>
-                </div>
-                <span className="text-[9px] text-gray-500 uppercase">
-                  {users.length} Registered Accounts
-                </span>
-              </div>
-
-              {users.length === 0 ? (
-                <div className="p-16 text-center text-gray-500 text-xs font-mono">
-                  [EMPTY DATABASE]: No developer registry profiles discovered.
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-900 overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-black/60 text-gray-500 font-mono text-[9px] uppercase tracking-wider border-b border-gray-900">
-                        <th className="p-4">Developer Profile</th>
-                        <th className="p-4">Status &amp; Role</th>
-                        <th className="p-4 text-center">Completed</th>
-                        <th className="p-4 text-right">Metrics (XP)</th>
-                        <th className="p-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-900">
-                      {users.map((item) => (
-                        <tr 
-                          key={item.uid}
-                          className={`hover:bg-gray-900/40 transition-all ${
-                            selectedUser?.uid === item.uid ? 'bg-gold-500/5' : ''
-                          }`}
-                        >
-                          <td className="p-4 cursor-pointer" onClick={() => setSelectedUser(item)}>
-                            <div className="font-semibold text-white uppercase tracking-wide">{item.name}</div>
-                            <div className="text-gray-400 font-mono text-[10px]">{item.email}</div>
-                          </td>
-                          <td className="p-4 font-mono text-[10px]">
-                            <span className={`px-2 py-0.5 rounded-sm uppercase tracking-wider font-semibold ${
-                              item.role === 'admin' 
-                                ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                                : 'bg-gray-900 text-gray-400 border border-gray-800'
-                            }`}>
-                              {item.role || 'user'}
-                            </span>
-                          </td>
-                          <td className="p-4 text-center font-mono text-cyan-400 font-semibold">
-                            {item.completedRooms?.length || 0} Rooms
-                          </td>
-                          <td className="p-4 text-right font-display font-bold text-gold-500">
-                            {item.xp || 0} XP
-                          </td>
-                          <td className="p-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedUser(item)}
-                                className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-mono uppercase rounded flex items-center gap-1 cursor-pointer"
-                              >
-                                <Eye size={11} /> Inspect
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteUserById(item);
-                                }}
-                                className="px-2.5 py-1 bg-red-950/80 hover:bg-red-800 border border-red-800 text-red-300 hover:text-white text-[10px] font-mono uppercase font-bold rounded flex items-center gap-1 transition-all cursor-pointer shadow-sm"
-                                title="Permanently delete user and allow recreation"
-                              >
-                                <Trash2 size={11} /> Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+        <div className="space-y-6">
+          {/* Quick Metrics Bar for Registered Users */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-4 bg-gray-950 border border-gray-800 rounded-sm">
+              <span className="text-[10px] font-mono text-gray-500 uppercase block">Total Accounts</span>
+              <span className="text-xl font-display font-bold text-white mt-1 block">{users.length}</span>
+            </div>
+            <div className="p-4 bg-gray-950 border border-gray-800 rounded-sm">
+              <span className="text-[10px] font-mono text-emerald-400 uppercase block">Email Verified</span>
+              <span className="text-xl font-display font-bold text-emerald-400 mt-1 block">
+                {users.filter(u => u.emailVerified || u.emailConfirmedAt || isSystemAdminEmail(u.email)).length}
+              </span>
+            </div>
+            <div className="p-4 bg-gray-950 border border-gray-800 rounded-sm">
+              <span className="text-[10px] font-mono text-amber-400 uppercase block">Pending Verification</span>
+              <span className="text-xl font-display font-bold text-amber-400 mt-1 block">
+                {users.filter(u => !u.emailVerified && !u.emailConfirmedAt && !isSystemAdminEmail(u.email)).length}
+              </span>
+            </div>
+            <div className="p-4 bg-gray-950 border border-gray-800 rounded-sm">
+              <span className="text-[10px] font-mono text-cyan-400 uppercase block">Paid Academy Members</span>
+              <span className="text-xl font-display font-bold text-cyan-400 mt-1 block">
+                {users.filter(u => u.isPaid).length}
+              </span>
             </div>
           </div>
 
-          {/* User inspector & system alerts dispatch terminal */}
-          <div className="lg:col-span-1">
-            {selectedUser ? (
-              <div className="bg-gray-950 border border-gray-800 p-6 rounded-sm sticky top-28 space-y-6">
-                <div>
-                  <span className="text-[9px] text-gray-500 uppercase tracking-widest font-mono">Academic inspector tools</span>
-                  <h3 className="text-base font-display font-bold text-white mt-1 uppercase">
-                    {selectedUser.name}
-                  </h3>
-                  <p className="text-xs text-gold-500 font-mono mt-1">
-                    {selectedUser.email}
-                  </p>
-                </div>
-
-                <div className="border-y border-gray-900 py-3.5 space-y-2.5 font-mono text-[10px] text-gray-400">
-                  <div className="flex justify-between">
-                    <span>Account UID Key:</span>
-                    <span className="text-gray-300 text-[9px]">{selectedUser.uid.substring(0, 16)}...</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Role / Level:</span>
-                    <span className="text-white uppercase font-bold">{selectedUser.role || 'User'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Rooms Completed:</span>
-                    <span className="text-cyan-400 font-bold">{selectedUser.completedRooms?.length || 0} Completed</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Registered On:</span>
-                    <span>
-                      {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Main Users Database roster table */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="bg-gray-950 border border-gray-800 rounded-sm">
+                <div className="p-4 border-b border-gray-800 bg-black/40 flex items-center justify-between font-mono">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-display font-semibold text-gold-500 uppercase tracking-wider">
+                      Registered developer accounts roster
                     </span>
-                  </div>
-                </div>
-
-                {/* Academy Paid Status Approval Toggle */}
-                <div className="pt-2 pb-4 border-b border-gray-900 space-y-3 font-mono text-[10px]">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Academy Paid Status:</span>
-                    <span className={`px-2 py-0.5 rounded-sm font-bold uppercase ${selectedUser.isPaid ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
-                      {selectedUser.isPaid ? '✓ PAID & APPROVED' : 'UNPAID'}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => handleTogglePaid(selectedUser.uid, selectedUser.isPaid)}
-                    className={`w-full py-2.5 uppercase tracking-widest font-bold rounded-sm border transition-all cursor-pointer ${
-                      selectedUser.isPaid 
-                        ? 'bg-red-950/40 border-red-900/60 text-red-400 hover:bg-red-900 hover:text-white' 
-                        : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-black'
-                    }`}
-                  >
-                    {selectedUser.isPaid ? 'Revoke Paid Access' : 'Approve & Grant Paid Access'}
-                  </button>
-
-                  {/* DANGER ZONE: PERMANENT DELETE */}
-                  <div className="p-3 bg-red-950/30 border border-red-900/50 rounded-sm space-y-2 mt-3">
-                    <span className="text-[9px] text-red-400 font-mono uppercase font-bold block">
-                      Danger Zone • Permanent Deletion
-                    </span>
-                    <p className="text-[10px] text-zinc-400 leading-tight">
-                      Permanently removes this user's profile and allows this email to register again.
-                    </p>
-                    <button 
+                    <button
                       type="button"
-                      onClick={() => handleDeleteUserById(selectedUser)}
-                      className="w-full py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-mono uppercase tracking-wider font-bold text-xs rounded-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                      onClick={loadUsersData}
+                      disabled={loadingUsers}
+                      className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-gold-400 text-[10px] uppercase font-mono rounded flex items-center gap-1.5 transition-all cursor-pointer"
+                      title="Sync and pull latest registrations from cloud database"
                     >
-                      <Trash2 size={13} /> Delete Account Permanently
+                      <RefreshCw size={11} className={loadingUsers ? 'animate-spin text-gold-400' : ''} />
+                      {loadingUsers ? 'Syncing...' : 'Sync Cloud'}
                     </button>
                   </div>
+                  <span className="text-[9px] text-gray-500 uppercase font-mono">
+                    {users.length} Accounts Listed
+                  </span>
                 </div>
+
+                {users.length === 0 ? (
+                  <div className="p-16 text-center text-gray-500 text-xs font-mono">
+                    [EMPTY DATABASE]: No developer registry profiles discovered.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-900 overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-black/60 text-gray-500 font-mono text-[9px] uppercase tracking-wider border-b border-gray-900">
+                          <th className="p-4">Developer Profile</th>
+                          <th className="p-4">Verification &amp; Role</th>
+                          <th className="p-4 text-center">Completed</th>
+                          <th className="p-4 text-right">Metrics (XP)</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-900">
+                        {users.map((item) => {
+                          const isVerified = !!(item.emailVerified || item.emailConfirmedAt || isSystemAdminEmail(item.email));
+                          return (
+                            <tr 
+                              key={item.uid}
+                              className={`hover:bg-gray-900/40 transition-all ${
+                                selectedUser?.uid === item.uid ? 'bg-gold-500/5' : ''
+                              }`}
+                            >
+                              <td className="p-4 cursor-pointer" onClick={() => setSelectedUser(item)}>
+                                <div className="font-semibold text-white uppercase tracking-wide flex items-center gap-1.5">
+                                  {item.name}
+                                  {item.isPaid && (
+                                    <span className="px-1.5 py-0.2 bg-gold-500/20 text-gold-400 text-[8px] font-mono rounded border border-gold-500/30 uppercase">
+                                      Paid
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-gray-400 font-mono text-[10px]">{item.email}</div>
+                              </td>
+                              <td className="p-4 font-mono text-[10px]">
+                                <div className="flex flex-col gap-1 items-start">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`px-2 py-0.5 rounded-sm uppercase tracking-wider font-semibold ${
+                                      item.role === 'admin' 
+                                        ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                                        : 'bg-gray-900 text-gray-400 border border-gray-800'
+                                    }`}>
+                                      {item.role || 'user'}
+                                    </span>
+                                    {isVerified ? (
+                                      <span className="px-1.5 py-0.5 rounded-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] uppercase font-bold flex items-center gap-1">
+                                        <CheckCircle2 size={10} /> Verified
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.5 rounded-sm bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] uppercase font-bold flex items-center gap-1">
+                                        <Clock size={10} /> Not Verified
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4 text-center font-mono text-cyan-400 font-semibold">
+                                {item.completedRooms?.length || 0} Rooms
+                              </td>
+                              <td className="p-4 text-right font-display font-bold text-gold-500">
+                                {item.xp || 0} XP
+                              </td>
+                              <td className="p-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedUser(item)}
+                                    className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-mono uppercase rounded flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <Eye size={11} /> Inspect
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteUserById(item);
+                                    }}
+                                    className="px-2.5 py-1 bg-red-950/80 hover:bg-red-800 border border-red-800 text-red-300 hover:text-white text-[10px] font-mono uppercase font-bold rounded flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                                    title="Permanently delete user and allow recreation"
+                                  >
+                                    <Trash2 size={11} /> Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* User inspector & system alerts dispatch terminal */}
+            <div className="lg:col-span-1">
+              {selectedUser ? (
+                <div className="bg-gray-950 border border-gray-800 p-6 rounded-sm sticky top-28 space-y-6">
+                  <div>
+                    <span className="text-[9px] text-gray-500 uppercase tracking-widest font-mono">Academic inspector tools</span>
+                    <h3 className="text-base font-display font-bold text-white mt-1 uppercase">
+                      {selectedUser.name}
+                    </h3>
+                    <p className="text-xs text-gold-500 font-mono mt-1">
+                      {selectedUser.email}
+                    </p>
+                  </div>
+
+                  <div className="border-y border-gray-900 py-3.5 space-y-2.5 font-mono text-[10px] text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Account UID Key:</span>
+                      <span className="text-gray-300 text-[9px]">{selectedUser.uid.substring(0, 16)}...</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Role / Level:</span>
+                      <span className="text-white uppercase font-bold">{selectedUser.role || 'User'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Email Verified:</span>
+                      {selectedUser.emailVerified || selectedUser.emailConfirmedAt || isSystemAdminEmail(selectedUser.email) ? (
+                        <span className="px-2 py-0.5 rounded-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] font-bold flex items-center gap-1">
+                          <CheckCircle2 size={10} /> YES (VERIFIED)
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-sm bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] font-bold flex items-center gap-1">
+                          <Clock size={10} /> NO (PENDING)
+                        </span>
+                      )}
+                    </div>
+                    {selectedUser.emailConfirmedAt && (
+                      <div className="flex justify-between">
+                        <span>Confirmed At:</span>
+                        <span className="text-gray-300 text-[9px]">
+                          {new Date(selectedUser.emailConfirmedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Rooms Completed:</span>
+                      <span className="text-cyan-400 font-bold">{selectedUser.completedRooms?.length || 0} Completed</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Registered On:</span>
+                      <span>
+                        {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Verification & Access Actions */}
+                  <div className="space-y-3 pt-1">
+                    {/* Manual Email Verification Toggle */}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleEmailVerified(selectedUser.uid, !!(selectedUser.emailVerified || selectedUser.emailConfirmedAt))}
+                        className={`flex-1 py-2 text-[10px] font-mono uppercase font-bold rounded-sm border transition-all cursor-pointer ${
+                          selectedUser.emailVerified || selectedUser.emailConfirmedAt
+                            ? 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800'
+                            : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-black'
+                        }`}
+                      >
+                        {selectedUser.emailVerified || selectedUser.emailConfirmedAt ? 'Mark Unverified' : 'Force Verify & Activate'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAdminResendVerification(selectedUser.email)}
+                        className="px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-gold-400 text-[10px] font-mono uppercase rounded flex items-center gap-1 cursor-pointer"
+                        title="Resend verification link to user's email"
+                      >
+                        <Mail size={11} /> Resend Link
+                      </button>
+                    </div>
+
+                    {/* Academy Paid Status Approval Toggle */}
+                    <div className="pt-2 pb-2 border-t border-gray-900 space-y-2 font-mono text-[10px]">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400">Academy Paid Status:</span>
+                        <span className={`px-2 py-0.5 rounded-sm font-bold uppercase ${selectedUser.isPaid ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
+                          {selectedUser.isPaid ? '✓ PAID & APPROVED' : 'UNPAID'}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleTogglePaid(selectedUser.uid, selectedUser.isPaid)}
+                        className={`w-full py-2.5 uppercase tracking-widest font-bold rounded-sm border transition-all cursor-pointer ${
+                          selectedUser.isPaid 
+                            ? 'bg-red-950/40 border-red-900/60 text-red-400 hover:bg-red-900 hover:text-white' 
+                            : 'bg-gold-500/20 border-gold-500/50 text-gold-400 hover:bg-gold-500 hover:text-black'
+                        }`}
+                      >
+                        {selectedUser.isPaid ? 'Revoke Paid Access' : 'Approve & Grant Paid Access'}
+                      </button>
+                    </div>
+
+                    {/* DANGER ZONE: PERMANENT DELETE */}
+                    <div className="p-3 bg-red-950/30 border border-red-900/50 rounded-sm space-y-2 mt-3">
+                      <span className="text-[9px] text-red-400 font-mono uppercase font-bold block">
+                        Danger Zone • Permanent Deletion
+                      </span>
+                      <p className="text-[10px] text-zinc-400 leading-tight">
+                        Permanently removes this user's profile and allows this email to register again.
+                      </p>
+                      <button 
+                        type="button"
+                        onClick={() => handleDeleteUserById(selectedUser)}
+                        className="w-full py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-mono uppercase tracking-wider font-bold text-xs rounded-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                      >
+                        <Trash2 size={13} /> Delete Account Permanently
+                      </button>
+                    </div>
+                  </div>
 
                 {/* Direct notifications dispatch form */}
                 <form onSubmit={handleSendNotification} className="space-y-4 pt-2">
@@ -2967,12 +3108,13 @@ Kogla Tech Global Admissions & Partnerships`;
 
               </div>
             ) : (
-              <div className="bg-gray-950 border border-gray-805 p-8 rounded-sm text-center text-gray-500 text-xs font-mono">
+              <div className="bg-gray-950 border border-gray-800 p-8 rounded-sm text-center text-gray-500 text-xs font-mono">
                 Select any user from the account ledger on the left to review metrics details and build custom system notifications alerts.
               </div>
             )}
           </div>
 
+          </div>
         </div>
       )}
 

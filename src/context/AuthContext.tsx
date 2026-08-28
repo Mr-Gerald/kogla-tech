@@ -69,6 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           existingProfile.role = 'admin';
           changed = true;
         }
+        if (currentUser.email_confirmed_at && !existingProfile.emailVerified) {
+          existingProfile.emailVerified = true;
+          existingProfile.emailConfirmedAt = currentUser.email_confirmed_at;
+          changed = true;
+        }
         setProfile(existingProfile);
         if (changed) {
           saveSupabaseUserProfile(existingProfile);
@@ -79,6 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || (isSystemAdmin ? 'Gerald Emechebe' : 'Member'),
           email: currentUser.email || '',
           role: role,
+          emailVerified: isSystemAdmin || !!currentUser.email_confirmed_at,
+          emailConfirmedAt: currentUser.email_confirmed_at || (isSystemAdmin ? new Date().toISOString() : undefined),
           xp: 0,
           completedRooms: [],
           avatarUrl: currentUser.user_metadata?.avatar_url || '',
