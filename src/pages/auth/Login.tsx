@@ -180,7 +180,7 @@ export default function Login() {
           await supabase.auth.signOut();
         } catch (_) {}
         setShowResendBtn(true);
-        throw new Error(`Email Verification Required: Please open the confirmation email sent to ${trimmedEmail} and click the link to verify your account before logging in.`);
+        throw new Error(`Email Verification Required: Please check your inbox (and Spam / Junk folder) for the confirmation email sent to ${trimmedEmail} and click the link to verify your account before logging in.`);
       }
 
       // 2. Ensure master Supabase profile registry has this user with correct role & verified status
@@ -218,7 +218,7 @@ export default function Login() {
           profile.emailConfirmedAt = data?.user?.email_confirmed_at || profile.emailConfirmedAt || new Date().toISOString();
         }
       }
-      saveSupabaseUserProfile(profile);
+      await saveSupabaseUserProfile(profile);
 
       // Save active session for instant restoration
       try {

@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
@@ -139,47 +140,80 @@ interface SyncedUser {
   updatedAt?: string;
 }
 
-const serverUsersMap = new Map<string, SyncedUser>();
-const deletedEmailsSet = new Set<string>();
-const deletedUidsSet = new Set<string>();
+const USERS_FILE_PATH = path.join(process.cwd(), 'server_data_users.json');
 
-// Pre-seed system admin account
-serverUsersMap.set('solutions@koglatech.com', {
-  uid: 'admin_master_gerald',
-  name: 'Gerald Emechebe',
-  email: 'solutions@koglatech.com',
-  role: 'admin',
-  xp: 1500,
-  completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines', 'cyber-defense-protocols'],
-  avatarUrl: '',
-  isPaid: true,
-  emailVerified: true,
-  emailConfirmedAt: '2026-01-01T00:00:00.000Z',
-  createdAt: '2026-01-01T00:00:00.000Z',
-  updatedAt: new Date().toISOString()
-});
+function getInitialAdminMap(): Map<string, SyncedUser> {
+  const map = new Map<string, SyncedUser>();
+  map.set('solutions@koglatech.com', {
+    uid: 'admin_master_gerald',
+    name: 'Gerald Emechebe',
+    email: 'solutions@koglatech.com',
+    role: 'admin',
+    xp: 1500,
+    completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines', 'cyber-defense-protocols'],
+    avatarUrl: '',
+    isPaid: true,
+    emailVerified: true,
+    emailConfirmedAt: '2026-01-01T00:00:00.000Z',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: new Date().toISOString()
+  });
 
-serverUsersMap.set('emechebegerald@gmail.com', {
-  uid: 'admin_gerald_emechebe',
-  name: 'Gerald Emechebe',
-  email: 'emechebegerald@gmail.com',
-  role: 'admin',
-  xp: 1500,
-  completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines'],
-  avatarUrl: '',
-  isPaid: true,
-  emailVerified: true,
-  emailConfirmedAt: '2026-01-01T00:00:00.000Z',
-  createdAt: '2026-01-01T00:00:00.000Z',
-  updatedAt: new Date().toISOString()
-});
+  map.set('emechebegerald@gmail.com', {
+    uid: 'admin_gerald_emechebe',
+    name: 'Gerald Emechebe',
+    email: 'emechebegerald@gmail.com',
+    role: 'admin',
+    xp: 1500,
+    completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines'],
+    avatarUrl: '',
+    isPaid: true,
+    emailVerified: true,
+    emailConfirmedAt: '2026-01-01T00:00:00.000Z',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: new Date().toISOString()
+  });
+  return map;
+}
+
+function loadUsersFromDisk(): Map<string, SyncedUser> {
+  const map = getInitialAdminMap();
+  try {
+    if (fs.existsSync(USERS_FILE_PATH)) {
+      const raw = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        for (const u of data) {
+          if (u && u.email) {
+            const key = u.email.toLowerCase().trim();
+            map.set(key, { ...map.get(key), ...u, email: key });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Server] Error loading users from disk:', err);
+  }
+  return map;
+}
+
+function saveUsersToDisk(map: Map<string, SyncedUser>) {
+  try {
+    const list = Array.from(map.values());
+    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[Server] Error saving users to disk:', err);
+  }
+}
+
+const serverUsersMap = loadUsersFromDisk();
 
 // GET /api/users - Return all registered developer profiles across all devices
 app.get('/api/users', (req, res) => {
   try {
-    const list = Array.from(serverUsersMap.values()).filter(
-      u => !deletedUidsSet.has(u.uid) && !deletedEmailsSet.has((u.email || '').toLowerCase().trim())
-    );
+    // Reload from disk to guarantee cross-process consistency
+    const diskMap = loadUsersFromDisk();
+    const list = Array.from(diskMap.values());
     res.json({ success: true, users: list });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message, users: [] });
@@ -195,22 +229,17 @@ app.post('/api/users/sync', (req, res) => {
       for (const item of batch) {
         if (item && item.email) {
           const normEmail = item.email.toLowerCase().trim();
-          if (!deletedEmailsSet.has(normEmail) && (!item.uid || !deletedUidsSet.has(item.uid))) {
-            const existing = serverUsersMap.get(normEmail);
-            serverUsersMap.set(normEmail, {
-              ...existing,
-              ...item,
-              email: normEmail,
-              updatedAt: new Date().toISOString()
-            });
-          }
+          const existing = serverUsersMap.get(normEmail);
+          serverUsersMap.set(normEmail, {
+            ...existing,
+            ...item,
+            email: normEmail,
+            updatedAt: new Date().toISOString()
+          });
         }
       }
     } else if (profile && profile.email) {
       const normEmail = profile.email.toLowerCase().trim();
-      deletedEmailsSet.delete(normEmail);
-      if (profile.uid) deletedUidsSet.delete(profile.uid);
-
       const existing = serverUsersMap.get(normEmail);
       serverUsersMap.set(normEmail, {
         ...existing,
@@ -220,10 +249,8 @@ app.post('/api/users/sync', (req, res) => {
       });
     }
 
-    const currentList = Array.from(serverUsersMap.values()).filter(
-      u => !deletedUidsSet.has(u.uid) && !deletedEmailsSet.has((u.email || '').toLowerCase().trim())
-    );
-
+    saveUsersToDisk(serverUsersMap);
+    const currentList = Array.from(serverUsersMap.values());
     res.json({ success: true, users: currentList });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
@@ -236,17 +263,16 @@ app.post('/api/users/delete', (req, res) => {
     const { uid, email } = req.body;
     if (email) {
       const normEmail = email.toLowerCase().trim();
-      deletedEmailsSet.add(normEmail);
       serverUsersMap.delete(normEmail);
     }
     if (uid) {
-      deletedUidsSet.add(uid);
       for (const [k, v] of serverUsersMap.entries()) {
         if (v.uid === uid) {
           serverUsersMap.delete(k);
         }
       }
     }
+    saveUsersToDisk(serverUsersMap);
     res.json({ success: true, message: 'User purged globally' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
@@ -257,39 +283,11 @@ app.post('/api/users/delete', (req, res) => {
 app.post('/api/users/purge-all', (req, res) => {
   try {
     serverUsersMap.clear();
-    deletedEmailsSet.clear();
-    deletedUidsSet.clear();
-
-    // Re-seed master admin cleanly
-    serverUsersMap.set('solutions@koglatech.com', {
-      uid: 'admin_master_gerald',
-      name: 'Gerald Emechebe',
-      email: 'solutions@koglatech.com',
-      role: 'admin',
-      xp: 1500,
-      completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines', 'cyber-defense-protocols'],
-      avatarUrl: '',
-      isPaid: true,
-      emailVerified: true,
-      emailConfirmedAt: '2026-01-01T00:00:00.000Z',
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: new Date().toISOString()
-    });
-
-    serverUsersMap.set('emechebegerald@gmail.com', {
-      uid: 'admin_gerald_emechebe',
-      name: 'Gerald Emechebe',
-      email: 'emechebegerald@gmail.com',
-      role: 'admin',
-      xp: 1500,
-      completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines'],
-      avatarUrl: '',
-      isPaid: true,
-      emailVerified: true,
-      emailConfirmedAt: '2026-01-01T00:00:00.000Z',
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: new Date().toISOString()
-    });
+    const freshAdminMap = getInitialAdminMap();
+    for (const [k, v] of freshAdminMap.entries()) {
+      serverUsersMap.set(k, v);
+    }
+    saveUsersToDisk(serverUsersMap);
 
     res.json({ success: true, message: 'All non-admin user records and ghost sessions purged completely.' });
   } catch (err: any) {

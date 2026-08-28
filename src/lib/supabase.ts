@@ -40,29 +40,9 @@ export async function safeSupabaseQuery<T>(
  */
 const lastWrittenProfileHashes: Record<string, string> = {};
 
-export function saveSupabaseUserProfile(profile: UserProfile): void {
+export async function saveSupabaseUserProfile(profile: UserProfile): Promise<void> {
   try {
     const normEmail = (profile.email || '').toLowerCase().trim();
-    
-    // 0. Ensure this email and uid are un-blacklisted from deletion registers on creation/login
-    if (normEmail) {
-      try {
-        const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
-        if (deletedEmails.includes(normEmail)) {
-          const updated = deletedEmails.filter(e => e.toLowerCase() !== normEmail);
-          localStorage.setItem('kogla_deleted_emails', JSON.stringify(updated));
-        }
-      } catch (_) {}
-    }
-    if (profile.uid) {
-      try {
-        const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
-        if (deletedUids.includes(profile.uid)) {
-          const updatedUids = deletedUids.filter(u => u !== profile.uid);
-          localStorage.setItem('kogla_deleted_uids', JSON.stringify(updatedUids));
-        }
-      } catch (_) {}
-    }
 
     // 1. Update Local Storage Cache
     const existingRaw = localStorage.getItem('kogla_supabase_users');
@@ -90,7 +70,7 @@ export function saveSupabaseUserProfile(profile: UserProfile): void {
       if (lastWrittenProfileHashes[profile.uid] !== stateHash) {
         lastWrittenProfileHashes[profile.uid] = stateHash;
 
-        safeFirestoreWrite(async () => {
+        try {
           const userRef = doc(db, 'users', profile.uid);
           await setDoc(userRef, {
             uid: profile.uid,
@@ -106,17 +86,19 @@ export function saveSupabaseUserProfile(profile: UserProfile): void {
             createdAt: profile.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString()
           }, { merge: true });
-        }).catch(() => {});
+        } catch (e) {
+          console.warn('[Firestore] Profile write note:', e);
+        }
       }
     }
 
-    // 3. Sync to backend Express server endpoint for cross-device API guarantees
+    // 3. Sync to backend Express server endpoint for persistent disk storage
     try {
-      fetch('/api/users/sync', {
+      await fetch('/api/users/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile: updatedProfile })
-      }).catch(() => {});
+      });
     } catch (_) {}
   } catch (err) {
     console.warn('[Supabase Profiles] Error saving profile:', err);
@@ -127,11 +109,7 @@ export function getSupabaseUserProfiles(): UserProfile[] {
   try {
     const existingRaw = localStorage.getItem('kogla_supabase_users');
     if (!existingRaw) return [];
-    const profiles: UserProfile[] = JSON.parse(existingRaw);
-    const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
-    const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
-    
-    return profiles.filter(p => !deletedUids.includes(p.uid) && !deletedEmails.includes((p.email || '').toLowerCase().trim()));
+    return JSON.parse(existingRaw);
   } catch (err) {
     console.warn('[Supabase Profiles] Error loading profiles:', err);
     return [];
@@ -144,9 +122,6 @@ export function getSupabaseUserProfiles(): UserProfile[] {
  */
 export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
   const localList = getSupabaseUserProfiles();
-  const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
-  const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
-
   const mergedMap = new Map<string, UserProfile>();
 
   // Seed with local list
@@ -197,9 +172,7 @@ export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
     }
   } catch (_) {}
 
-  const merged = Array.from(mergedMap.values()).filter(
-    p => !deletedUids.includes(p.uid) && !deletedEmails.includes((p.email || '').toLowerCase().trim())
-  );
+  const merged = Array.from(mergedMap.values());
 
   // Update local cache so that this device/browser is completely up to date
   try {
@@ -247,40 +220,22 @@ export async function deleteSupabaseUserProfile(uid: string, email: string): Pro
     }
   } catch (_) {}
 
-  // 2. Track in persistent deletion lists to prevent ghost reappearance from stale cache
+  // 2. Delete from Cloud Firestore
   if (uid) {
     try {
-      const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
-      if (!deletedUids.includes(uid)) {
-        deletedUids.push(uid);
-        localStorage.setItem('kogla_deleted_uids', JSON.stringify(deletedUids));
-      }
-    } catch (_) {}
-  }
-  if (normEmail) {
-    try {
-      const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
-      if (!deletedEmails.includes(normEmail)) {
-        deletedEmails.push(normEmail);
-        localStorage.setItem('kogla_deleted_emails', JSON.stringify(deletedEmails));
-      }
-    } catch (_) {}
-  }
-
-  // 3. Delete from Cloud Firestore
-  if (uid) {
-    await safeFirestoreWrite(async () => {
       await deleteDoc(doc(db, 'users', uid));
-    }).catch(() => {});
+    } catch (e) {
+      console.warn('[Firestore] Delete user note:', e);
+    }
   }
 
-  // 4. Delete from server API
+  // 3. Delete from server disk API
   try {
     await fetch('/api/users/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid, email: normEmail })
-    }).catch(() => {});
+    });
   } catch (_) {}
 }
 

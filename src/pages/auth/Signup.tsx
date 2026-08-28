@@ -209,7 +209,7 @@ export default function Signup() {
         updatedAt: new Date().toISOString()
       };
 
-      saveSupabaseUserProfile(initialProfile);
+      await saveSupabaseUserProfile(initialProfile);
 
       if (isSystemAdmin) {
         try {
