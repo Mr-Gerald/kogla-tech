@@ -34,8 +34,8 @@ export async function safeSupabaseQuery<T>(
 }
 
 /**
- * Master Profile Registry with dual-layer cloud + local persistence
- * to guarantee zero hidden accounts and 100% reliable visibility in the Admin Dashboard.
+ * Master Profile Registry with tri-layer cloud + server + local persistence
+ * to guarantee zero hidden accounts and 100% reliable visibility across all devices.
  */
 const lastWrittenProfileHashes: Record<string, string> = {};
 
@@ -83,32 +83,40 @@ export function saveSupabaseUserProfile(profile: UserProfile): void {
     }
     localStorage.setItem('kogla_supabase_users', JSON.stringify(profiles));
 
-    // 2. Dual-write to Cloud Firestore only when profile data has actually changed
+    // 2. Dual-write to Cloud Firestore
     if (profile.uid) {
       const stateHash = `${profile.uid}|${profile.role}|${profile.xp}|${(profile.completedRooms || []).join(',')}|${profile.name}|${profile.avatarUrl}|${profile.isPaid}|${profile.emailVerified}|${profile.emailConfirmedAt}`;
-      if (lastWrittenProfileHashes[profile.uid] === stateHash) {
-        return; // State is identical, skip redundant write
-      }
-      lastWrittenProfileHashes[profile.uid] = stateHash;
+      if (lastWrittenProfileHashes[profile.uid] !== stateHash) {
+        lastWrittenProfileHashes[profile.uid] = stateHash;
 
-      safeFirestoreWrite(async () => {
-        const userRef = doc(db, 'users', profile.uid);
-        await setDoc(userRef, {
-          uid: profile.uid,
-          name: profile.name || profile.email.split('@')[0],
-          email: normEmail || profile.email,
-          role: profile.role || 'user',
-          xp: profile.xp || 0,
-          completedRooms: profile.completedRooms || [],
-          avatarUrl: profile.avatarUrl || '',
-          isPaid: !!profile.isPaid,
-          emailVerified: !!profile.emailVerified,
-          emailConfirmedAt: profile.emailConfirmedAt || null,
-          createdAt: profile.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      }).catch(() => {});
+        safeFirestoreWrite(async () => {
+          const userRef = doc(db, 'users', profile.uid);
+          await setDoc(userRef, {
+            uid: profile.uid,
+            name: profile.name || profile.email.split('@')[0],
+            email: normEmail || profile.email,
+            role: profile.role || 'user',
+            xp: profile.xp || 0,
+            completedRooms: profile.completedRooms || [],
+            avatarUrl: profile.avatarUrl || '',
+            isPaid: !!profile.isPaid,
+            emailVerified: !!profile.emailVerified,
+            emailConfirmedAt: profile.emailConfirmedAt || null,
+            createdAt: profile.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        }).catch(() => {});
+      }
     }
+
+    // 3. Sync to backend Express server endpoint for cross-device API guarantees
+    try {
+      fetch('/api/users/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: updatedProfile })
+      }).catch(() => {});
+    } catch (_) {}
   } catch (err) {
     console.warn('[Supabase Profiles] Error saving profile:', err);
   }
@@ -130,26 +138,28 @@ export function getSupabaseUserProfiles(): UserProfile[] {
 }
 
 /**
- * Loads the complete, cross-device user roster by combining Cloud Firestore,
- * Supabase profiles, and local cache so no registered user is ever omitted.
+ * Loads the complete, cross-device user roster by querying Cloud Firestore,
+ * server-side API, and local storage.
  */
 export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
   const localList = getSupabaseUserProfiles();
   const deletedEmails: string[] = JSON.parse(localStorage.getItem('kogla_deleted_emails') || '[]');
   const deletedUids: string[] = JSON.parse(localStorage.getItem('kogla_deleted_uids') || '[]');
 
+  const mergedMap = new Map<string, UserProfile>();
+
+  // Seed with local list
+  for (const p of localList) {
+    if (p.email) mergedMap.set(p.email.toLowerCase().trim(), p);
+  }
+
+  // 1. Fetch from Firestore Cloud Database
   try {
-    // Read from Firestore users collection
     const cloudUsers = await safeFirestoreRead(async () => {
       const snap = await getDocs(collection(db, 'users'));
       return snap.docs.map(d => d.data() as UserProfile);
     }, []);
 
-    // Merge Cloud and Local by email / uid
-    const mergedMap = new Map<string, UserProfile>();
-    for (const p of localList) {
-      if (p.email) mergedMap.set(p.email.toLowerCase().trim(), p);
-    }
     for (const cp of cloudUsers) {
       if (cp.email) {
         const key = cp.email.toLowerCase().trim();
@@ -161,20 +171,53 @@ export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
         }
       }
     }
-
-    const merged = Array.from(mergedMap.values()).filter(
-      p => !deletedUids.includes(p.uid) && !deletedEmails.includes((p.email || '').toLowerCase().trim())
-    );
-
-    // Update local cache with any new users from cloud
-    try {
-      localStorage.setItem('kogla_supabase_users', JSON.stringify(merged));
-    } catch (_) {}
-
-    return merged;
   } catch (e) {
-    return localList;
+    console.warn('[Supabase Profiles] Cloud read note:', e);
   }
+
+  // 2. Fetch from backend server API
+  try {
+    const res = await fetch('/api/users');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.users)) {
+        for (const su of data.users) {
+          if (su.email) {
+            const key = su.email.toLowerCase().trim();
+            const existing = mergedMap.get(key);
+            if (existing) {
+              mergedMap.set(key, { ...existing, ...su });
+            } else {
+              mergedMap.set(key, su);
+            }
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
+  const merged = Array.from(mergedMap.values()).filter(
+    p => !deletedUids.includes(p.uid) && !deletedEmails.includes((p.email || '').toLowerCase().trim())
+  );
+
+  // Update local cache so that this device/browser is completely up to date
+  try {
+    localStorage.setItem('kogla_supabase_users', JSON.stringify(merged));
+  } catch (_) {}
+
+  return merged;
+}
+
+/**
+ * Fetches an individual user's profile across local cache, Cloud Firestore, and server API
+ */
+export async function fetchUserProfileAsync(uidOrEmail: string): Promise<UserProfile | null> {
+  const local = getSupabaseUserProfile(uidOrEmail);
+  if (local) return local;
+
+  const roster = await fetchFullUserRosterAsync();
+  const norm = uidOrEmail.toLowerCase().trim();
+  return roster.find(p => p.uid === uidOrEmail || p.email.toLowerCase().trim() === norm) || null;
 }
 
 export function getSupabaseUserProfile(uidOrEmail: string): UserProfile | null {
@@ -188,7 +231,7 @@ export function getSupabaseUserProfile(uidOrEmail: string): UserProfile | null {
 }
 
 /**
- * Permanently purges a user profile across local storage and Cloud Firestore
+ * Permanently purges a user profile across local storage, Cloud Firestore, and server API
  */
 export async function deleteSupabaseUserProfile(uid: string, email: string): Promise<void> {
   const normEmail = (email || '').toLowerCase().trim();
@@ -229,5 +272,14 @@ export async function deleteSupabaseUserProfile(uid: string, email: string): Pro
       await deleteDoc(doc(db, 'users', uid));
     }).catch(() => {});
   }
+
+  // 4. Delete from server API
+  try {
+    await fetch('/api/users/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid, email: normEmail })
+    }).catch(() => {});
+  } catch (_) {}
 }
 

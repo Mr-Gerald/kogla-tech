@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile, fetchFullUserRosterAsync } from '../../lib/supabase';
+import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile, fetchFullUserRosterAsync, fetchUserProfileAsync } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
 import { isSystemAdminEmail } from '../../lib/authUtils';
@@ -187,6 +187,12 @@ export default function Login() {
       let profile = getSupabaseUserProfile(activeUser.id);
       if (!profile) {
         profile = getSupabaseUserProfile(trimmedEmail);
+      }
+      if (!profile) {
+        profile = await fetchUserProfileAsync(activeUser.id);
+      }
+      if (!profile) {
+        profile = await fetchUserProfileAsync(trimmedEmail);
       }
 
       const defaultRole = isSystemAdmin ? 'admin' : 'user';

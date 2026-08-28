@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { LogOut } from 'lucide-react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile } from '../lib/supabase';
+import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile, fetchUserProfileAsync } from '../lib/supabase';
 import { UserProfile, NotificationRecord } from '../types';
 import { isSystemAdminEmail } from '../lib/authUtils';
 
@@ -61,6 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let existingProfile = getSupabaseUserProfile(normalizedUser.id);
       if (!existingProfile && currentUser.email) {
         existingProfile = getSupabaseUserProfile(currentUser.email);
+      }
+
+      // If not in local storage cache, fetch asynchronously from Cloud / Server
+      if (!existingProfile) {
+        existingProfile = await fetchUserProfileAsync(normalizedUser.id);
+        if (!existingProfile && currentUser.email) {
+          existingProfile = await fetchUserProfileAsync(currentUser.email);
+        }
       }
 
       if (existingProfile) {

@@ -123,6 +123,136 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Server-side State Persistence for Cross-Device Synchronization
+interface SyncedUser {
+  uid: string;
+  name: string;
+  email: string;
+  role: string;
+  xp?: number;
+  completedRooms?: string[];
+  avatarUrl?: string;
+  isPaid?: boolean;
+  emailVerified?: boolean;
+  emailConfirmedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+const serverUsersMap = new Map<string, SyncedUser>();
+const deletedEmailsSet = new Set<string>();
+const deletedUidsSet = new Set<string>();
+
+// Pre-seed system admin account
+serverUsersMap.set('solutions@koglatech.com', {
+  uid: 'admin_master_gerald',
+  name: 'Gerald Emechebe',
+  email: 'solutions@koglatech.com',
+  role: 'admin',
+  xp: 1500,
+  completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines', 'cyber-defense-protocols'],
+  avatarUrl: '',
+  isPaid: true,
+  emailVerified: true,
+  emailConfirmedAt: '2026-01-01T00:00:00.000Z',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: new Date().toISOString()
+});
+
+serverUsersMap.set('emechebegerald@gmail.com', {
+  uid: 'admin_gerald_emechebe',
+  name: 'Gerald Emechebe',
+  email: 'emechebegerald@gmail.com',
+  role: 'admin',
+  xp: 1500,
+  completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines'],
+  avatarUrl: '',
+  isPaid: true,
+  emailVerified: true,
+  emailConfirmedAt: '2026-01-01T00:00:00.000Z',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: new Date().toISOString()
+});
+
+// GET /api/users - Return all registered developer profiles across all devices
+app.get('/api/users', (req, res) => {
+  try {
+    const list = Array.from(serverUsersMap.values()).filter(
+      u => !deletedUidsSet.has(u.uid) && !deletedEmailsSet.has((u.email || '').toLowerCase().trim())
+    );
+    res.json({ success: true, users: list });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message, users: [] });
+  }
+});
+
+// POST /api/users/sync - Merges and updates profile across all connected devices
+app.post('/api/users/sync', (req, res) => {
+  try {
+    const { profile, batch } = req.body;
+    
+    if (batch && Array.isArray(batch)) {
+      for (const item of batch) {
+        if (item && item.email) {
+          const normEmail = item.email.toLowerCase().trim();
+          if (!deletedEmailsSet.has(normEmail) && (!item.uid || !deletedUidsSet.has(item.uid))) {
+            const existing = serverUsersMap.get(normEmail);
+            serverUsersMap.set(normEmail, {
+              ...existing,
+              ...item,
+              email: normEmail,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
+      }
+    } else if (profile && profile.email) {
+      const normEmail = profile.email.toLowerCase().trim();
+      deletedEmailsSet.delete(normEmail);
+      if (profile.uid) deletedUidsSet.delete(profile.uid);
+
+      const existing = serverUsersMap.get(normEmail);
+      serverUsersMap.set(normEmail, {
+        ...existing,
+        ...profile,
+        email: normEmail,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    const currentList = Array.from(serverUsersMap.values()).filter(
+      u => !deletedUidsSet.has(u.uid) && !deletedEmailsSet.has((u.email || '').toLowerCase().trim())
+    );
+
+    res.json({ success: true, users: currentList });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/users/delete - Permanently deletes an account globally
+app.post('/api/users/delete', (req, res) => {
+  try {
+    const { uid, email } = req.body;
+    if (email) {
+      const normEmail = email.toLowerCase().trim();
+      deletedEmailsSet.add(normEmail);
+      serverUsersMap.delete(normEmail);
+    }
+    if (uid) {
+      deletedUidsSet.add(uid);
+      for (const [k, v] of serverUsersMap.entries()) {
+        if (v.uid === uid) {
+          serverUsersMap.delete(k);
+        }
+      }
+    }
+    res.json({ success: true, message: 'User purged globally' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Vite middleware / static serving
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
