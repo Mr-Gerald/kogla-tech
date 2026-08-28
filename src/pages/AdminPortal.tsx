@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSiteConfig, SiteConfig } from '../context/SiteConfigContext';
-import { supabase, getSupabaseUserProfiles, saveSupabaseUserProfile, fetchFullUserRosterAsync, deleteSupabaseUserProfile } from '../lib/supabase';
+import { supabase, getSupabaseUserProfiles, saveSupabaseUserProfile, fetchFullUserRosterAsync, deleteSupabaseUserProfile, purgeAllUsersAndDatabaseRecords } from '../lib/supabase';
 import { isSystemAdminEmail } from '../lib/authUtils';
 import { motion } from 'motion/react';
 import { 
@@ -1035,6 +1035,41 @@ Kogla Tech Global Admissions & Partnerships`;
   const handleDeleteUserPermanently = async () => {
     if (selectedUser) {
       await handleDeleteUserById(selectedUser);
+    }
+  };
+
+  const [isPurgingAll, setIsPurgingAll] = useState(false);
+
+  const handlePurgeAllGhostAndTestAccounts = async () => {
+    if (window.confirm('CRITICAL ACTION: Reset all accounts and caches to start COMPLETELY fresh?\n\nThis will:\n1. Purge all test and ghost user documents from Cloud Firestore.\n2. Reset server memory and registration records.\n3. Clear all browser local storage cache.\n4. Protect and retain your Master Admin account.\n\nProceed with clean slate reset?')) {
+      setIsPurgingAll(true);
+      try {
+        await purgeAllUsersAndDatabaseRecords();
+        setSelectedUser(null);
+        await loadUsersData();
+        triggerSuccess('CLEAN SLATE COMPLETED: All ghost/test accounts and local storage data cleared!');
+      } catch (err: any) {
+        console.error('Purge all error:', err);
+        setErrorMsg(`Purge error: ${err.message}`);
+        setTimeout(() => setErrorMsg(''), 5000);
+      } finally {
+        setIsPurgingAll(false);
+      }
+    }
+  };
+
+  const handleClearLocalCacheOnly = () => {
+    if (window.confirm('Clear all local browser storage and cached user tokens for this session?')) {
+      try {
+        localStorage.removeItem('kogla_supabase_users');
+        localStorage.removeItem('kogla_deleted_uids');
+        localStorage.removeItem('kogla_deleted_emails');
+        localStorage.removeItem('kogla_users');
+        triggerSuccess('Local browser cache cleared. Refreshing roster...');
+        loadUsersData();
+      } catch (e: any) {
+        setErrorMsg(`Failed clearing cache: ${e.message}`);
+      }
     }
   };
 
@@ -2817,20 +2852,39 @@ Kogla Tech Global Admissions & Partnerships`;
             {/* Main Users Database roster table */}
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-gray-950 border border-gray-800 rounded-sm">
-                <div className="p-4 border-b border-gray-800 bg-black/40 flex items-center justify-between font-mono">
-                  <div className="flex items-center gap-3">
+                <div className="p-4 border-b border-gray-800 bg-black/40 flex flex-wrap items-center justify-between gap-2 font-mono">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-display font-semibold text-gold-500 uppercase tracking-wider">
                       Registered developer accounts roster
                     </span>
                     <button
                       type="button"
                       onClick={loadUsersData}
-                      disabled={loadingUsers}
+                      disabled={loadingUsers || isPurgingAll}
                       className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-gold-400 text-[10px] uppercase font-mono rounded flex items-center gap-1.5 transition-all cursor-pointer"
                       title="Sync and pull latest registrations from cloud database"
                     >
                       <RefreshCw size={11} className={loadingUsers ? 'animate-spin text-gold-400' : ''} />
                       {loadingUsers ? 'Syncing...' : 'Sync Cloud'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePurgeAllGhostAndTestAccounts}
+                      disabled={isPurgingAll || loadingUsers}
+                      className="px-2.5 py-1 bg-red-950/60 hover:bg-red-900/80 border border-red-800/80 text-red-300 hover:text-white text-[10px] uppercase font-mono rounded flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                      title="Purge all ghost and test users across Firestore, server persistence, and localStorage for a 100% fresh start"
+                    >
+                      <Trash2 size={11} className={isPurgingAll ? 'animate-spin text-red-300' : 'text-red-400'} />
+                      {isPurgingAll ? 'Purging All...' : 'Purge All Ghost & Test Accounts (Clean Slate)'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearLocalCacheOnly}
+                      disabled={loadingUsers || isPurgingAll}
+                      className="px-2 py-1 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 text-[9px] uppercase font-mono rounded transition-all cursor-pointer"
+                      title="Clear local browser storage cache"
+                    >
+                      Clear Local Storage
                     </button>
                   </div>
                   <span className="text-[9px] text-gray-500 uppercase font-mono">

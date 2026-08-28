@@ -253,6 +253,50 @@ app.post('/api/users/delete', (req, res) => {
   }
 });
 
+// POST /api/users/purge-all - Wipes all test/ghost users and resets server database
+app.post('/api/users/purge-all', (req, res) => {
+  try {
+    serverUsersMap.clear();
+    deletedEmailsSet.clear();
+    deletedUidsSet.clear();
+
+    // Re-seed master admin cleanly
+    serverUsersMap.set('solutions@koglatech.com', {
+      uid: 'admin_master_gerald',
+      name: 'Gerald Emechebe',
+      email: 'solutions@koglatech.com',
+      role: 'admin',
+      xp: 1500,
+      completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines', 'cyber-defense-protocols'],
+      avatarUrl: '',
+      isPaid: true,
+      emailVerified: true,
+      emailConfirmedAt: '2026-01-01T00:00:00.000Z',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: new Date().toISOString()
+    });
+
+    serverUsersMap.set('emechebegerald@gmail.com', {
+      uid: 'admin_gerald_emechebe',
+      name: 'Gerald Emechebe',
+      email: 'emechebegerald@gmail.com',
+      role: 'admin',
+      xp: 1500,
+      completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines'],
+      avatarUrl: '',
+      isPaid: true,
+      emailVerified: true,
+      emailConfirmedAt: '2026-01-01T00:00:00.000Z',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({ success: true, message: 'All non-admin user records and ghost sessions purged completely.' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Vite middleware / static serving
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

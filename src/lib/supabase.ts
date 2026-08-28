@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { UserProfile } from '../types';
 import { db, safeFirestoreWrite, safeFirestoreRead } from './firebase';
 import { collection, doc, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
+import { isSystemAdminEmail } from './authUtils';
 
 // Supabase Project Configuration
 export const SUPABASE_URL = 'https://venvcnrqcafizslpwail.supabase.co';
@@ -282,4 +283,66 @@ export async function deleteSupabaseUserProfile(uid: string, email: string): Pro
     }).catch(() => {});
   } catch (_) {}
 }
+
+/**
+ * Completely purges all ghost and non-admin accounts across Cloud Firestore,
+ * Server persistence, and all local storage keys, creating a pristine fresh state.
+ */
+export async function purgeAllUsersAndDatabaseRecords(): Promise<void> {
+  // 1. Wipe non-admin documents from Cloud Firestore
+  try {
+    const snap = await safeFirestoreRead(async () => {
+      return await getDocs(collection(db, 'users'));
+    }, null);
+    if (snap && snap.docs) {
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data();
+        const email = (data.email || '').toLowerCase().trim();
+        if (!isSystemAdminEmail(email)) {
+          await safeFirestoreWrite(async () => {
+            await deleteDoc(doc(db, 'users', docSnap.id));
+          }).catch(() => {});
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Purge] Cloud firestore purge note:', err);
+  }
+
+  // 2. Clear all local storage records across this browser
+  try {
+    localStorage.removeItem('kogla_supabase_users');
+    localStorage.removeItem('kogla_deleted_uids');
+    localStorage.removeItem('kogla_deleted_emails');
+    localStorage.removeItem('kogla_users');
+    localStorage.removeItem('user_profile');
+    localStorage.removeItem('custom_notifications');
+
+    // Retain clean baseline admin record in local cache
+    const defaultAdmin: UserProfile = {
+      uid: 'admin_gerald_emechebe',
+      name: 'Gerald Emechebe',
+      email: 'emechebegerald@gmail.com',
+      role: 'admin',
+      isPaid: true,
+      emailVerified: true,
+      emailConfirmedAt: new Date().toISOString(),
+      xp: 1500,
+      completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines'],
+      avatarUrl: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem('kogla_supabase_users', JSON.stringify([defaultAdmin]));
+  } catch (_) {}
+
+  // 3. Clear server backend persistence
+  try {
+    await fetch('/api/users/purge-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (_) {}
+}
+
 
