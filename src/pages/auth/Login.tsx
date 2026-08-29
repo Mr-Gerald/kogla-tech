@@ -104,33 +104,14 @@ export default function Login() {
     const isSystemAdmin = isSystemAdminEmail(trimmedEmail);
 
     try {
-      // 1. Primary: Attempt sign in with Supabase Auth with timeout protection
+      // 1. Primary: Attempt sign in with Supabase Auth
       let activeUser: any = null;
+      let isVerified = false;
 
-      const authPromise = supabase.auth.signInWithPassword({
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: password
       });
-
-      const timeoutPromise = new Promise<{ data: any; error: any }>((_, reject) =>
-        setTimeout(() => reject(new Error('AUTH_TIMEOUT')), 9000)
-      );
-
-      let data: any = null;
-      let authError: any = null;
-
-      try {
-        const result = await Promise.race([authPromise, timeoutPromise]);
-        data = result.data;
-        authError = result.error;
-      } catch (err: any) {
-        if (err?.message === 'AUTH_TIMEOUT') {
-          console.warn('[Auth] Supabase network timeout, falling back to local/cloud verified roster');
-          authError = { message: 'Network Timeout' };
-        } else {
-          authError = err;
-        }
-      }
 
       if (authError) {
         const errorMsgLower = (authError.message || '').toLowerCase();
@@ -142,40 +123,71 @@ export default function Login() {
           errorMsgLower.includes('unconfirmed')
         ) {
           if (isSystemAdmin) {
+            // Admin auto-bypass unconfirmed requirement
             activeUser = {
-              id: `admin_${Date.now()}`,
+              id: `admin_${trimmedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
               email: trimmedEmail,
               user_metadata: { name: 'Gerald Emechebe', role: 'admin' }
             };
+            isVerified = true;
           } else {
             setShowResendBtn(true);
             throw new Error(`Email Not Verified: Your email address (${trimmedEmail}) has not been verified yet. Please check your inbox (or spam folder) and click the confirmation link before signing in.`);
           }
-        } else {
-          // If system admin emergency access
-          if (isSystemAdmin) {
-            activeUser = {
-              id: `admin_${Date.now()}`,
+        } else if (isSystemAdmin) {
+          // If system admin sign-in failed (e.g. user not registered in Supabase Auth yet),
+          // attempt to create the admin account in Supabase Auth automatically
+          try {
+            const signUpRes = await supabase.auth.signUp({
               email: trimmedEmail,
-              user_metadata: {
-                name: 'Gerald Emechebe',
-                role: 'admin'
+              password: password,
+              options: {
+                data: {
+                  name: 'Gerald Emechebe',
+                  role: 'admin'
+                }
               }
+            });
+
+            if (signUpRes.data?.user) {
+              activeUser = signUpRes.data.user;
+              isVerified = true;
+            } else if (signUpRes.error?.message?.toLowerCase().includes('already registered')) {
+              throw new Error('Incorrect password for System Admin account. Please verify your admin password.');
+            } else {
+              // Create local admin session fallback
+              activeUser = {
+                id: `admin_${trimmedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+                email: trimmedEmail,
+                user_metadata: { name: 'Gerald Emechebe', role: 'admin' }
+              };
+              isVerified = true;
+            }
+          } catch (signUpErr: any) {
+            if (signUpErr.message.includes('Incorrect password')) {
+              throw signUpErr;
+            }
+            activeUser = {
+              id: `admin_${trimmedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+              email: trimmedEmail,
+              user_metadata: { name: 'Gerald Emechebe', role: 'admin' }
             };
-          } else {
-            throw new Error('Invalid email address or password. Please verify your credentials or click "Create an Account" to register.');
+            isVerified = true;
           }
+        } else {
+          throw new Error('Invalid email address or password. Please verify your credentials or click "Create an Account" to register.');
         }
       } else {
         activeUser = data?.user;
+        isVerified = !!activeUser?.email_confirmed_at || isSystemAdmin;
       }
 
       if (!activeUser) {
         throw new Error('Authentication session could not be established.');
       }
 
-      // Check if user email is confirmed
-      if (data?.user && !data.user.email_confirmed_at && !isSystemAdmin) {
+      // Check non-admin email confirmation
+      if (!isVerified && !isSystemAdmin) {
         try {
           await supabase.auth.signOut();
         } catch (_) {}
@@ -183,48 +195,29 @@ export default function Login() {
         throw new Error(`Email Verification Required: Please check your inbox (and Spam / Junk folder) for the confirmation email sent to ${trimmedEmail} and click the link to verify your account before logging in.`);
       }
 
-      // 2. Ensure master Supabase profile registry has this user with correct role & verified status
-      let profile = getSupabaseUserProfile(activeUser.id);
-      if (!profile) {
-        profile = getSupabaseUserProfile(trimmedEmail);
-      }
-      if (!profile) {
-        profile = await fetchUserProfileAsync(activeUser.id);
-      }
-      if (!profile) {
-        profile = await fetchUserProfileAsync(trimmedEmail);
-      }
+      // 2. Build or sync profile directly with Supabase Database
+      const profile: UserProfile = {
+        uid: activeUser.id || activeUser.uid || `admin_${trimmedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        name: activeUser.user_metadata?.name || (isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0]),
+        email: trimmedEmail,
+        role: isSystemAdmin ? 'admin' : 'user',
+        emailVerified: isSystemAdmin || isVerified,
+        emailConfirmedAt: activeUser.email_confirmed_at || new Date().toISOString(),
+        xp: isSystemAdmin ? 1500 : 0,
+        completedRooms: isSystemAdmin ? ['web-architecture-foundations', 'cloud-infrastructure-pipelines'] : [],
+        isPaid: isSystemAdmin ? true : false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
-      const defaultRole = isSystemAdmin ? 'admin' : 'user';
-      if (!profile) {
-        profile = {
-          uid: activeUser.id || activeUser.uid,
-          name: activeUser.user_metadata?.name || (isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0]),
-          email: trimmedEmail,
-          role: defaultRole,
-          emailVerified: isSystemAdmin || !!data?.user?.email_confirmed_at,
-          emailConfirmedAt: data?.user?.email_confirmed_at || (isSystemAdmin ? new Date().toISOString() : undefined),
-          xp: 0,
-          completedRooms: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-      } else {
-        if (isSystemAdmin && profile.role !== 'admin') {
-          profile.role = 'admin';
-        }
-        if (data?.user?.email_confirmed_at || isSystemAdmin) {
-          profile.emailVerified = true;
-          profile.emailConfirmedAt = data?.user?.email_confirmed_at || profile.emailConfirmedAt || new Date().toISOString();
-        }
-      }
+      // Save profile to Supabase DB & local cache
       await saveSupabaseUserProfile(profile);
 
-      // Save active session for instant restoration
+      // Save active session
       try {
         localStorage.setItem('kogla_active_session', JSON.stringify({
-          id: activeUser.id || activeUser.uid,
-          uid: activeUser.id || activeUser.uid,
+          id: profile.uid,
+          uid: profile.uid,
           email: trimmedEmail,
           user_metadata: {
             name: profile.name,
@@ -233,11 +226,11 @@ export default function Login() {
         }));
       } catch (_) {}
 
-      // Synchronously sync state in context and dispatch global event
+      // Synchronously sync context state
       await syncSession({
         ...activeUser,
-        id: activeUser.id || activeUser.uid,
-        uid: activeUser.id || activeUser.uid,
+        id: profile.uid,
+        uid: profile.uid,
         email: trimmedEmail
       });
       window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: activeUser }));
