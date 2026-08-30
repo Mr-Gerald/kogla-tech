@@ -260,7 +260,7 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
           discountedAmount: d.discounted_amount || d.discountedAmount || 237500,
           commissionRate: d.commission_rate || d.commissionRate || 6,
           commissionAmount: d.commission_amount || d.commissionAmount || 14250,
-          status: d.status || 'confirmed',
+          status: d.status || 'pending',
           confirmedAt: d.confirmed_at || d.confirmedAt,
           paidAt: d.paid_at || d.paidAt,
           paymentProofNote: d.payment_proof_note || d.paymentProofNote,
@@ -290,6 +290,7 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
           const discountedAmount = tuitionAmount - discountApplied;
           const commissionRate = 6;
           const commissionAmount = Math.round(discountedAmount * 0.06);
+          const isUserPaid = Boolean(u.isPaid);
 
           const synLead: ReferralLead = {
             id: leadId,
@@ -304,8 +305,8 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
             discountedAmount,
             commissionRate,
             commissionAmount,
-            status: 'confirmed',
-            confirmedAt: u.createdAt || new Date().toISOString(),
+            status: isUserPaid ? 'confirmed' : 'pending',
+            confirmedAt: isUserPaid ? (u.createdAt || new Date().toISOString()) : undefined,
             createdAt: u.createdAt || new Date().toISOString()
           };
           referralMap.set(leadId, synLead);
@@ -326,8 +327,8 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
               discounted_amount: discountedAmount,
               commission_rate: commissionRate,
               commission_amount: commissionAmount,
-              status: 'confirmed',
-              confirmed_at: synLead.confirmedAt,
+              status: synLead.status,
+              confirmed_at: synLead.confirmedAt || null,
               created_at: synLead.createdAt
             }).then(() => {});
           } catch (_) {}
@@ -384,8 +385,7 @@ export async function createReferralLead(params: {
     discountedAmount,
     commissionRate,
     commissionAmount,
-    status: 'confirmed',
-    confirmedAt: new Date().toISOString(),
+    status: 'pending',
     createdAt: new Date().toISOString()
   };
 
@@ -401,15 +401,13 @@ export async function createReferralLead(params: {
   }
   saveCachedReferrals(updatedReferrals);
 
-  // Update partner total referrals in cache
+  // Update partner total referrals in cache (do not increase confirmedCount or totalEarned until payment is approved by Admin)
   const cachedAffiliates = getCachedAffiliates();
   const updatedAffiliates = cachedAffiliates.map(a => {
     if (a.code.toUpperCase() === normCode) {
       return {
         ...a,
-        totalReferrals: (a.totalReferrals || 0) + 1,
-        confirmedCount: (a.confirmedCount || 0) + 1,
-        totalEarned: (a.totalEarned || 0) + commissionAmount
+        totalReferrals: (a.totalReferrals || 0) + 1
       };
     }
     return a;
@@ -431,8 +429,7 @@ export async function createReferralLead(params: {
       discounted_amount: discountedAmount,
       commission_rate: commissionRate,
       commission_amount: commissionAmount,
-      status: 'confirmed',
-      confirmed_at: newLead.confirmedAt,
+      status: 'pending',
       created_at: newLead.createdAt
     });
   } catch (_) {}
