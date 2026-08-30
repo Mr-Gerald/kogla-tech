@@ -58,6 +58,10 @@ import {
   ExternalLink,
   Copy,
   GraduationCap,
+  CreditCard,
+  Building2,
+  Landmark,
+  AlertCircle,
   EyeOff,
   Key,
   Download,
@@ -1991,6 +1995,38 @@ Kogla Tech Global Admissions & Partnerships`;
                 </div>
               </div>
 
+              {(() => {
+                const matchingPartner = affiliates.find(a => a.code.toUpperCase() === activeApprovalLead.affiliateCode.toUpperCase());
+                return (
+                  <div className="p-3 bg-emerald-950/30 border border-emerald-500/40 rounded text-xs font-mono space-y-1">
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold flex items-center gap-1">
+                      <Building2 size={12} className="text-emerald-400" /> Creator Payout Destination (Code: {activeApprovalLead.affiliateCode})
+                    </span>
+                    {matchingPartner?.bankDetails?.bankName && matchingPartner?.bankDetails?.accountNumber ? (
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-white font-bold">
+                        <div>
+                          <span className="text-emerald-400">{matchingPartner.bankDetails.bankName}</span> — <span className="tracking-wider">{matchingPartner.bankDetails.accountNumber}</span> ({matchingPartner.bankDetails.accountName || matchingPartner.name})
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${matchingPartner.bankDetails!.bankName} ${matchingPartner.bankDetails!.accountNumber} ${matchingPartner.bankDetails!.accountName || ''}`);
+                            triggerSuccess('Bank account details copied!');
+                          }}
+                          className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-[11px] text-emerald-300 rounded border border-zinc-700 cursor-pointer flex items-center gap-1 transition-all"
+                        >
+                          <Copy size={11} /> Copy Bank Details
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-amber-400 text-[11px]">
+                        ⚠️ Empty — Creator has not added payout bank account details yet.
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+
               <form onSubmit={handleConfirmApproval} className="flex flex-col sm:flex-row gap-3 pt-2">
                 <input
                   type="text"
@@ -2027,7 +2063,7 @@ Kogla Tech Global Admissions & Partnerships`;
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
+                <table className="w-full text-left text-xs font-mono min-w-[750px]">
                   <thead>
                     <tr className="border-b border-zinc-800 text-[10px] uppercase text-zinc-500">
                       <th className="pb-3 pr-3">Student</th>
@@ -2060,14 +2096,17 @@ Kogla Tech Global Admissions & Partnerships`;
                             {r.mode === 'physical' ? 'Physical Hub' : 'Online'}
                           </span>
                         </td>
-                        <td className="py-4 px-3 text-zinc-200">
-                          {formatNaira(r.discountedAmount)}
+                        <td className="py-4 px-3 text-zinc-200 whitespace-nowrap">
+                          <div className="font-bold text-white">{formatNaira(r.discountedAmount)}</div>
+                          <div className="text-[9px] text-emerald-400 font-sans">
+                            -5% promo ({formatNaira(r.discountApplied)})
+                          </div>
                         </td>
-                        <td className="py-4 px-3 font-bold text-gold-400">
-                          {formatNaira(r.commissionAmount)}
-                          <span className="block text-[9px] text-zinc-500 font-normal">({r.commissionRate}%)</span>
+                        <td className="py-4 px-3 font-bold text-gold-400 whitespace-nowrap">
+                          <div>{formatNaira(r.commissionAmount)}</div>
+                          <div className="text-[9px] text-zinc-500 font-normal">({r.commissionRate}% rate)</div>
                         </td>
-                        <td className="py-4 px-3">
+                        <td className="py-4 px-3 whitespace-nowrap">
                           {r.status === 'pending' && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded text-[10px] uppercase">
                               <Clock size={10} /> Pending Payment
@@ -2147,8 +2186,9 @@ Kogla Tech Global Admissions & Partnerships`;
                 <table className="w-full text-left text-xs font-mono">
                   <thead>
                     <tr className="border-b border-zinc-800 text-[10px] uppercase text-zinc-500">
-                      <th className="pb-3 pr-3">Ambassador</th>
+                      <th className="pb-3 px-3">Ambassador</th>
                       <th className="pb-3 px-3">Promo Code</th>
+                      <th className="pb-3 px-3">Saved Payout Bank Account</th>
                       <th className="pb-3 px-3">Tier & Rates</th>
                       <th className="pb-3 px-3">Confirmed Referrals</th>
                       <th className="pb-3 px-3">Legal Agreement Status</th>
@@ -2177,6 +2217,42 @@ Kogla Tech Global Admissions & Partnerships`;
                             <span className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 font-bold rounded text-xs">
                               {aff.code}
                             </span>
+                          </td>
+                          <td className="py-4 px-3">
+                            {aff.bankDetails && aff.bankDetails.bankName && aff.bankDetails.accountNumber ? (
+                              <div className="p-2 bg-emerald-950/40 border border-emerald-500/40 rounded space-y-0.5 font-mono text-xs max-w-[210px]">
+                                <div className="flex items-center justify-between text-[11px] font-bold text-emerald-400 uppercase">
+                                  <span className="truncate flex items-center gap-1">
+                                    <Building2 size={12} className="shrink-0 text-emerald-400" />
+                                    {aff.bankDetails.bankName}
+                                  </span>
+                                </div>
+                                <div className="text-white font-mono text-xs font-bold tracking-wider flex items-center justify-between gap-1">
+                                  <span className="select-all">{aff.bankDetails.accountNumber}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(aff.bankDetails!.accountNumber);
+                                      triggerSuccess(`Copied account number: ${aff.bankDetails!.accountNumber}`);
+                                    }}
+                                    className="text-zinc-400 hover:text-white p-1 hover:bg-zinc-800 rounded transition-colors cursor-pointer shrink-0"
+                                    title="Copy account number"
+                                  >
+                                    <Copy size={11} />
+                                  </button>
+                                </div>
+                                {aff.bankDetails.accountName && (
+                                  <div className="text-[10px] text-zinc-300 font-sans truncate" title={aff.bankDetails.accountName}>
+                                    {aff.bankDetails.accountName}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="px-2 py-1 bg-zinc-900 border border-zinc-800 text-zinc-500 text-[10px] font-mono uppercase rounded inline-flex items-center gap-1">
+                                <AlertCircle size={11} className="text-amber-500/80 shrink-0" />
+                                <span>Empty (Pending Creator Setup)</span>
+                              </div>
+                            )}
                           </td>
                           <td className="py-4 px-3">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${

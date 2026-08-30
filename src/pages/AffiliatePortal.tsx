@@ -769,81 +769,159 @@ export default function AffiliatePortal() {
             <p className="text-[11px] text-zinc-500">Share your link <b className="text-gold-400">{referralUrl}</b> or promo code <b className="text-gold-400">{partnerCode}</b> to start logging attributions.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead>
-                <tr className="border-b border-zinc-800 text-zinc-500 uppercase text-[10px]">
-                  <th className="pb-3 pr-4">Lead Name</th>
-                  <th className="pb-3 px-4">Track / Service</th>
-                  <th className="pb-3 px-4">Mode</th>
-                  <th className="pb-3 px-4">Net Total</th>
-                  <th className="pb-3 px-4">Your Commission</th>
-                  <th className="pb-3 px-4">Status</th>
-                  <th className="pb-3 pl-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-850 text-zinc-300">
-                {referrals.map((lead) => {
-                  let statusBadge = (
-                    <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit">
-                      <Clock size={10} /> Pending Payment
+          <div className="space-y-4">
+            {/* MOBILE CARD VIEW (< md) */}
+            <div className="block md:hidden space-y-3">
+              {referrals.map((lead) => {
+                let statusBadge = (
+                  <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit shrink-0">
+                    <Clock size={10} /> Pending Payment
+                  </span>
+                );
+                if (lead.status === 'confirmed') {
+                  statusBadge = (
+                    <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit shrink-0">
+                      <CheckCircle2 size={10} /> Confirmed (Ready)
                     </span>
                   );
-                  if (lead.status === 'confirmed') {
-                    statusBadge = (
-                      <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit">
-                        <CheckCircle2 size={10} /> Confirmed (Ready)
-                      </span>
-                    );
-                  } else if (lead.status === 'paid_out') {
-                    statusBadge = (
-                      <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit">
-                        <Check size={10} /> Paid Out to Bank
-                      </span>
-                    );
-                  }
+                } else if (lead.status === 'paid_out') {
+                  statusBadge = (
+                    <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit shrink-0">
+                      <Check size={10} /> Paid Out to Bank
+                    </span>
+                  );
+                }
 
-                  return (
-                    <tr key={lead.id} className="hover:bg-zinc-900/50 transition-colors">
-                      <td className="py-4 pr-4 font-sans font-medium text-white">
-                        {lead.studentName}
+                return (
+                  <div key={lead.id} className="p-4 bg-zinc-900/80 border border-zinc-800 rounded-lg space-y-3">
+                    <div className="flex items-start justify-between gap-2 border-b border-zinc-800/80 pb-2.5">
+                      <div>
+                        <h4 className="font-sans font-bold text-white text-sm">{lead.studentName}</h4>
                         {lead.studentEmail && (
-                          <span className="block text-[10px] font-mono text-zinc-500">
-                            {lead.studentEmail}
-                          </span>
+                          <span className="text-[10px] font-mono text-zinc-400 block">{lead.studentEmail}</span>
                         )}
-                      </td>
-                      <td className="py-4 px-4 text-zinc-300">
-                        {lead.courseTitle}
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[10px] uppercase text-zinc-400">
+                      </div>
+                      <div>
+                        {statusBadge}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                      <div>
+                        <span className="text-[10px] uppercase text-zinc-500 block">Course / Track</span>
+                        <span className="text-zinc-200 font-sans text-xs">{lead.courseTitle}</span>
+                        <span className="text-[9px] uppercase text-zinc-400 block mt-0.5">
                           {lead.mode === 'physical' ? 'Physical Hub' : 'Online Cohort'}
                         </span>
-                      </td>
-                      <td className="py-4 px-4 text-zinc-200">
-                        {formatNaira(lead.discountedAmount)}
-                        <span className="block text-[9px] text-emerald-400">
-                          -5% applied ({formatNaira(lead.discountApplied)})
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] uppercase text-zinc-500 block">Net Tuition</span>
+                        <span className="text-white font-bold whitespace-nowrap">{formatNaira(lead.discountedAmount)}</span>
+                        <span className="text-[9px] text-emerald-400 block whitespace-nowrap">
+                          -5% Promo ({formatNaira(lead.discountApplied)})
                         </span>
-                      </td>
-                      <td className="py-4 px-4 font-bold text-gold-400">
-                        {formatNaira(lead.commissionAmount)}
-                        <span className="block text-[9px] text-zinc-500 font-normal">
-                          ({lead.commissionRate}% rate)
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-800/60 text-xs font-mono">
+                      <div>
+                        <span className="text-[10px] uppercase text-zinc-500 block">Your Commission</span>
+                        <span className="text-gold-400 font-bold text-sm whitespace-nowrap">
+                          {formatNaira(lead.commissionAmount)}
                         </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        {statusBadge}
-                      </td>
-                      <td className="py-4 pl-4 text-zinc-500 text-[11px]">
-                        {new Date(lead.createdAt).toLocaleDateString('en-GB')}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <span className="text-[9px] text-zinc-500"> ({lead.commissionRate}% rate)</span>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[10px] uppercase text-zinc-500 block">Date Tracked</span>
+                        <span className="text-zinc-400 text-[11px] whitespace-nowrap">
+                          {new Date(lead.createdAt).toLocaleDateString('en-GB')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* DESKTOP TABLE VIEW (hidden on mobile, visible md+) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-zinc-500 uppercase text-[10px]">
+                    <th className="pb-3 pr-4">Lead Name</th>
+                    <th className="pb-3 px-4">Track / Service</th>
+                    <th className="pb-3 px-4">Mode</th>
+                    <th className="pb-3 px-4">Net Total</th>
+                    <th className="pb-3 px-4">Your Commission</th>
+                    <th className="pb-3 px-4">Status</th>
+                    <th className="pb-3 pl-4">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-850 text-zinc-300">
+                  {referrals.map((lead) => {
+                    let statusBadge = (
+                      <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit whitespace-nowrap">
+                        <Clock size={10} /> Pending Payment
+                      </span>
+                    );
+                    if (lead.status === 'confirmed') {
+                      statusBadge = (
+                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit whitespace-nowrap">
+                          <CheckCircle2 size={10} /> Confirmed (Ready)
+                        </span>
+                      );
+                    } else if (lead.status === 'paid_out') {
+                      statusBadge = (
+                        <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded text-[10px] uppercase font-bold flex items-center gap-1 w-fit whitespace-nowrap">
+                          <Check size={10} /> Paid Out to Bank
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <tr key={lead.id} className="hover:bg-zinc-900/50 transition-colors">
+                        <td className="py-4 pr-4 font-sans font-medium text-white">
+                          {lead.studentName}
+                          {lead.studentEmail && (
+                            <span className="block text-[10px] font-mono text-zinc-500">
+                              {lead.studentEmail}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 text-zinc-300">
+                          {lead.courseTitle}
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[10px] uppercase text-zinc-400 whitespace-nowrap">
+                            {lead.mode === 'physical' ? 'Physical Hub' : 'Online Cohort'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-zinc-200 whitespace-nowrap">
+                          <div className="font-bold text-white">{formatNaira(lead.discountedAmount)}</div>
+                          <div className="text-[9px] text-emerald-400">
+                            -5% promo ({formatNaira(lead.discountApplied)})
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 font-bold text-gold-400 whitespace-nowrap">
+                          <div>{formatNaira(lead.commissionAmount)}</div>
+                          <div className="text-[9px] text-zinc-500 font-normal">
+                            ({lead.commissionRate}% rate)
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          {statusBadge}
+                        </td>
+                        <td className="py-4 pl-4 text-zinc-500 text-[11px] whitespace-nowrap">
+                          {new Date(lead.createdAt).toLocaleDateString('en-GB')}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

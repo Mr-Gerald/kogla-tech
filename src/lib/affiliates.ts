@@ -172,12 +172,13 @@ export async function getAllAffiliates(): Promise<AffiliatePartner[]> {
             totalEarned: existing?.totalEarned || 0,
             totalPaidOut: existing?.totalPaidOut || 0,
             pendingPayout: existing?.pendingPayout || 0,
+            bankDetails: existing?.bankDetails || (u as any).bankDetails,
             contractSigned: true,
             contractSignedDate: existing?.contractSignedDate || u.createdAt || new Date().toISOString(),
             createdAt: existing?.createdAt || u.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };
-          partnerMap.set(code, { ...existing, ...synthesized });
+          partnerMap.set(code, { ...existing, ...synthesized, bankDetails: existing?.bankDetails || (u as any).bankDetails || synthesized.bankDetails });
         }
       }
     }
@@ -190,8 +191,14 @@ export async function getAllAffiliates(): Promise<AffiliatePartner[]> {
       for (const d of data) {
         if (d.code) {
           const normCode = d.code.toUpperCase().trim();
+          const existingP = partnerMap.get(normCode);
+          let rawBank = d.bank_details || d.bankDetails || existingP?.bankDetails;
+          if (typeof rawBank === 'string') {
+            try { rawBank = JSON.parse(rawBank); } catch (_) {}
+          }
+
           partnerMap.set(normCode, {
-            ...partnerMap.get(normCode),
+            ...existingP,
             id: d.id,
             code: normCode,
             name: d.name,
@@ -206,6 +213,7 @@ export async function getAllAffiliates(): Promise<AffiliatePartner[]> {
             totalEarned: d.total_earned || d.totalEarned || 0,
             totalPaidOut: d.total_paid_out || d.totalPaidOut || 0,
             pendingPayout: d.pending_payout || d.pendingPayout || 0,
+            bankDetails: rawBank && typeof rawBank === 'object' ? rawBank : existingP?.bankDetails,
             contractSigned: d.contract_signed ?? true,
             contractSignedDate: d.contract_signed_date || d.contractSignedDate,
             createdAt: d.created_at || d.createdAt,
@@ -660,6 +668,7 @@ export async function saveAffiliatePartner(partner: AffiliatePartner): Promise<b
       name: partnerToSave.name,
       email: partnerToSave.email,
       instagram_handle: partnerToSave.instagramHandle,
+      bank_details: partnerToSave.bankDetails ? JSON.stringify(partnerToSave.bankDetails) : null,
       tier: partnerToSave.tier,
       base_rate: partnerToSave.baseRate,
       boosted_rate: partnerToSave.boostedRate,
