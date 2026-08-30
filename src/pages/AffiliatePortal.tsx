@@ -100,6 +100,20 @@ export default function AffiliatePortal() {
 
   useEffect(() => {
     loadPartnerData(partnerCode);
+
+    // Auto-poll every 5 seconds so live approvals and payouts from Admin Portal reflect instantly
+    const interval = setInterval(() => {
+      if (partnerCode) {
+        getAffiliateByCode(partnerCode).then(p => {
+          if (p) setPartner(p);
+        }).catch(() => {});
+        getReferralsByCode(partnerCode).then(refs => {
+          if (refs) setReferrals(refs);
+        }).catch(() => {});
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [partnerCode]);
 
   const referralUrl = `${window.location.origin}/?ref=${partnerCode}`;

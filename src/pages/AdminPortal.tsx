@@ -522,6 +522,12 @@ export default function AdminPortal() {
   useEffect(() => {
     if (tab === 'affiliates') {
       loadAffiliatesData();
+      // Auto-poll every 4 seconds when viewing affiliates tab so approvals and payouts sync across all devices
+      const interval = setInterval(() => {
+        getAllAffiliates().then(affs => setAffiliates(affs)).catch(() => {});
+        getAllReferrals().then(refs => setReferrals(refs)).catch(() => {});
+      }, 4000);
+      return () => clearInterval(interval);
     } else if (tab === 'certificates') {
       loadCertificatesData();
     } else if (tab === 'users') {

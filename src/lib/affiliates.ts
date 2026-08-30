@@ -263,16 +263,25 @@ export async function getReferralsByCode(code: string): Promise<ReferralLead[]> 
 }
 
 /**
- * Fetch all referrals across the platform (for Admin)
+ * Fetch all referrals across the platform (for Admin & Creators)
  */
 export async function getAllReferrals(): Promise<ReferralLead[]> {
   const referralMap = new Map<string, ReferralLead>();
 
-  // 1. Load local cache
-  const cached = getCachedReferrals();
-  for (const r of cached) {
-    if (r.id) referralMap.set(r.id, r);
-  }
+  // 1. Load from Express backend server disk store (Primary Source of Truth)
+  try {
+    const res = await fetch('/api/referrals');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.referrals)) {
+        for (const r of data.referrals) {
+          if (r && r.id) {
+            referralMap.set(r.id, r);
+          }
+        }
+      }
+    }
+  } catch (_) {}
 
   // 2. Load from Supabase DB
   try {
@@ -285,7 +294,7 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
           studentName: d.student_name || d.studentName || 'Student',
           studentEmail: d.student_email || d.studentEmail || '',
           studentPhone: d.student_phone || d.studentPhone || '',
-          courseTitle: d.course_title || d.courseTitle || 'Account Registration',
+          courseTitle: d.course_title || d.courseTitle || 'Full-Stack Web Development',
           mode: d.mode || 'online',
           tuitionAmount: d.tuition_amount || d.tuitionAmount || 250000,
           discountApplied: d.discount_applied || d.discountApplied || 12500,
@@ -298,12 +307,45 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
           paymentProofNote: d.payment_proof_note || d.paymentProofNote,
           createdAt: d.created_at || d.createdAt || new Date().toISOString()
         };
-        referralMap.set(item.id, item);
+        // Only set if not already in referralMap from server, or if server didn't have confirmed/paid_out
+        if (!referralMap.has(item.id)) {
+          referralMap.set(item.id, item);
+        } else {
+          const existing = referralMap.get(item.id)!;
+          referralMap.set(item.id, {
+            ...existing,
+            ...item,
+            status: existing.status === 'confirmed' || existing.status === 'paid_out' ? existing.status : item.status,
+            confirmedAt: existing.confirmedAt || item.confirmedAt,
+            paidAt: existing.paidAt || item.paidAt,
+            courseTitle: existing.courseTitle && existing.courseTitle !== 'Account Registration (Kogla Academy)' ? existing.courseTitle : item.courseTitle
+          });
+        }
       }
     }
   } catch (_) {}
 
-  // 3. Auto-heal: Check user profiles for any registered students with referredBy or appliedPromoCode
+  // 3. Load local cache (merge without overwriting approved statuses)
+  const cached = getCachedReferrals();
+  for (const r of cached) {
+    if (r && r.id) {
+      if (!referralMap.has(r.id)) {
+        referralMap.set(r.id, r);
+      } else {
+        const existing = referralMap.get(r.id)!;
+        referralMap.set(r.id, {
+          ...existing,
+          ...r,
+          status: existing.status === 'confirmed' || existing.status === 'paid_out' ? existing.status : r.status,
+          confirmedAt: existing.confirmedAt || r.confirmedAt,
+          paidAt: existing.paidAt || r.paidAt,
+          courseTitle: existing.courseTitle && existing.courseTitle !== 'Account Registration (Kogla Academy)' ? existing.courseTitle : r.courseTitle
+        });
+      }
+    }
+  }
+
+  // 4. Auto-heal: Check user profiles for any registered students with referredBy or appliedPromoCode
   try {
     const userProfiles = getSupabaseUserProfiles();
     const existingKeys = new Set(
@@ -317,6 +359,7 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
         const key = `${normEmail}_${code}`;
         if (!existingKeys.has(key)) {
           const leadId = `ref-syn-${u.uid || Math.random().toString(36).substring(2, 7)}`;
+          const userSpecificTrack = (u as any).enrolledCourse || (u as any).interestTrack || (u as any).courseTitle || 'Full-Stack Web Development';
           const tuitionAmount = 250000;
           const discountApplied = Math.round(tuitionAmount * 0.05);
           const discountedAmount = tuitionAmount - discountApplied;
@@ -330,7 +373,7 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
             studentName: u.name || normEmail.split('@')[0],
             studentEmail: normEmail,
             studentPhone: (u as any).phone || '',
-            courseTitle: 'Account Registration (Kogla Academy)',
+            courseTitle: userSpecificTrack,
             mode: 'online',
             tuitionAmount,
             discountApplied,
@@ -344,8 +387,14 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
           referralMap.set(leadId, synLead);
           existingKeys.add(key);
 
-          // Save to Supabase DB asynchronously
+          // Sync to backend and Supabase
           try {
+            fetch('/api/referrals/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ referral: synLead })
+            }).catch(() => {});
+
             supabase.from('referrals').upsert({
               id: leadId,
               affiliate_code: code,
@@ -369,32 +418,19 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
     }
   } catch (_) {}
 
-  // 4. Strict Sanitizer: Enforce 'pending' for any leads where payment has not been verified by Admin or student is not paid
-  try {
-    const userProfiles = getSupabaseUserProfiles();
-    const userPaidMap = new Map<string, boolean>();
-    for (const u of userProfiles) {
-      if (u.email) userPaidMap.set(u.email.toLowerCase().trim(), Boolean(u.isPaid));
-    }
-
-    for (const lead of referralMap.values()) {
-      if (lead.status === 'confirmed') {
-        const studentEmailNorm = (lead.studentEmail || '').toLowerCase().trim();
-        const isUserPaid = userPaidMap.get(studentEmailNorm);
-        const hasAdminApprovalNote = Boolean(lead.paymentProofNote && lead.paymentProofNote.trim());
-
-        // If the student user is not paid AND admin has not issued an approval note, revert lead to pending payment
-        if (!isUserPaid && !hasAdminApprovalNote) {
-          lead.status = 'pending';
-          lead.confirmedAt = undefined;
-        }
-      }
-    }
-  } catch (_) {}
-
   const finalReferrals = Array.from(referralMap.values());
   finalReferrals.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   saveCachedReferrals(finalReferrals);
+
+  // Sync latest merged batch to server disk
+  try {
+    fetch('/api/referrals/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ list: finalReferrals })
+    }).catch(() => {});
+  } catch (_) {}
+
   return finalReferrals;
 }
 
@@ -489,54 +525,82 @@ export async function createReferralLead(params: {
     });
   } catch (_) {}
 
+  // Sync to Express server disk persistence
+  try {
+    fetch('/api/referrals/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ referral: newLead })
+    }).catch(() => {});
+  } catch (_) {}
+
   return newLead;
 }
 
 /**
- * Admin Action: Approve student payment and confirm enrollment.
+ * Admin Action: Approve student payment and confirm enrollment globally.
  */
 export async function approveReferralPayment(leadId: string, paymentProofNote?: string): Promise<boolean> {
   const referrals = getCachedReferrals();
   const leadIndex = referrals.findIndex(r => r.id === leadId);
-  if (leadIndex === -1) return false;
+  
+  // Mark lead confirmed in local cache
+  if (leadIndex !== -1) {
+    const lead = referrals[leadIndex];
+    lead.status = 'confirmed';
+    lead.confirmedAt = new Date().toISOString();
+    if (paymentProofNote) lead.paymentProofNote = paymentProofNote;
+    referrals[leadIndex] = lead;
+    saveCachedReferrals(referrals);
 
-  const lead = referrals[leadIndex];
-  if (lead.status === 'confirmed' || lead.status === 'paid_out') return true;
+    // Update affiliate partner stats locally
+    const affiliates = getCachedAffiliates();
+    const affIndex = affiliates.findIndex(a => a.code.toUpperCase() === lead.affiliateCode.toUpperCase());
+    if (affIndex !== -1) {
+      const partner = affiliates[affIndex];
+      const newConfirmedCount = (partner.confirmedCount || 0) + 1;
+      const newTotalEarned = (partner.totalEarned || 0) + lead.commissionAmount;
+      const newPendingPayout = (partner.pendingPayout || 0) + lead.commissionAmount;
+      const newTier: 1 | 2 = newConfirmedCount >= 3 ? 2 : 1;
 
-  // Mark lead confirmed
-  lead.status = 'confirmed';
-  lead.confirmedAt = new Date().toISOString();
-  if (paymentProofNote) lead.paymentProofNote = paymentProofNote;
-  referrals[leadIndex] = lead;
-  saveCachedReferrals(referrals);
-
-  // Update affiliate partner stats
-  const affiliates = getCachedAffiliates();
-  const affIndex = affiliates.findIndex(a => a.code.toUpperCase() === lead.affiliateCode.toUpperCase());
-  if (affIndex !== -1) {
-    const partner = affiliates[affIndex];
-    const newConfirmedCount = (partner.confirmedCount || 0) + 1;
-    const newTotalEarned = (partner.totalEarned || 0) + lead.commissionAmount;
-    const newPendingPayout = (partner.pendingPayout || 0) + lead.commissionAmount;
-    const newTier: 1 | 2 = newConfirmedCount >= 3 ? 2 : 1;
-
-    affiliates[affIndex] = {
-      ...partner,
-      confirmedCount: newConfirmedCount,
-      totalEarned: newTotalEarned,
-      pendingPayout: newPendingPayout,
-      tier: newTier,
-      updatedAt: new Date().toISOString()
-    };
-    saveCachedAffiliates(affiliates);
+      affiliates[affIndex] = {
+        ...partner,
+        confirmedCount: newConfirmedCount,
+        totalEarned: newTotalEarned,
+        pendingPayout: newPendingPayout,
+        tier: newTier,
+        updatedAt: new Date().toISOString()
+      };
+      saveCachedAffiliates(affiliates);
+    }
   }
 
-  // Update Supabase
+  // 1. Trigger Global Server Approval (persists across all devices & browsers)
+  try {
+    const res = await fetch('/api/referrals/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: leadId, paymentProofNote })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.referrals && Array.isArray(data.referrals)) {
+        saveCachedReferrals(data.referrals);
+      }
+      if (data.affiliates && Array.isArray(data.affiliates)) {
+        saveCachedAffiliates(data.affiliates);
+      }
+    }
+  } catch (err) {
+    console.warn('[Affiliates] Failed to broadcast approval to server:', err);
+  }
+
+  // 2. Update Supabase
   try {
     await supabase.from('referrals').update({
       status: 'confirmed',
-      confirmed_at: lead.confirmedAt,
-      payment_proof_note: lead.paymentProofNote || ''
+      confirmed_at: new Date().toISOString(),
+      payment_proof_note: paymentProofNote || 'Verified in Admin Portal'
     }).eq('id', leadId);
   } catch (_) {}
 
@@ -544,29 +608,50 @@ export async function approveReferralPayment(leadId: string, paymentProofNote?: 
 }
 
 /**
- * Admin Action: Mark affiliate commission as paid out to creator's bank account
+ * Admin Action: Mark affiliate commission as paid out to creator's bank account globally
  */
 export async function markReferralPaidOut(leadId: string): Promise<boolean> {
   const referrals = getCachedReferrals();
   const lead = referrals.find(r => r.id === leadId);
-  if (!lead || lead.status !== 'confirmed') return false;
+  if (lead) {
+    lead.status = 'paid_out';
+    lead.paidAt = new Date().toISOString();
+    saveCachedReferrals(referrals);
 
-  lead.status = 'paid_out';
-  lead.paidAt = new Date().toISOString();
-  saveCachedReferrals(referrals);
-
-  const affiliates = getCachedAffiliates();
-  const partner = affiliates.find(a => a.code.toUpperCase() === lead.affiliateCode.toUpperCase());
-  if (partner) {
-    partner.pendingPayout = Math.max(0, (partner.pendingPayout || 0) - lead.commissionAmount);
-    partner.totalPaidOut = (partner.totalPaidOut || 0) + lead.commissionAmount;
-    saveCachedAffiliates(affiliates);
+    const affiliates = getCachedAffiliates();
+    const partner = affiliates.find(a => a.code.toUpperCase() === lead.affiliateCode.toUpperCase());
+    if (partner) {
+      partner.pendingPayout = Math.max(0, (partner.pendingPayout || 0) - lead.commissionAmount);
+      partner.totalPaidOut = (partner.totalPaidOut || 0) + lead.commissionAmount;
+      saveCachedAffiliates(affiliates);
+    }
   }
 
+  // 1. Trigger Global Server Payout (persists across all devices & browsers)
+  try {
+    const res = await fetch('/api/referrals/paid-out', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: leadId })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.referrals && Array.isArray(data.referrals)) {
+        saveCachedReferrals(data.referrals);
+      }
+      if (data.affiliates && Array.isArray(data.affiliates)) {
+        saveCachedAffiliates(data.affiliates);
+      }
+    }
+  } catch (err) {
+    console.warn('[Affiliates] Failed to broadcast payout to server:', err);
+  }
+
+  // 2. Update Supabase
   try {
     await supabase.from('referrals').update({
       status: 'paid_out',
-      paid_at: lead.paidAt
+      paid_at: new Date().toISOString()
     }).eq('id', leadId);
   } catch (_) {}
 
@@ -579,6 +664,14 @@ export async function markReferralPaidOut(leadId: string): Promise<boolean> {
 export async function deleteReferralLead(leadId: string): Promise<boolean> {
   const referrals = getCachedReferrals().filter(r => r.id !== leadId);
   saveCachedReferrals(referrals);
+
+  try {
+    fetch('/api/referrals/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: leadId })
+    }).catch(() => {});
+  } catch (_) {}
 
   try {
     await supabase.from('referrals').delete().eq('id', leadId);
@@ -611,12 +704,16 @@ export async function deleteAffiliatePartner(code: string): Promise<boolean> {
 }
 
 /**
- * Purge all mock/test referral leads and test affiliates from local cache and Supabase
+ * Purge all mock/test referral leads and test affiliates from local cache, server, and Supabase
  */
 export async function purgeAllTestReferralsAndAffiliates(): Promise<boolean> {
   // Clear local storage
   localStorage.removeItem(LOCAL_AFFILIATES_KEY);
   localStorage.removeItem(LOCAL_REFERRALS_KEY);
+
+  try {
+    fetch('/api/referrals/purge-all', { method: 'POST' }).catch(() => {});
+  } catch (_) {}
 
   try {
     await supabase.from('affiliates').delete().in('code', ['PHENA', 'SHIRLEY']);

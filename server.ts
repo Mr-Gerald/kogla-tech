@@ -168,15 +168,42 @@ interface SyncedAffiliate {
   totalEarned: number;
   totalPaidOut: number;
   pendingPayout: number;
+  bankDetails?: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  };
   contractSigned: boolean;
   contractSignedDate: string;
   createdAt: string;
   updatedAt: string;
 }
 
+interface SyncedReferral {
+  id: string;
+  affiliateCode: string;
+  studentName: string;
+  studentEmail: string;
+  studentPhone?: string;
+  courseTitle: string;
+  mode: 'online' | 'physical';
+  tuitionAmount: number;
+  discountedAmount: number;
+  discountApplied: number;
+  commissionRate: number;
+  commissionAmount: number;
+  status: 'pending' | 'confirmed' | 'paid_out';
+  paymentProofNote?: string;
+  confirmedAt?: string;
+  paidAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 const USERS_FILE_PATH = path.join(process.cwd(), 'server_data_users.json');
 const DELETED_USERS_FILE_PATH = path.join(process.cwd(), 'server_deleted_users.json');
 const AFFILIATES_FILE_PATH = path.join(process.cwd(), 'server_data_affiliates.json');
+const REFERRALS_FILE_PATH = path.join(process.cwd(), 'server_data_referrals.json');
 
 function loadAffiliatesFromDisk(): Map<string, SyncedAffiliate> {
   const map = new Map<string, SyncedAffiliate>();
@@ -209,6 +236,66 @@ function saveAffiliatesToDisk(map: Map<string, SyncedAffiliate>) {
 }
 
 const serverAffiliatesMap = loadAffiliatesFromDisk();
+
+function loadReferralsFromDisk(): Map<string, SyncedReferral> {
+  const map = new Map<string, SyncedReferral>();
+  try {
+    if (fs.existsSync(REFERRALS_FILE_PATH)) {
+      const raw = fs.readFileSync(REFERRALS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        for (const r of data) {
+          if (r && r.id) {
+            map.set(r.id, r);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Server] Error loading referrals from disk:', err);
+  }
+  return map;
+}
+
+function saveReferralsToDisk(map: Map<string, SyncedReferral>) {
+  try {
+    const list = Array.from(map.values());
+    fs.writeFileSync(REFERRALS_FILE_PATH, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[Server] Error saving referrals to disk:', err);
+  }
+}
+
+const serverReferralsMap = loadReferralsFromDisk();
+
+function recalculateAffiliateStats(partnerCode: string) {
+  const normCode = partnerCode.toUpperCase().trim();
+  const partner = serverAffiliatesMap.get(normCode);
+  if (!partner) return;
+
+  const partnerRefs = Array.from(serverReferralsMap.values()).filter(
+    r => (r.affiliateCode || '').toUpperCase().trim() === normCode
+  );
+
+  const totalReferrals = partnerRefs.length;
+  const confirmedLeads = partnerRefs.filter(r => r.status === 'confirmed' || r.status === 'paid_out');
+  const confirmedCount = confirmedLeads.length;
+  const totalEarned = confirmedLeads.reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
+  const totalPaidOut = partnerRefs.filter(r => r.status === 'paid_out').reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
+  const pendingPayout = partnerRefs.filter(r => r.status === 'confirmed').reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
+  const tier: 1 | 2 = confirmedCount >= 3 ? 2 : 1;
+
+  partner.totalReferrals = totalReferrals;
+  partner.confirmedCount = confirmedCount;
+  partner.totalEarned = totalEarned;
+  partner.totalPaidOut = totalPaidOut;
+  partner.pendingPayout = pendingPayout;
+  partner.tier = tier;
+  partner.updatedAt = new Date().toISOString();
+
+  serverAffiliatesMap.set(normCode, partner);
+  saveAffiliatesToDisk(serverAffiliatesMap);
+}
 
 function loadDeletedUsersFromDisk(): Set<string> {
   const set = new Set<string>();
@@ -470,6 +557,159 @@ app.post('/api/affiliates/delete', (req, res) => {
       saveAffiliatesToDisk(serverAffiliatesMap);
     }
     res.json({ success: true, message: 'Affiliate removed' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/referrals - Return all referrals globally across all devices
+app.get('/api/referrals', (req, res) => {
+  try {
+    const diskMap = loadReferralsFromDisk();
+    const list = Array.from(diskMap.values());
+    res.json({ success: true, referrals: list });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message, referrals: [] });
+  }
+});
+
+// POST /api/referrals/sync - Save or update referral leads globally
+app.post('/api/referrals/sync', (req, res) => {
+  try {
+    const { referral, list } = req.body;
+    if (list && Array.isArray(list)) {
+      for (const item of list) {
+        if (item && item.id) {
+          const existing = serverReferralsMap.get(item.id);
+          serverReferralsMap.set(item.id, {
+            ...existing,
+            ...item,
+            updatedAt: new Date().toISOString()
+          });
+          if (item.affiliateCode) {
+            recalculateAffiliateStats(item.affiliateCode);
+          }
+        }
+      }
+    } else if (referral && referral.id) {
+      const existing = serverReferralsMap.get(referral.id);
+      serverReferralsMap.set(referral.id, {
+        ...existing,
+        ...referral,
+        updatedAt: new Date().toISOString()
+      });
+      if (referral.affiliateCode) {
+        recalculateAffiliateStats(referral.affiliateCode);
+      }
+    }
+    saveReferralsToDisk(serverReferralsMap);
+    res.json({ success: true, referrals: Array.from(serverReferralsMap.values()) });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/referrals/approve - Admin global payment approval
+app.post('/api/referrals/approve', (req, res) => {
+  try {
+    const { id, paymentProofNote } = req.body;
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'Referral ID is required.' });
+    }
+
+    const lead = serverReferralsMap.get(id);
+    if (!lead) {
+      // If not yet in map, return failure so client can sync first
+      return res.status(404).json({ success: false, error: 'Referral record not found on server.' });
+    }
+
+    lead.status = 'confirmed';
+    lead.confirmedAt = new Date().toISOString();
+    if (paymentProofNote) lead.paymentProofNote = paymentProofNote;
+    lead.updatedAt = new Date().toISOString();
+
+    serverReferralsMap.set(id, lead);
+    saveReferralsToDisk(serverReferralsMap);
+
+    if (lead.affiliateCode) {
+      recalculateAffiliateStats(lead.affiliateCode);
+    }
+
+    res.json({
+      success: true,
+      referral: lead,
+      affiliates: Array.from(serverAffiliatesMap.values()),
+      referrals: Array.from(serverReferralsMap.values())
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/referrals/paid-out - Admin global commission payout confirmation
+app.post('/api/referrals/paid-out', (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'Referral ID is required.' });
+    }
+
+    const lead = serverReferralsMap.get(id);
+    if (!lead) {
+      return res.status(404).json({ success: false, error: 'Referral record not found on server.' });
+    }
+
+    lead.status = 'paid_out';
+    lead.paidAt = new Date().toISOString();
+    lead.updatedAt = new Date().toISOString();
+
+    serverReferralsMap.set(id, lead);
+    saveReferralsToDisk(serverReferralsMap);
+
+    if (lead.affiliateCode) {
+      recalculateAffiliateStats(lead.affiliateCode);
+    }
+
+    res.json({
+      success: true,
+      referral: lead,
+      affiliates: Array.from(serverAffiliatesMap.values()),
+      referrals: Array.from(serverReferralsMap.values())
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/referrals/delete - Remove a single referral lead globally
+app.post('/api/referrals/delete', (req, res) => {
+  try {
+    const { id } = req.body;
+    if (id) {
+      const lead = serverReferralsMap.get(id);
+      const affCode = lead?.affiliateCode;
+      serverReferralsMap.delete(id);
+      saveReferralsToDisk(serverReferralsMap);
+      if (affCode) {
+        recalculateAffiliateStats(affCode);
+      }
+    }
+    res.json({ success: true, message: 'Referral removed', referrals: Array.from(serverReferralsMap.values()) });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/referrals/purge-all - Clear mock/test referrals
+app.post('/api/referrals/purge-all', (req, res) => {
+  try {
+    for (const [id, r] of serverReferralsMap.entries()) {
+      if (r.affiliateCode === 'PHENA' || r.affiliateCode === 'SHIRLEY' || id.startsWith('ref-demo-')) {
+        serverReferralsMap.delete(id);
+      }
+    }
+    saveReferralsToDisk(serverReferralsMap);
+    res.json({ success: true, message: 'Test referrals cleared.' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
