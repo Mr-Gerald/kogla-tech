@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { ImageConfig, DEFAULT_IMAGES, sanitizeImages } from '../utils/storage';
 
 export interface SiteConfig {
@@ -121,44 +120,38 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Sync config from Firestore doc config/site
-    const configRef = doc(db, 'config', 'site');
-    const unsubscribe = onSnapshot(configRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data() as SiteConfig;
-        const sanitized = sanitizeSiteConfig(data);
-        setConfig(sanitized);
-        localStorage.setItem('kogla_site_config', JSON.stringify(sanitized));
-      } else {
-        // Document does not exist yet. Use default config.
-        setConfig(DEFAULT_SITE_CONFIG);
-      }
-      setLoading(false);
-    }, (error) => {
-      console.warn('[SiteConfig] Firestore sync notice, using local config fallback:', error?.message);
-      setLoading(false);
-    });
+    // 1. Initial async load from Supabase settings / site_config table
+    const loadFromSupabase = async () => {
+      try {
+        const { data: configRow } = await supabase
+          .from('site_config')
+          .select('*')
+          .eq('key', 'site')
+          .single();
+        if (configRow && configRow.value) {
+          const sanitized = sanitizeSiteConfig(typeof configRow.value === 'string' ? JSON.parse(configRow.value) : configRow.value);
+          setConfig(sanitized);
+          localStorage.setItem('kogla_site_config', JSON.stringify(sanitized));
+        }
+      } catch (_) {}
 
-    // Sync images from Firestore doc config/images
-    const imagesRef = doc(db, 'config', 'images');
-    const unsubscribeImages = onSnapshot(imagesRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data() as ImageConfig;
-        const sanitized = sanitizeImages(data);
-        setImages(sanitized);
-        localStorage.setItem('kogla_images', JSON.stringify(sanitized));
-      } else {
-        // Document does not exist yet. Use default images.
-        setImages(DEFAULT_IMAGES);
-      }
-    }, (error) => {
-      console.warn('[SiteConfig] Firestore images sync notice:', error?.message);
-    });
+      try {
+        const { data: imagesRow } = await supabase
+          .from('site_config')
+          .select('*')
+          .eq('key', 'images')
+          .single();
+        if (imagesRow && imagesRow.value) {
+          const sanitized = sanitizeImages(typeof imagesRow.value === 'string' ? JSON.parse(imagesRow.value) : imagesRow.value);
+          setImages(sanitized);
+          localStorage.setItem('kogla_images', JSON.stringify(sanitized));
+        }
+      } catch (_) {}
 
-    return () => {
-      unsubscribe();
-      unsubscribeImages();
+      setLoading(false);
     };
+
+    loadFromSupabase();
   }, []);
 
   useEffect(() => {
@@ -200,14 +193,15 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
       console.warn('[SiteConfig] localStorage config save warning:', e);
     }
 
-    // Save to Firestore with quota error protection
+    // Save to Supabase
     try {
-      const configRef = doc(db, 'config', 'site');
-      await setDoc(configRef, updated);
+      await supabase.from('site_config').upsert({
+        key: 'site',
+        value: updated,
+        updated_at: new Date().toISOString()
+      });
     } catch (err: any) {
-      console.warn('[SiteConfig] Firestore site config setDoc notice:', err?.message);
-      // If Firestore quota is exceeded, local storage has already saved successfully.
-      // Do not crash or block the UI.
+      console.warn('[SiteConfig] Supabase site config upsert notice:', err?.message);
     }
   };
 
@@ -231,12 +225,15 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
       console.warn('[SiteConfig] localStorage save warning:', e);
     }
 
-    // Attempt cloud save to Firestore
+    // Save to Supabase
     try {
-      const imagesRef = doc(db, 'config', 'images');
-      await setDoc(imagesRef, cleanImages);
+      await supabase.from('site_config').upsert({
+        key: 'images',
+        value: cleanImages,
+        updated_at: new Date().toISOString()
+      });
     } catch (err: any) {
-      console.warn('[SiteConfig] Firestore images setDoc notice (local storage active):', err?.message);
+      console.warn('[SiteConfig] Supabase images upsert notice:', err?.message);
     }
   };
 

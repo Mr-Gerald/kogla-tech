@@ -1,6 +1,5 @@
 import { CertificateRecord } from '../types';
-import { db, safeFirestoreWrite, safeFirestoreRead } from './firebase';
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where } from 'firebase/firestore';
+import { supabase } from './supabase';
 
 const LOCAL_CERTIFICATES_KEY = 'kogla_certificates_cache';
 
@@ -79,28 +78,33 @@ export function saveFounderSignature(sig: string) {
     localStorage.setItem('kogla_founder_signature', sig);
   } catch (_) {}
 
-  // Sync to Firestore for persistence
-  safeFirestoreWrite(async () => {
-    await setDoc(doc(db, 'config', 'founder_signature'), {
-      signature: sig,
-      updatedAt: new Date().toISOString()
-    });
-  }, 2000);
+  // Sync to Supabase for persistence
+  try {
+    supabase.from('site_config').upsert({
+      key: 'founder_signature',
+      value: { signature: sig },
+      updated_at: new Date().toISOString()
+    }).then(() => {});
+  } catch (_) {}
 }
 
 export async function fetchFounderSignatureCloud(): Promise<string> {
   const local = getFounderSignature();
-  return safeFirestoreRead(async () => {
-    const snap = await getDoc(doc(db, 'config', 'founder_signature'));
-    if (snap.exists() && snap.data()?.signature) {
-      const cloudSig = snap.data().signature as string;
+  try {
+    const { data } = await supabase
+      .from('site_config')
+      .select('*')
+      .eq('key', 'founder_signature')
+      .single();
+    if (data && data.value && data.value.signature) {
+      const cloudSig = data.value.signature as string;
       try {
         localStorage.setItem('kogla_founder_signature', cloudSig);
       } catch (_) {}
       return cloudSig;
     }
-    return local;
-  }, local, 1500);
+  } catch (_) {}
+  return local;
 }
 
 /**
@@ -142,10 +146,26 @@ export async function issueCertificate(params: {
   const cached = getCachedCertificates();
   saveCachedCertificates([newCert, ...cached]);
 
-  // Sync to Firestore
-  safeFirestoreWrite(async () => {
-    await setDoc(doc(db, 'certificates', certId), newCert);
-  }, 2500);
+  // Sync to Supabase
+  try {
+    await supabase.from('certificates').upsert({
+      id: certId,
+      student_name: newCert.studentName,
+      student_email: newCert.studentEmail,
+      course_title: newCert.courseTitle,
+      mode: newCert.mode,
+      grade: newCert.grade,
+      issue_date: newCert.issueDate,
+      completion_date: newCert.completionDate,
+      issued_by: newCert.issuedBy,
+      founder_name: newCert.founderName,
+      founder_title: newCert.founderTitle,
+      signature_image: newCert.signatureImage,
+      verified: newCert.verified,
+      credential_url: newCert.credentialUrl,
+      created_at: newCert.createdAt
+    });
+  } catch (_) {}
 
   return newCert;
 }
@@ -157,14 +177,34 @@ export async function verifyCertificate(certId: string): Promise<CertificateReco
   const cleanId = certId.trim().toUpperCase();
   const cached = getCachedCertificates().find(c => c.id.toUpperCase() === cleanId);
 
-  return safeFirestoreRead(async () => {
-    const docRef = doc(db, 'certificates', cleanId);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      return snap.data() as CertificateRecord;
+  try {
+    const { data } = await supabase
+      .from('certificates')
+      .select('*')
+      .eq('id', cleanId)
+      .single();
+    if (data) {
+      return {
+        id: data.id,
+        studentName: data.student_name || data.studentName,
+        studentEmail: data.student_email || data.studentEmail,
+        courseTitle: data.course_title || data.courseTitle,
+        mode: data.mode,
+        grade: data.grade,
+        issueDate: data.issue_date || data.issueDate,
+        completionDate: data.completion_date || data.completionDate,
+        issuedBy: data.issued_by || data.issuedBy,
+        founderName: data.founder_name || data.founderName || FOUNDER_NAME,
+        founderTitle: data.founder_title || data.founderTitle || FOUNDER_TITLE,
+        signatureImage: data.signature_image || data.signatureImage,
+        verified: data.verified ?? true,
+        credentialUrl: data.credential_url || data.credentialUrl,
+        createdAt: data.created_at || data.createdAt || new Date().toISOString()
+      };
     }
-    return cached || null;
-  }, cached || null, 1500);
+  } catch (_) {}
+
+  return cached || null;
 }
 
 /**
@@ -173,15 +213,31 @@ export async function verifyCertificate(certId: string): Promise<CertificateReco
 export async function getAllCertificates(): Promise<CertificateRecord[]> {
   const cached = getCachedCertificates();
 
-  return safeFirestoreRead(async () => {
-    const snap = await getDocs(collection(db, 'certificates'));
-    if (!snap.empty) {
-      const list: CertificateRecord[] = [];
-      snap.forEach(d => list.push(d.data() as CertificateRecord));
+  try {
+    const { data, error } = await supabase.from('certificates').select('*');
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const list: CertificateRecord[] = data.map((d: any) => ({
+        id: d.id,
+        studentName: d.student_name || d.studentName,
+        studentEmail: d.student_email || d.studentEmail,
+        courseTitle: d.course_title || d.courseTitle,
+        mode: d.mode,
+        grade: d.grade,
+        issueDate: d.issue_date || d.issueDate,
+        completionDate: d.completion_date || d.completionDate,
+        issuedBy: d.issued_by || d.issuedBy,
+        founderName: d.founder_name || d.founderName || FOUNDER_NAME,
+        founderTitle: d.founder_title || d.founderTitle || FOUNDER_TITLE,
+        signatureImage: d.signature_image || d.signatureImage,
+        verified: d.verified ?? true,
+        credentialUrl: d.credential_url || d.credentialUrl,
+        createdAt: d.created_at || d.createdAt || new Date().toISOString()
+      }));
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       saveCachedCertificates(list);
       return list;
     }
-    return cached;
-  }, cached, 1500);
+  } catch (_) {}
+
+  return cached;
 }

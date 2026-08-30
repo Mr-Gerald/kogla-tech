@@ -1,6 +1,4 @@
-import { ReferralLead, AffiliatePartner } from '../types';
-import { safeFirestoreWrite, safeFirestoreRead, db } from './firebase';
-import { collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where, orderBy } from 'firebase/firestore';
+import { AffiliatePartner } from '../types';
 
 const REF_STORAGE_KEY = 'kogla_referral_code';
 const REF_TIMESTAMP_KEY = 'kogla_referral_timestamp';

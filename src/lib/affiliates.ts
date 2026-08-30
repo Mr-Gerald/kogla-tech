@@ -1,25 +1,8 @@
 import { AffiliatePartner, ReferralLead } from '../types';
-import { db, safeFirestoreWrite, safeFirestoreRead } from './firebase';
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc,
-  where, 
-  orderBy,
-  onSnapshot 
-} from 'firebase/firestore';
-import { DEFAULT_AFFILIATES } from './referralTracker';
+import { supabase, getSupabaseUserProfiles } from './supabase';
 
 const LOCAL_AFFILIATES_KEY = 'kogla_affiliates_cache';
 const LOCAL_REFERRALS_KEY = 'kogla_referrals_cache';
-
-// Default referrals (empty until real student signups occur)
-const INITIAL_DEMO_REFERRALS: ReferralLead[] = [];
 
 function getCachedAffiliates(): AffiliatePartner[] {
   try {
@@ -75,51 +58,167 @@ export async function getAffiliateByCode(code: string): Promise<AffiliatePartner
   const normCode = code.trim().toUpperCase();
   const cached = getCachedAffiliates();
   const foundInCache = cached.find(a => a.code.toUpperCase() === normCode);
+  if (foundInCache) return foundInCache;
 
-  return safeFirestoreRead(async () => {
-    const docRef = doc(db, 'affiliates', normCode);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      const data = snap.data() as AffiliatePartner;
-      // If it's the old test mock doc, delete it
-      if (data.code === 'PHENA' && (data.email?.includes('instagram.com') || data.name?.includes('Her Tech'))) {
-        deleteDoc(docRef).catch(() => {});
-        return null;
-      }
-      return data;
+  // Check user roster from Supabase cache
+  try {
+    const userProfiles = getSupabaseUserProfiles();
+    const matchUser = userProfiles.find(u => 
+      (u.affiliateCode && u.affiliateCode.toUpperCase() === normCode) ||
+      getUserReferralCode(u, u.uid).toUpperCase() === normCode
+    );
+    if (matchUser) {
+      return {
+        id: matchUser.uid,
+        code: normCode,
+        name: matchUser.name || 'Ambassador Partner',
+        email: matchUser.email || '',
+        tier: 1,
+        baseRate: 6,
+        boostedRate: 10,
+        discountOffered: 5,
+        totalReferrals: 0,
+        confirmedCount: 0,
+        totalEarned: 0,
+        totalPaidOut: 0,
+        pendingPayout: 0,
+        contractSigned: true,
+        contractSignedDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
     }
-    return foundInCache || null;
-  }, foundInCache || null, 1500);
+  } catch (_) {}
+
+  // Fetch from Supabase
+  try {
+    const { data } = await supabase
+      .from('affiliates')
+      .select('*')
+      .eq('code', normCode)
+      .single();
+    if (data) {
+      return {
+        id: data.id,
+        code: data.code,
+        name: data.name,
+        email: data.email,
+        instagramHandle: data.instagram_handle || data.instagramHandle,
+        tier: data.tier || 1,
+        baseRate: data.base_rate || data.baseRate || 6,
+        boostedRate: data.boosted_rate || data.boostedRate || 10,
+        discountOffered: data.discount_offered || data.discountOffered || 5,
+        totalReferrals: data.total_referrals || data.totalReferrals || 0,
+        confirmedCount: data.confirmed_count || data.confirmedCount || 0,
+        totalEarned: data.total_earned || data.totalEarned || 0,
+        totalPaidOut: data.total_paid_out || data.totalPaidOut || 0,
+        pendingPayout: data.pending_payout || data.pendingPayout || 0,
+        contractSigned: data.contract_signed ?? true,
+        contractSignedDate: data.contract_signed_date || data.contractSignedDate,
+        createdAt: data.created_at || data.createdAt,
+        updatedAt: data.updated_at || data.updatedAt
+      };
+    }
+  } catch (_) {}
+
+  return null;
 }
 
 /**
  * Fetch all registered affiliate partners (for Admin)
  */
 export async function getAllAffiliates(): Promise<AffiliatePartner[]> {
-  const cached = getCachedAffiliates();
+  const partnerMap = new Map<string, AffiliatePartner>();
 
-  return safeFirestoreRead(async () => {
-    const snap = await getDocs(collection(db, 'affiliates'));
-    if (!snap.empty) {
-      const list: AffiliatePartner[] = [];
-      snap.forEach(d => {
-        const data = d.data() as AffiliatePartner;
-        // Purge test docs from Firestore
-        if (
-          data.code === 'SHIRLEY' || 
-          data.id === 'aff-shirley' || 
-          (data.code === 'PHENA' && (data.email?.includes('instagram.com') || data.name?.includes('Her Tech')))
-        ) {
-          deleteDoc(doc(db, 'affiliates', d.id)).catch(() => {});
-        } else {
-          list.push(data);
+  // 1. Load from local cache
+  const cached = getCachedAffiliates();
+  for (const c of cached) {
+    if (c.code) partnerMap.set(c.code.toUpperCase().trim(), c);
+  }
+
+  // 2. Load from Express server disk store
+  try {
+    const res = await fetch('/api/affiliates');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.affiliates)) {
+        for (const a of data.affiliates) {
+          if (a.code) partnerMap.set(a.code.toUpperCase().trim(), a);
         }
-      });
-      saveCachedAffiliates(list);
-      return list;
+      }
     }
-    return cached;
-  }, cached, 1500);
+  } catch (_) {}
+
+  // 3. Load from User Roster (Supabase database / local storage)
+  try {
+    const userProfiles = getSupabaseUserProfiles();
+    for (const u of userProfiles) {
+      if (u.isAmbassador || u.affiliateCode) {
+        const code = (u.affiliateCode || getUserReferralCode(u, u.uid)).toUpperCase().trim();
+        if (code) {
+          const existing = partnerMap.get(code);
+          const synthesized: AffiliatePartner = {
+            id: u.uid || `part_${code}`,
+            code: code,
+            name: u.name || u.email?.split('@')[0] || 'Ambassador Partner',
+            email: u.email || '',
+            instagramHandle: (u as any).instagramHandle || existing?.instagramHandle,
+            tier: existing?.tier || 1,
+            baseRate: existing?.baseRate || 6,
+            boostedRate: existing?.boostedRate || 10,
+            discountOffered: existing?.discountOffered || 5,
+            totalReferrals: existing?.totalReferrals || 0,
+            confirmedCount: existing?.confirmedCount || 0,
+            totalEarned: existing?.totalEarned || 0,
+            totalPaidOut: existing?.totalPaidOut || 0,
+            pendingPayout: existing?.pendingPayout || 0,
+            contractSigned: true,
+            contractSignedDate: existing?.contractSignedDate || u.createdAt || new Date().toISOString(),
+            createdAt: existing?.createdAt || u.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          partnerMap.set(code, { ...existing, ...synthesized });
+        }
+      }
+    }
+  } catch (_) {}
+
+  // 4. Load from Supabase Database
+  try {
+    const { data } = await supabase.from('affiliates').select('*');
+    if (data && Array.isArray(data)) {
+      for (const d of data) {
+        if (d.code) {
+          const normCode = d.code.toUpperCase().trim();
+          partnerMap.set(normCode, {
+            ...partnerMap.get(normCode),
+            id: d.id,
+            code: normCode,
+            name: d.name,
+            email: d.email,
+            instagramHandle: d.instagram_handle || d.instagramHandle,
+            tier: d.tier || 1,
+            baseRate: d.base_rate || d.baseRate || 6,
+            boostedRate: d.boosted_rate || d.boostedRate || 10,
+            discountOffered: d.discount_offered || d.discountOffered || 5,
+            totalReferrals: d.total_referrals || d.totalReferrals || 0,
+            confirmedCount: d.confirmed_count || d.confirmedCount || 0,
+            totalEarned: d.total_earned || d.totalEarned || 0,
+            totalPaidOut: d.total_paid_out || d.totalPaidOut || 0,
+            pendingPayout: d.pending_payout || d.pendingPayout || 0,
+            contractSigned: d.contract_signed ?? true,
+            contractSignedDate: d.contract_signed_date || d.contractSignedDate,
+            createdAt: d.created_at || d.createdAt,
+            updatedAt: d.updated_at || d.updatedAt
+          });
+        }
+      }
+    }
+  } catch (_) {}
+
+  const finalAffiliates = Array.from(partnerMap.values());
+  saveCachedAffiliates(finalAffiliates);
+  return finalAffiliates;
 }
 
 /**
@@ -129,31 +228,37 @@ export async function getReferralsByCode(code: string): Promise<ReferralLead[]> 
   const normCode = code.trim().toUpperCase();
   const cached = getCachedReferrals().filter(r => r.affiliateCode.toUpperCase() === normCode);
 
-  return safeFirestoreRead(async () => {
-    const q = query(
-      collection(db, 'referrals'),
-      where('affiliateCode', '==', normCode)
-    );
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const list: ReferralLead[] = [];
-      snap.forEach(d => {
-        const data = d.data() as ReferralLead;
-        if (
-          data.studentName === 'DGS' || 
-          data.studentEmail === 'eechebegerald@gmail.com' ||
-          data.id?.startsWith('ref-demo-')
-        ) {
-          deleteDoc(doc(db, 'referrals', d.id)).catch(() => {});
-        } else {
-          list.push(data);
-        }
-      });
+  try {
+    const { data } = await supabase
+      .from('referrals')
+      .select('*')
+      .eq('affiliate_code', normCode);
+    if (data && Array.isArray(data) && data.length > 0) {
+      const list: ReferralLead[] = data.map((d: any) => ({
+        id: d.id,
+        affiliateCode: d.affiliate_code || d.affiliateCode,
+        studentName: d.student_name || d.studentName,
+        studentEmail: d.student_email || d.studentEmail,
+        studentPhone: d.student_phone || d.studentPhone,
+        courseTitle: d.course_title || d.courseTitle,
+        mode: d.mode,
+        tuitionAmount: d.tuition_amount || d.tuitionAmount,
+        discountApplied: d.discount_applied || d.discountApplied,
+        discountedAmount: d.discounted_amount || d.discountedAmount,
+        commissionRate: d.commission_rate || d.commissionRate,
+        commissionAmount: d.commission_amount || d.commissionAmount,
+        status: d.status,
+        confirmedAt: d.confirmed_at || d.confirmedAt,
+        paidAt: d.paid_at || d.paidAt,
+        paymentProofNote: d.payment_proof_note || d.paymentProofNote,
+        createdAt: d.created_at || d.createdAt
+      }));
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       return list;
     }
-    return cached;
-  }, cached, 1500);
+  } catch (_) {}
+
+  return cached;
 }
 
 /**
@@ -162,31 +267,35 @@ export async function getReferralsByCode(code: string): Promise<ReferralLead[]> 
 export async function getAllReferrals(): Promise<ReferralLead[]> {
   const cached = getCachedReferrals();
 
-  return safeFirestoreRead(async () => {
-    const snap = await getDocs(collection(db, 'referrals'));
-    if (!snap.empty) {
-      const list: ReferralLead[] = [];
-      snap.forEach(d => {
-        const data = d.data() as ReferralLead;
-        // Exclude and delete test referrals
-        if (
-          data.affiliateCode === 'SHIRLEY' || 
-          data.id?.startsWith('ref-demo-') ||
-          data.studentEmail === 'eechebegerald@gmail.com' ||
-          data.studentName === 'DGS' ||
-          (data.affiliateCode === 'PHENA' && data.studentName === 'DGS')
-        ) {
-          deleteDoc(doc(db, 'referrals', d.id)).catch(() => {});
-        } else {
-          list.push(data);
-        }
-      });
+  try {
+    const { data } = await supabase.from('referrals').select('*');
+    if (data && Array.isArray(data) && data.length > 0) {
+      const list: ReferralLead[] = data.map((d: any) => ({
+        id: d.id,
+        affiliateCode: d.affiliate_code || d.affiliateCode,
+        studentName: d.student_name || d.studentName,
+        studentEmail: d.student_email || d.studentEmail,
+        studentPhone: d.student_phone || d.studentPhone,
+        courseTitle: d.course_title || d.courseTitle,
+        mode: d.mode,
+        tuitionAmount: d.tuition_amount || d.tuitionAmount,
+        discountApplied: d.discount_applied || d.discountApplied,
+        discountedAmount: d.discounted_amount || d.discountedAmount,
+        commissionRate: d.commission_rate || d.commissionRate,
+        commissionAmount: d.commission_amount || d.commissionAmount,
+        status: d.status,
+        confirmedAt: d.confirmed_at || d.confirmedAt,
+        paidAt: d.paid_at || d.paidAt,
+        paymentProofNote: d.payment_proof_note || d.paymentProofNote,
+        createdAt: d.created_at || d.createdAt
+      }));
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       saveCachedReferrals(list);
       return list;
     }
-    return cached;
-  }, cached, 1500);
+  } catch (_) {}
+
+  return cached;
 }
 
 /**
@@ -253,27 +362,31 @@ export async function createReferralLead(params: {
   });
   saveCachedAffiliates(updatedAffiliates);
 
-  // Save to Firestore
-  safeFirestoreWrite(async () => {
-    await setDoc(doc(db, 'referrals', leadId), newLead);
-    const partnerRef = doc(db, 'affiliates', normCode);
-    const partnerSnap = await getDoc(partnerRef);
-    if (partnerSnap.exists()) {
-      const pData = partnerSnap.data() as AffiliatePartner;
-      await updateDoc(partnerRef, {
-        totalReferrals: (pData.totalReferrals || 0) + 1,
-        updatedAt: new Date().toISOString()
-      });
-    }
-  }, 2000);
+  // Save to Supabase
+  try {
+    await supabase.from('referrals').upsert({
+      id: leadId,
+      affiliate_code: normCode,
+      student_name: params.studentName,
+      student_email: params.studentEmail,
+      student_phone: params.studentPhone || '',
+      course_title: params.courseTitle,
+      mode: params.mode,
+      tuition_amount: params.tuitionAmount,
+      discount_applied: discountApplied,
+      discounted_amount: discountedAmount,
+      commission_rate: commissionRate,
+      commission_amount: commissionAmount,
+      status: 'pending',
+      created_at: newLead.createdAt
+    });
+  } catch (_) {}
 
   return newLead;
 }
 
 /**
  * Admin Action: Approve student payment and confirm enrollment.
- * Automatically recalculates commission, increments partner's confirmed count,
- * and permanently unlocks Tier 2 (10%) if 3 confirmed students reached!
  */
 export async function approveReferralPayment(leadId: string, paymentProofNote?: string): Promise<boolean> {
   const referrals = getCachedReferrals();
@@ -311,28 +424,16 @@ export async function approveReferralPayment(leadId: string, paymentProofNote?: 
     saveCachedAffiliates(affiliates);
   }
 
-  // Sync to Firestore
-  return safeFirestoreWrite(async () => {
-    await updateDoc(doc(db, 'referrals', leadId), {
+  // Update Supabase
+  try {
+    await supabase.from('referrals').update({
       status: 'confirmed',
-      confirmedAt: lead.confirmedAt,
-      paymentProofNote: lead.paymentProofNote || ''
-    });
+      confirmed_at: lead.confirmedAt,
+      payment_proof_note: lead.paymentProofNote || ''
+    }).eq('id', leadId);
+  } catch (_) {}
 
-    const partnerRef = doc(db, 'affiliates', lead.affiliateCode.toUpperCase());
-    const partnerSnap = await getDoc(partnerRef);
-    if (partnerSnap.exists()) {
-      const p = partnerSnap.data() as AffiliatePartner;
-      const newConfirmed = (p.confirmedCount || 0) + 1;
-      await updateDoc(partnerRef, {
-        confirmedCount: newConfirmed,
-        totalEarned: (p.totalEarned || 0) + lead.commissionAmount,
-        pendingPayout: (p.pendingPayout || 0) + lead.commissionAmount,
-        tier: newConfirmed >= 3 ? 2 : 1,
-        updatedAt: new Date().toISOString()
-      });
-    }
-  }, 2500);
+  return true;
 }
 
 /**
@@ -355,21 +456,14 @@ export async function markReferralPaidOut(leadId: string): Promise<boolean> {
     saveCachedAffiliates(affiliates);
   }
 
-  return safeFirestoreWrite(async () => {
-    await updateDoc(doc(db, 'referrals', leadId), {
+  try {
+    await supabase.from('referrals').update({
       status: 'paid_out',
-      paidAt: lead.paidAt
-    });
+      paid_at: lead.paidAt
+    }).eq('id', leadId);
+  } catch (_) {}
 
-    if (partner) {
-      const pRef = doc(db, 'affiliates', partner.code.toUpperCase());
-      await updateDoc(pRef, {
-        pendingPayout: partner.pendingPayout,
-        totalPaidOut: partner.totalPaidOut,
-        updatedAt: new Date().toISOString()
-      });
-    }
-  }, 2500);
+  return true;
 }
 
 /**
@@ -379,9 +473,11 @@ export async function deleteReferralLead(leadId: string): Promise<boolean> {
   const referrals = getCachedReferrals().filter(r => r.id !== leadId);
   saveCachedReferrals(referrals);
 
-  return safeFirestoreWrite(async () => {
-    await deleteDoc(doc(db, 'referrals', leadId));
-  }, 2000);
+  try {
+    await supabase.from('referrals').delete().eq('id', leadId);
+  } catch (_) {}
+
+  return true;
 }
 
 /**
@@ -392,43 +488,35 @@ export async function deleteAffiliatePartner(code: string): Promise<boolean> {
   const affiliates = getCachedAffiliates().filter(a => a.code.toUpperCase() !== normCode);
   saveCachedAffiliates(affiliates);
 
-  return safeFirestoreWrite(async () => {
-    await deleteDoc(doc(db, 'affiliates', normCode));
-  }, 2000);
+  try {
+    fetch('/api/affiliates/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: normCode })
+    }).catch(() => {});
+  } catch (_) {}
+
+  try {
+    await supabase.from('affiliates').delete().eq('code', normCode);
+  } catch (_) {}
+
+  return true;
 }
 
 /**
- * Purge all mock/test referral leads and test affiliates from local cache and Firestore
+ * Purge all mock/test referral leads and test affiliates from local cache and Supabase
  */
 export async function purgeAllTestReferralsAndAffiliates(): Promise<boolean> {
   // Clear local storage
   localStorage.removeItem(LOCAL_AFFILIATES_KEY);
   localStorage.removeItem(LOCAL_REFERRALS_KEY);
 
-  return safeFirestoreWrite(async () => {
-    // Delete PHENA and SHIRLEY docs if present
-    try {
-      await deleteDoc(doc(db, 'affiliates', 'PHENA'));
-      await deleteDoc(doc(db, 'affiliates', 'SHIRLEY'));
-      await deleteDoc(doc(db, 'affiliates', 'aff-shirley'));
-    } catch (_) {}
+  try {
+    await supabase.from('affiliates').delete().in('code', ['PHENA', 'SHIRLEY']);
+    await supabase.from('referrals').delete().in('affiliate_code', ['PHENA', 'SHIRLEY']);
+  } catch (_) {}
 
-    // Find and delete any referrals with PHENA or test email
-    try {
-      const snap = await getDocs(collection(db, 'referrals'));
-      snap.forEach(async (d) => {
-        const data = d.data() as ReferralLead;
-        if (
-          data.affiliateCode === 'PHENA' || 
-          data.affiliateCode === 'SHIRLEY' || 
-          data.id?.startsWith('ref-demo-') ||
-          data.studentEmail === 'eechebegerald@gmail.com'
-        ) {
-          await deleteDoc(doc(db, 'referrals', d.id));
-        }
-      });
-    } catch (_) {}
-  }, 2500);
+  return true;
 }
 
 /**
@@ -437,18 +525,59 @@ export async function purgeAllTestReferralsAndAffiliates(): Promise<boolean> {
 export async function saveAffiliatePartner(partner: AffiliatePartner): Promise<boolean> {
   const affiliates = getCachedAffiliates();
   const normCode = partner.code.trim().toUpperCase();
-  const existingIdx = affiliates.findIndex(a => a.code.toUpperCase() === normCode);
+  const partnerToSave: AffiliatePartner = {
+    ...partner,
+    code: normCode,
+    updatedAt: new Date().toISOString()
+  };
+
+  const existingIdx = affiliates.findIndex(a => 
+    a.code.toUpperCase() === normCode || 
+    (a.id && partner.id && a.id === partner.id) ||
+    (a.email && partner.email && a.email.toLowerCase() === partner.email.toLowerCase())
+  );
 
   if (existingIdx !== -1) {
-    affiliates[existingIdx] = { ...partner, code: normCode, updatedAt: new Date().toISOString() };
+    affiliates[existingIdx] = partnerToSave;
   } else {
-    affiliates.push({ ...partner, code: normCode, createdAt: new Date().toISOString() });
+    affiliates.push({ ...partnerToSave, createdAt: partner.createdAt || new Date().toISOString() });
   }
   saveCachedAffiliates(affiliates);
 
-  return safeFirestoreWrite(async () => {
-    await setDoc(doc(db, 'affiliates', normCode), partner);
-  }, 2500);
+  // Sync to Express backend disk persistence
+  try {
+    fetch('/api/affiliates/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ partner: partnerToSave })
+    }).catch(() => {});
+  } catch (_) {}
+
+  // Sync to Supabase
+  try {
+    await supabase.from('affiliates').upsert({
+      id: partnerToSave.id,
+      code: partnerToSave.code,
+      name: partnerToSave.name,
+      email: partnerToSave.email,
+      instagram_handle: partnerToSave.instagramHandle,
+      tier: partnerToSave.tier,
+      base_rate: partnerToSave.baseRate,
+      boosted_rate: partnerToSave.boostedRate,
+      discount_offered: partnerToSave.discountOffered,
+      total_referrals: partnerToSave.totalReferrals,
+      confirmed_count: partnerToSave.confirmedCount,
+      total_earned: partnerToSave.totalEarned,
+      total_paid_out: partnerToSave.totalPaidOut,
+      pending_payout: partnerToSave.pendingPayout,
+      contract_signed: partnerToSave.contractSigned,
+      contract_signed_date: partnerToSave.contractSignedDate,
+      created_at: partnerToSave.createdAt,
+      updated_at: partnerToSave.updatedAt
+    });
+  } catch (_) {}
+
+  return true;
 }
 
 /**
@@ -495,5 +624,3 @@ export function getUserReferralCode(profile?: any, uid?: string): string {
   const rand2 = 10 + (seed % 90);
   return `${safeBase}${rand2}`;
 }
-
-

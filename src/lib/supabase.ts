@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile } from '../types';
-import { db } from './firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { isSystemAdminEmail } from './authUtils';
 
 // Supabase Project Configuration
@@ -43,6 +41,8 @@ export function rowToUserProfile(row: any): UserProfile {
     try {
       if (typeof row.bio === 'string' && row.bio.startsWith('{')) {
         extra = JSON.parse(row.bio);
+      } else if (typeof row.bio === 'object' && row.bio !== null) {
+        extra = row.bio;
       }
     } catch (_) {}
   }
@@ -55,9 +55,21 @@ export function rowToUserProfile(row: any): UserProfile {
     email: normEmail,
     role: isAdmin ? 'admin' : (row.role || 'user'),
     xp: row.xp || 0,
-    completedRooms: Array.isArray(row.completed_rooms) ? row.completed_rooms : [],
+    completedRooms: Array.isArray(row.completed_rooms) ? row.completed_rooms : (Array.isArray(row.completedRooms) ? row.completedRooms : []),
+    phone: row.phone || extra.phone || '',
+    bio: extra.realBio !== undefined ? extra.realBio : (typeof row.bio === 'string' && !row.bio.startsWith('{') ? row.bio : ''),
+    title: row.title || extra.title || '',
+    location: row.location || extra.location || '',
+    website: row.website || extra.website || '',
+    githubUrl: row.github_url || extra.githubUrl || '',
+    linkedinUrl: row.linkedin_url || extra.linkedinUrl || '',
     avatarUrl: extra.avatarUrl || row.github || '',
+    signatureUrl: extra.signatureUrl || row.signature_url || '',
     isPaid: typeof extra.isPaid === 'boolean' ? extra.isPaid : (isAdmin ? true : false),
+    isAmbassador: typeof extra.isAmbassador === 'boolean' ? extra.isAmbassador : (typeof row.is_ambassador === 'boolean' ? row.is_ambassador : false),
+    affiliateCode: extra.affiliateCode || row.affiliate_code || '',
+    preferences: extra.preferences || undefined,
+    savedItems: Array.isArray(extra.savedItems) ? extra.savedItems : [],
     emailVerified: typeof row.email_verified === 'boolean' ? row.email_verified : (isAdmin ? true : false),
     emailConfirmedAt: extra.emailConfirmedAt || (isAdmin ? '2026-01-01T00:00:00.000Z' : undefined),
     discountPercent: typeof extra.discountPercent === 'number' ? extra.discountPercent : (extra.referredBy ? 5 : 0),
@@ -76,6 +88,27 @@ export function userProfileToRow(profile: UserProfile): any {
   const isAdmin = isSystemAdminEmail(normEmail);
   const uid = profile.uid || `user_${Date.now()}`;
 
+  const extra = {
+    avatarUrl: profile.avatarUrl || '',
+    signatureUrl: profile.signatureUrl || '',
+    phone: profile.phone || '',
+    title: profile.title || '',
+    realBio: profile.bio || '',
+    location: profile.location || '',
+    website: profile.website || '',
+    githubUrl: profile.githubUrl || '',
+    linkedinUrl: profile.linkedinUrl || '',
+    isPaid: isAdmin || !!profile.isPaid,
+    isAmbassador: !!profile.isAmbassador,
+    affiliateCode: profile.affiliateCode || '',
+    referredBy: profile.referredBy || profile.appliedPromoCode || '',
+    appliedPromoCode: profile.appliedPromoCode || profile.referredBy || '',
+    discountPercent: profile.discountPercent || (profile.referredBy ? 5 : 0),
+    preferences: profile.preferences || {},
+    savedItems: profile.savedItems || [],
+    emailConfirmedAt: profile.emailConfirmedAt || (isAdmin ? '2026-01-01T00:00:00.000Z' : undefined),
+  };
+
   return {
     id: uid,
     uid: uid,
@@ -85,14 +118,7 @@ export function userProfileToRow(profile: UserProfile): any {
     xp: profile.xp || 0,
     completed_rooms: profile.completedRooms || [],
     email_verified: isAdmin || !!profile.emailVerified,
-    bio: JSON.stringify({
-      avatarUrl: profile.avatarUrl || '',
-      isPaid: isAdmin || !!profile.isPaid,
-      emailConfirmedAt: profile.emailConfirmedAt || (isAdmin ? '2026-01-01T00:00:00.000Z' : undefined),
-      discountPercent: profile.discountPercent || (profile.referredBy ? 5 : 0),
-      appliedPromoCode: profile.appliedPromoCode || profile.referredBy || '',
-      referredBy: profile.referredBy || profile.appliedPromoCode || ''
-    }),
+    bio: JSON.stringify(extra),
     created_at: profile.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -137,7 +163,7 @@ export async function saveSupabaseUserProfile(profile: UserProfile): Promise<voi
     }
     localStorage.setItem('kogla_supabase_users', JSON.stringify(profiles));
 
-    // 3. Background non-blocking sync to Express server & Firestore
+    // 3. Background non-blocking sync to Express server
     try {
       fetch('/api/users/sync', {
         method: 'POST',
@@ -145,19 +171,6 @@ export async function saveSupabaseUserProfile(profile: UserProfile): Promise<voi
         body: JSON.stringify({ profile: updatedProfile })
       }).catch(() => {});
     } catch (_) {}
-
-    if (profile.uid) {
-      try {
-        const userRef = doc(db, 'users', profile.uid);
-        setDoc(userRef, {
-          uid: profile.uid,
-          name: profile.name,
-          email: normEmail,
-          role: profile.role,
-          updatedAt: new Date().toISOString()
-        }, { merge: true }).catch(() => {});
-      } catch (_) {}
-    }
   } catch (err) {
     console.warn('[Supabase Profiles] Error saving profile:', err);
   }
@@ -192,6 +205,10 @@ export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
         const p = rowToUserProfile(row);
         if (p.email) {
           const normKey = p.email.toLowerCase().trim();
+          // Skip any account that has been deleted/purged
+          if (isAccountPurgedOrDeleted(normKey) || (p.uid && isAccountPurgedOrDeleted(p.uid))) {
+            continue;
+          }
           if (rosterMap.has(normKey)) {
             const existing = rosterMap.get(normKey)!;
             const merged: UserProfile = {
@@ -200,6 +217,8 @@ export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
               role: (existing.role === 'admin' || p.role === 'admin') ? 'admin' : (p.role || existing.role),
               xp: Math.max(existing.xp || 0, p.xp || 0),
               isPaid: existing.isPaid || p.isPaid,
+              isAmbassador: p.isAmbassador !== undefined ? p.isAmbassador : existing.isAmbassador,
+              affiliateCode: p.affiliateCode || existing.affiliateCode || '',
               emailVerified: existing.emailVerified || p.emailVerified,
               discountPercent: p.discountPercent || existing.discountPercent || (p.referredBy ? 5 : 0),
               appliedPromoCode: p.appliedPromoCode || existing.appliedPromoCode || p.referredBy || undefined
@@ -399,12 +418,7 @@ export async function deleteSupabaseUserProfile(uid: string, email: string): Pro
     }
   } catch (_) {}
 
-  // 5. Background delete from Cloud Firestore and Server API
-  if (uid) {
-    try {
-      deleteDoc(doc(db, 'users', uid)).catch(() => {});
-    } catch (_) {}
-  }
+  // 5. Background delete from Server API
   try {
     fetch('/api/users/delete', {
       method: 'POST',

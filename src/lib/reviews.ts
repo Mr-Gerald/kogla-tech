@@ -1,19 +1,5 @@
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  arrayUnion, 
-  arrayRemove, 
-  increment,
-  getDocs 
-} from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from './firebase';
 import { ReviewRecord } from '../types';
+import { supabase } from './supabase';
 
 const LOCAL_REVIEWS_KEY = 'kogla_reviews_cache_v5';
 
@@ -157,42 +143,40 @@ function saveCachedReviews(reviews: ReviewRecord[]) {
   } catch (_) {}
 }
 
-export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, onError?: (err: unknown) => void) {
-  const reviewsRef = collection(db, 'reviews');
-  const q = query(reviewsRef, orderBy('createdAt', 'desc'));
-
+export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _onError?: (err: unknown) => void) {
   // Provide initial cached reviews immediately for instant response
   const cached = getCachedReviews();
   onData(cached);
 
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      if (!snapshot.empty) {
-        const firestoreReviews: ReviewRecord[] = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            userId: data.userId || '',
-            userName: data.userName || 'Anonymous',
-            userAvatar: data.userAvatar || '',
-            userRole: data.userRole || 'Student',
-            rating: typeof data.rating === 'number' ? data.rating : 5,
-            title: data.title || '',
-            content: data.content || '',
-            targetType: data.targetType || 'platform',
-            targetId: data.targetId || 'general',
-            parentId: data.parentId || null,
-            likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
-            likeCount: typeof data.likeCount === 'number' ? data.likeCount : 0,
-            createdAt: data.createdAt || new Date().toISOString(),
-            updatedAt: data.updatedAt || '',
-          };
-        });
+  // Fetch from Supabase
+  (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        // Merge firestore reviews with any authentic reviews not yet in firestore
-        const existingIds = new Set(firestoreReviews.map(r => r.id));
-        const merged = [...firestoreReviews];
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const dbReviews: ReviewRecord[] = data.map((d: any) => ({
+          id: d.id,
+          userId: d.user_id || d.userId || '',
+          userName: d.user_name || d.userName || 'Anonymous',
+          userAvatar: d.user_avatar || d.userAvatar || '',
+          userRole: d.user_role || d.userRole || 'Student',
+          rating: typeof d.rating === 'number' ? d.rating : 5,
+          title: d.title || '',
+          content: d.content || '',
+          targetType: d.target_type || d.targetType || 'platform',
+          targetId: d.target_id || d.targetId || 'general',
+          parentId: d.parent_id || d.parentId || null,
+          likedBy: Array.isArray(d.liked_by) ? d.liked_by : (Array.isArray(d.likedBy) ? d.likedBy : []),
+          likeCount: typeof d.like_count === 'number' ? d.like_count : (typeof d.likeCount === 'number' ? d.likeCount : 0),
+          createdAt: d.created_at || d.createdAt || new Date().toISOString(),
+          updatedAt: d.updated_at || d.updatedAt || '',
+        }));
+
+        const existingIds = new Set(dbReviews.map(r => r.id));
+        const merged = [...dbReviews];
         INITIAL_AUTHENTIC_REVIEWS.forEach(ar => {
           if (!existingIds.has(ar.id)) {
             merged.push(ar);
@@ -201,16 +185,12 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, on
 
         saveCachedReviews(merged);
         onData(merged);
-      } else {
-        onData(cached);
       }
-    },
-    (error) => {
-      console.warn('Fallback to local reviews cache:', error);
-      onData(cached);
-      if (onError) onError(error);
-    }
-  );
+    } catch (_) {}
+  })();
+
+  // Return unsubscribe noop
+  return () => {};
 }
 
 export async function createReview(params: {
@@ -251,13 +231,28 @@ export async function createReview(params: {
   saveCachedReviews(updated);
 
   try {
-    const docRef = await addDoc(collection(db, 'reviews'), newRecord);
-    await updateDoc(docRef, { id: docRef.id });
-    return docRef.id;
+    await supabase.from('reviews').upsert({
+      id: newReviewId,
+      user_id: newRecord.userId,
+      user_name: newRecord.userName,
+      user_avatar: newRecord.userAvatar,
+      user_role: newRecord.userRole,
+      rating: newRecord.rating,
+      title: newRecord.title,
+      content: newRecord.content,
+      target_type: newRecord.targetType,
+      target_id: newRecord.targetId,
+      parent_id: newRecord.parentId,
+      liked_by: newRecord.likedBy,
+      like_count: newRecord.likeCount,
+      created_at: newRecord.createdAt,
+      updated_at: newRecord.updatedAt
+    });
   } catch (error) {
-    console.warn('Error saving review to Firestore, saved locally:', error);
-    return newReviewId;
+    console.warn('[Supabase Reviews] Error saving review:', error);
   }
+
+  return newReviewId;
 }
 
 export async function toggleLikeReview(review: ReviewRecord, currentUserId: string): Promise<void> {
@@ -267,34 +262,31 @@ export async function toggleLikeReview(review: ReviewRecord, currentUserId: stri
   // Local cache update
   const cached = getCachedReviews();
   const target = cached.find(r => r.id === review.id);
+  let nextLikedBy = [...review.likedBy];
+  let nextLikeCount = review.likeCount;
+
+  if (isLiked) {
+    nextLikedBy = nextLikedBy.filter(u => u !== currentUserId);
+    nextLikeCount = Math.max(0, nextLikeCount - 1);
+  } else {
+    nextLikedBy.push(currentUserId);
+    nextLikeCount += 1;
+  }
+
   if (target) {
-    if (isLiked) {
-      target.likedBy = target.likedBy.filter(u => u !== currentUserId);
-      target.likeCount = Math.max(0, target.likeCount - 1);
-    } else {
-      target.likedBy.push(currentUserId);
-      target.likeCount += 1;
-    }
+    target.likedBy = nextLikedBy;
+    target.likeCount = nextLikeCount;
     saveCachedReviews(cached);
   }
 
   try {
-    const reviewRef = doc(db, 'reviews', review.id);
-    if (isLiked) {
-      await updateDoc(reviewRef, {
-        likedBy: arrayRemove(currentUserId),
-        likeCount: Math.max(0, review.likeCount - 1),
-        updatedAt: new Date().toISOString(),
-      });
-    } else {
-      await updateDoc(reviewRef, {
-        likedBy: arrayUnion(currentUserId),
-        likeCount: increment(1),
-        updatedAt: new Date().toISOString(),
-      });
-    }
+    await supabase.from('reviews').update({
+      liked_by: nextLikedBy,
+      like_count: nextLikeCount,
+      updated_at: new Date().toISOString()
+    }).eq('id', review.id);
   } catch (error) {
-    console.warn('Error updating like on Firestore:', error);
+    console.warn('[Supabase Reviews] Error updating like:', error);
   }
 }
 
@@ -303,8 +295,8 @@ export async function deleteReview(reviewId: string): Promise<void> {
   saveCachedReviews(cached);
 
   try {
-    await deleteDoc(doc(db, 'reviews', reviewId));
+    await supabase.from('reviews').delete().eq('id', reviewId);
   } catch (error) {
-    console.warn('Error deleting review from Firestore:', error);
+    console.warn('[Supabase Reviews] Error deleting review:', error);
   }
 }

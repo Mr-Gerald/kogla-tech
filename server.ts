@@ -133,15 +133,82 @@ interface SyncedUser {
   xp?: number;
   completedRooms?: string[];
   avatarUrl?: string;
+  signatureUrl?: string;
+  phone?: string;
+  title?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  githubUrl?: string;
+  linkedinUrl?: string;
   isPaid?: boolean;
+  isAmbassador?: boolean;
+  affiliateCode?: string;
+  referredBy?: string | null;
+  discountPercent?: number;
+  appliedPromoCode?: string;
   emailVerified?: boolean;
   emailConfirmedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
+interface SyncedAffiliate {
+  id: string;
+  code: string;
+  name: string;
+  email: string;
+  instagramHandle?: string;
+  tier: 1 | 2;
+  baseRate: number;
+  boostedRate: number;
+  discountOffered: number;
+  totalReferrals: number;
+  confirmedCount: number;
+  totalEarned: number;
+  totalPaidOut: number;
+  pendingPayout: number;
+  contractSigned: boolean;
+  contractSignedDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const USERS_FILE_PATH = path.join(process.cwd(), 'server_data_users.json');
 const DELETED_USERS_FILE_PATH = path.join(process.cwd(), 'server_deleted_users.json');
+const AFFILIATES_FILE_PATH = path.join(process.cwd(), 'server_data_affiliates.json');
+
+function loadAffiliatesFromDisk(): Map<string, SyncedAffiliate> {
+  const map = new Map<string, SyncedAffiliate>();
+  try {
+    if (fs.existsSync(AFFILIATES_FILE_PATH)) {
+      const raw = fs.readFileSync(AFFILIATES_FILE_PATH, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        for (const a of data) {
+          if (a && a.code) {
+            const key = a.code.toUpperCase().trim();
+            map.set(key, a);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Server] Error loading affiliates from disk:', err);
+  }
+  return map;
+}
+
+function saveAffiliatesToDisk(map: Map<string, SyncedAffiliate>) {
+  try {
+    const list = Array.from(map.values());
+    fs.writeFileSync(AFFILIATES_FILE_PATH, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[Server] Error saving affiliates to disk:', err);
+  }
+}
+
+const serverAffiliatesMap = loadAffiliatesFromDisk();
 
 function loadDeletedUsersFromDisk(): Set<string> {
   const set = new Set<string>();
@@ -345,6 +412,64 @@ app.post('/api/users/purge-all', (req, res) => {
     saveDeletedUsersToDisk(serverDeletedUsersSet);
 
     res.json({ success: true, message: 'All non-admin user records and ghost sessions purged completely.' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/affiliates - Return all registered affiliate partners
+app.get('/api/affiliates', (req, res) => {
+  try {
+    const diskMap = loadAffiliatesFromDisk();
+    const list = Array.from(diskMap.values());
+    res.json({ success: true, affiliates: list });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message, affiliates: [] });
+  }
+});
+
+// POST /api/affiliates/sync - Save or update an affiliate partner profile
+app.post('/api/affiliates/sync', (req, res) => {
+  try {
+    const { partner, list } = req.body;
+    if (list && Array.isArray(list)) {
+      for (const item of list) {
+        if (item && item.code) {
+          const normCode = item.code.toUpperCase().trim();
+          serverAffiliatesMap.set(normCode, {
+            ...serverAffiliatesMap.get(normCode),
+            ...item,
+            code: normCode,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+    } else if (partner && partner.code) {
+      const normCode = partner.code.toUpperCase().trim();
+      serverAffiliatesMap.set(normCode, {
+        ...serverAffiliatesMap.get(normCode),
+        ...partner,
+        code: normCode,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    saveAffiliatesToDisk(serverAffiliatesMap);
+    res.json({ success: true, affiliates: Array.from(serverAffiliatesMap.values()) });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/affiliates/delete - Remove an affiliate partner
+app.post('/api/affiliates/delete', (req, res) => {
+  try {
+    const { code } = req.body;
+    if (code) {
+      const normCode = code.toUpperCase().trim();
+      serverAffiliatesMap.delete(normCode);
+      saveAffiliatesToDisk(serverAffiliatesMap);
+    }
+    res.json({ success: true, message: 'Affiliate removed' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
