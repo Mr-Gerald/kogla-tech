@@ -10,7 +10,7 @@ import {
   ArrowRight, KeyRound, Eye, EyeOff, AlertTriangle, FileText, X, ShieldAlert, UserCheck, RefreshCw 
 } from 'lucide-react';
 import { captureUrlReferral, getActiveReferralCode, setManualReferralCode } from '../../lib/referralTracker';
-import { getUserReferralCode } from '../../lib/affiliates';
+import { getUserReferralCode, createReferralLead } from '../../lib/affiliates';
 import { isSystemAdminEmail } from '../../lib/authUtils';
 import { validatePromoCode } from '../../utils/promo';
 
@@ -204,18 +204,20 @@ export default function Signup() {
       const generatedCode = getUserReferralCode({ name }, activeUser.id);
 
       // 2. Save master profile record to database / local cache
+      const effectivePromo = (promoValidation.isValid ? promoValidation.code : cleanPromo).trim().toUpperCase();
+
       const initialProfile: UserProfile = {
         uid: activeUser.id,
         name: name || trimmedEmail.split('@')[0],
         email: trimmedEmail,
         role: role as ('user' | 'admin' | 'affiliate'),
         isAmbassador: false,
-        affiliateCode: generatedCode,
+        affiliateCode: '', // Standard users do not have active affiliate code until ambassador status is activated
         xp: 0,
         completedRooms: [],
-        referredBy: promoValidation.isValid ? promoValidation.code : (cleanPromo || null),
-        appliedPromoCode: promoValidation.isValid ? promoValidation.code : undefined,
-        discountPercent: promoValidation.isValid ? 5 : 0,
+        referredBy: effectivePromo || null,
+        appliedPromoCode: effectivePromo || undefined,
+        discountPercent: effectivePromo ? 5 : 0,
         emailVerified: isSystemAdmin ? true : false,
         emailConfirmedAt: isSystemAdmin ? new Date().toISOString() : undefined,
         createdAt: new Date().toISOString(),
@@ -223,6 +225,23 @@ export default function Signup() {
       };
 
       await saveSupabaseUserProfile(initialProfile);
+
+      // 3. Log referral lead so the creator/ambassador gets credited in the admin portal
+      if (effectivePromo) {
+        try {
+          await createReferralLead({
+            affiliateCode: effectivePromo,
+            studentName: initialProfile.name,
+            studentEmail: trimmedEmail,
+            studentPhone: '',
+            courseTitle: 'Account Registration (Kogla Academy)',
+            mode: 'online',
+            tuitionAmount: 250000
+          });
+        } catch (refErr) {
+          console.warn('[Signup] Referral lead logging notice:', refErr);
+        }
+      }
 
       if (isSystemAdmin) {
         try {

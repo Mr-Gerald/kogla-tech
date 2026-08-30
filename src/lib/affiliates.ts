@@ -153,7 +153,7 @@ export async function getAllAffiliates(): Promise<AffiliatePartner[]> {
   try {
     const userProfiles = getSupabaseUserProfiles();
     for (const u of userProfiles) {
-      if (u.isAmbassador || u.affiliateCode) {
+      if (u.isAmbassador === true || u.role === 'affiliate') {
         const code = (u.affiliateCode || getUserReferralCode(u, u.uid)).toUpperCase().trim();
         if (code) {
           const existing = partnerMap.get(code);
@@ -226,76 +226,120 @@ export async function getAllAffiliates(): Promise<AffiliatePartner[]> {
  */
 export async function getReferralsByCode(code: string): Promise<ReferralLead[]> {
   const normCode = code.trim().toUpperCase();
-  const cached = getCachedReferrals().filter(r => r.affiliateCode.toUpperCase() === normCode);
-
-  try {
-    const { data } = await supabase
-      .from('referrals')
-      .select('*')
-      .eq('affiliate_code', normCode);
-    if (data && Array.isArray(data) && data.length > 0) {
-      const list: ReferralLead[] = data.map((d: any) => ({
-        id: d.id,
-        affiliateCode: d.affiliate_code || d.affiliateCode,
-        studentName: d.student_name || d.studentName,
-        studentEmail: d.student_email || d.studentEmail,
-        studentPhone: d.student_phone || d.studentPhone,
-        courseTitle: d.course_title || d.courseTitle,
-        mode: d.mode,
-        tuitionAmount: d.tuition_amount || d.tuitionAmount,
-        discountApplied: d.discount_applied || d.discountApplied,
-        discountedAmount: d.discounted_amount || d.discountedAmount,
-        commissionRate: d.commission_rate || d.commissionRate,
-        commissionAmount: d.commission_amount || d.commissionAmount,
-        status: d.status,
-        confirmedAt: d.confirmed_at || d.confirmedAt,
-        paidAt: d.paid_at || d.paidAt,
-        paymentProofNote: d.payment_proof_note || d.paymentProofNote,
-        createdAt: d.created_at || d.createdAt
-      }));
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return list;
-    }
-  } catch (_) {}
-
-  return cached;
+  const allRefs = await getAllReferrals();
+  return allRefs.filter(r => r.affiliateCode.toUpperCase() === normCode);
 }
 
 /**
  * Fetch all referrals across the platform (for Admin)
  */
 export async function getAllReferrals(): Promise<ReferralLead[]> {
-  const cached = getCachedReferrals();
+  const referralMap = new Map<string, ReferralLead>();
 
+  // 1. Load local cache
+  const cached = getCachedReferrals();
+  for (const r of cached) {
+    if (r.id) referralMap.set(r.id, r);
+  }
+
+  // 2. Load from Supabase DB
   try {
     const { data } = await supabase.from('referrals').select('*');
     if (data && Array.isArray(data) && data.length > 0) {
-      const list: ReferralLead[] = data.map((d: any) => ({
-        id: d.id,
-        affiliateCode: d.affiliate_code || d.affiliateCode,
-        studentName: d.student_name || d.studentName,
-        studentEmail: d.student_email || d.studentEmail,
-        studentPhone: d.student_phone || d.studentPhone,
-        courseTitle: d.course_title || d.courseTitle,
-        mode: d.mode,
-        tuitionAmount: d.tuition_amount || d.tuitionAmount,
-        discountApplied: d.discount_applied || d.discountApplied,
-        discountedAmount: d.discounted_amount || d.discountedAmount,
-        commissionRate: d.commission_rate || d.commissionRate,
-        commissionAmount: d.commission_amount || d.commissionAmount,
-        status: d.status,
-        confirmedAt: d.confirmed_at || d.confirmedAt,
-        paidAt: d.paid_at || d.paidAt,
-        paymentProofNote: d.payment_proof_note || d.paymentProofNote,
-        createdAt: d.created_at || d.createdAt
-      }));
-      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      saveCachedReferrals(list);
-      return list;
+      for (const d of data) {
+        const item: ReferralLead = {
+          id: d.id,
+          affiliateCode: (d.affiliate_code || d.affiliateCode || '').toUpperCase().trim(),
+          studentName: d.student_name || d.studentName || 'Student',
+          studentEmail: d.student_email || d.studentEmail || '',
+          studentPhone: d.student_phone || d.studentPhone || '',
+          courseTitle: d.course_title || d.courseTitle || 'Account Registration',
+          mode: d.mode || 'online',
+          tuitionAmount: d.tuition_amount || d.tuitionAmount || 250000,
+          discountApplied: d.discount_applied || d.discountApplied || 12500,
+          discountedAmount: d.discounted_amount || d.discountedAmount || 237500,
+          commissionRate: d.commission_rate || d.commissionRate || 6,
+          commissionAmount: d.commission_amount || d.commissionAmount || 14250,
+          status: d.status || 'confirmed',
+          confirmedAt: d.confirmed_at || d.confirmedAt,
+          paidAt: d.paid_at || d.paidAt,
+          paymentProofNote: d.payment_proof_note || d.paymentProofNote,
+          createdAt: d.created_at || d.createdAt || new Date().toISOString()
+        };
+        referralMap.set(item.id, item);
+      }
     }
   } catch (_) {}
 
-  return cached;
+  // 3. Auto-heal: Check user profiles for any registered students with referredBy or appliedPromoCode
+  try {
+    const userProfiles = getSupabaseUserProfiles();
+    const existingKeys = new Set(
+      Array.from(referralMap.values()).map(r => `${(r.studentEmail || '').toLowerCase().trim()}_${(r.affiliateCode || '').toUpperCase().trim()}`)
+    );
+
+    for (const u of userProfiles) {
+      const code = (u.appliedPromoCode || u.referredBy || '').toUpperCase().trim();
+      if (code && u.email) {
+        const normEmail = u.email.toLowerCase().trim();
+        const key = `${normEmail}_${code}`;
+        if (!existingKeys.has(key)) {
+          const leadId = `ref-syn-${u.uid || Math.random().toString(36).substring(2, 7)}`;
+          const tuitionAmount = 250000;
+          const discountApplied = Math.round(tuitionAmount * 0.05);
+          const discountedAmount = tuitionAmount - discountApplied;
+          const commissionRate = 6;
+          const commissionAmount = Math.round(discountedAmount * 0.06);
+
+          const synLead: ReferralLead = {
+            id: leadId,
+            affiliateCode: code,
+            studentName: u.name || normEmail.split('@')[0],
+            studentEmail: normEmail,
+            studentPhone: (u as any).phone || '',
+            courseTitle: 'Account Registration (Kogla Academy)',
+            mode: 'online',
+            tuitionAmount,
+            discountApplied,
+            discountedAmount,
+            commissionRate,
+            commissionAmount,
+            status: 'confirmed',
+            confirmedAt: u.createdAt || new Date().toISOString(),
+            createdAt: u.createdAt || new Date().toISOString()
+          };
+          referralMap.set(leadId, synLead);
+          existingKeys.add(key);
+
+          // Save to Supabase DB asynchronously
+          try {
+            supabase.from('referrals').upsert({
+              id: leadId,
+              affiliate_code: code,
+              student_name: synLead.studentName,
+              student_email: synLead.studentEmail,
+              student_phone: synLead.studentPhone || '',
+              course_title: synLead.courseTitle,
+              mode: synLead.mode,
+              tuition_amount: tuitionAmount,
+              discount_applied: discountApplied,
+              discounted_amount: discountedAmount,
+              commission_rate: commissionRate,
+              commission_amount: commissionAmount,
+              status: 'confirmed',
+              confirmed_at: synLead.confirmedAt,
+              created_at: synLead.createdAt
+            }).then(() => {});
+          } catch (_) {}
+        }
+      }
+    }
+  } catch (_) {}
+
+  const finalReferrals = Array.from(referralMap.values());
+  finalReferrals.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  saveCachedReferrals(finalReferrals);
+  return finalReferrals;
 }
 
 /**
@@ -340,13 +384,21 @@ export async function createReferralLead(params: {
     discountedAmount,
     commissionRate,
     commissionAmount,
-    status: 'pending', // Starts as pending until Admin approves payment
+    status: 'confirmed',
+    confirmedAt: new Date().toISOString(),
     createdAt: new Date().toISOString()
   };
 
   // Update local cache
   const cached = getCachedReferrals();
-  const updatedReferrals = [newLead, ...cached];
+  const existingIdx = cached.findIndex(r => r.studentEmail.toLowerCase() === params.studentEmail.toLowerCase() && r.affiliateCode.toUpperCase() === normCode);
+  let updatedReferrals: ReferralLead[];
+  if (existingIdx !== -1) {
+    cached[existingIdx] = { ...cached[existingIdx], ...newLead };
+    updatedReferrals = [...cached];
+  } else {
+    updatedReferrals = [newLead, ...cached];
+  }
   saveCachedReferrals(updatedReferrals);
 
   // Update partner total referrals in cache
@@ -355,7 +407,9 @@ export async function createReferralLead(params: {
     if (a.code.toUpperCase() === normCode) {
       return {
         ...a,
-        totalReferrals: (a.totalReferrals || 0) + 1
+        totalReferrals: (a.totalReferrals || 0) + 1,
+        confirmedCount: (a.confirmedCount || 0) + 1,
+        totalEarned: (a.totalEarned || 0) + commissionAmount
       };
     }
     return a;
@@ -377,7 +431,8 @@ export async function createReferralLead(params: {
       discounted_amount: discountedAmount,
       commission_rate: commissionRate,
       commission_amount: commissionAmount,
-      status: 'pending',
+      status: 'confirmed',
+      confirmed_at: newLead.confirmedAt,
       created_at: newLead.createdAt
     });
   } catch (_) {}
