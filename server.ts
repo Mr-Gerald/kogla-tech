@@ -141,6 +141,36 @@ interface SyncedUser {
 }
 
 const USERS_FILE_PATH = path.join(process.cwd(), 'server_data_users.json');
+const DELETED_USERS_FILE_PATH = path.join(process.cwd(), 'server_deleted_users.json');
+
+function loadDeletedUsersFromDisk(): Set<string> {
+  const set = new Set<string>();
+  try {
+    if (fs.existsSync(DELETED_USERS_FILE_PATH)) {
+      const raw = fs.readFileSync(DELETED_USERS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        data.forEach(item => {
+          if (typeof item === 'string') set.add(item.toLowerCase().trim());
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Server] Error loading deleted users from disk:', err);
+  }
+  return set;
+}
+
+function saveDeletedUsersToDisk(set: Set<string>) {
+  try {
+    const list = Array.from(set.values());
+    fs.writeFileSync(DELETED_USERS_FILE_PATH, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[Server] Error saving deleted users to disk:', err);
+  }
+}
+
+const serverDeletedUsersSet = loadDeletedUsersFromDisk();
 
 function getInitialAdminMap(): Map<string, SyncedUser> {
   const map = new Map<string, SyncedUser>();
@@ -229,6 +259,8 @@ app.post('/api/users/sync', (req, res) => {
       for (const item of batch) {
         if (item && item.email) {
           const normEmail = item.email.toLowerCase().trim();
+          // Remove from deleted set if re-registered or active
+          serverDeletedUsersSet.delete(normEmail);
           const existing = serverUsersMap.get(normEmail);
           serverUsersMap.set(normEmail, {
             ...existing,
@@ -240,6 +272,7 @@ app.post('/api/users/sync', (req, res) => {
       }
     } else if (profile && profile.email) {
       const normEmail = profile.email.toLowerCase().trim();
+      serverDeletedUsersSet.delete(normEmail);
       const existing = serverUsersMap.get(normEmail);
       serverUsersMap.set(normEmail, {
         ...existing,
@@ -250,10 +283,21 @@ app.post('/api/users/sync', (req, res) => {
     }
 
     saveUsersToDisk(serverUsersMap);
+    saveDeletedUsersToDisk(serverDeletedUsersSet);
     const currentList = Array.from(serverUsersMap.values());
     res.json({ success: true, users: currentList });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/users/deleted - Return list of all purged/deleted accounts
+app.get('/api/users/deleted', (req, res) => {
+  try {
+    const diskDeleted = loadDeletedUsersFromDisk();
+    res.json({ success: true, deleted: Array.from(diskDeleted.values()) });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message, deleted: [] });
   }
 });
 
@@ -264,15 +308,19 @@ app.post('/api/users/delete', (req, res) => {
     if (email) {
       const normEmail = email.toLowerCase().trim();
       serverUsersMap.delete(normEmail);
+      serverDeletedUsersSet.add(normEmail);
     }
     if (uid) {
       for (const [k, v] of serverUsersMap.entries()) {
         if (v.uid === uid) {
           serverUsersMap.delete(k);
+          serverDeletedUsersSet.add(k);
         }
       }
+      serverDeletedUsersSet.add(uid);
     }
     saveUsersToDisk(serverUsersMap);
+    saveDeletedUsersToDisk(serverDeletedUsersSet);
     res.json({ success: true, message: 'User purged globally' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
@@ -282,12 +330,19 @@ app.post('/api/users/delete', (req, res) => {
 // POST /api/users/purge-all - Wipes all test/ghost users and resets server database
 app.post('/api/users/purge-all', (req, res) => {
   try {
+    // Record all purged non-admin accounts
+    for (const [k, v] of serverUsersMap.entries()) {
+      if (v.role !== 'admin') {
+        serverDeletedUsersSet.add(k);
+      }
+    }
     serverUsersMap.clear();
     const freshAdminMap = getInitialAdminMap();
     for (const [k, v] of freshAdminMap.entries()) {
       serverUsersMap.set(k, v);
     }
     saveUsersToDisk(serverUsersMap);
+    saveDeletedUsersToDisk(serverDeletedUsersSet);
 
     res.json({ success: true, message: 'All non-admin user records and ghost sessions purged completely.' });
   } catch (err: any) {

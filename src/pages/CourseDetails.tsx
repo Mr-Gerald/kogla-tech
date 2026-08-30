@@ -26,23 +26,27 @@ import { ACADEMY_COURSES, getCourseBySlug, formatNaira, CourseTrack } from '../d
 import { getActiveReferralCode, setManualReferralCode, captureUrlReferral } from '../lib/referralTracker';
 import { createReferralLead } from '../lib/affiliates';
 import { useAuth } from '../context/AuthContext';
+import { validatePromoCode } from '../utils/promo';
+import { fetchFullUserRosterAsync } from '../lib/supabase';
 
 export default function CourseDetails() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const courseKey = slug?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'web-development';
   const course = getCourseBySlug(courseKey) || ACADEMY_COURSES[0];
 
   // Enrollment form state
   const [selectedFormat, setSelectedFormat] = useState<'online' | 'physical'>('online');
-  const [name, setName] = useState(user?.user_metadata?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
+  const [name, setName] = useState(user?.user_metadata?.name || profile?.name || '');
+  const [email, setEmail] = useState(user?.email || profile?.email || '');
   const [phone, setPhone] = useState('');
   const [motivation, setMotivation] = useState('');
-  const [promoCode, setPromoCode] = useState(getActiveReferralCode() || '');
-  const [promoApplied, setPromoApplied] = useState(Boolean(getActiveReferralCode()));
+  const [promoCode, setPromoCode] = useState(getActiveReferralCode() || profile?.appliedPromoCode || profile?.referredBy || '');
+  const [promoApplied, setPromoApplied] = useState(Boolean(getActiveReferralCode() || profile?.appliedPromoCode || profile?.referredBy || (profile?.discountPercent && profile.discountPercent > 0)));
+  const [promoError, setPromoError] = useState('');
+  const [knownAffiliateCodes, setKnownAffiliateCodes] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [showAuthPromptModal, setShowAuthPromptModal] = useState(false);
@@ -50,30 +54,50 @@ export default function CourseDetails() {
   const [copiedAll, setCopiedAll] = useState(false);
 
   useEffect(() => {
-    const urlRef = captureUrlReferral();
-    const active = urlRef || getActiveReferralCode();
-    if (active) {
-      setPromoCode(active);
-      setPromoApplied(true);
-    }
+    fetchFullUserRosterAsync().then(users => {
+      const codes = users.map(u => u.affiliateCode || '').filter(Boolean);
+      setKnownAffiliateCodes(codes);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (user) {
-      if (!name && user.user_metadata?.name) setName(user.user_metadata.name);
-      if (!email && user.email) setEmail(user.email);
+    const urlRef = captureUrlReferral();
+    const active = urlRef || getActiveReferralCode() || profile?.appliedPromoCode || profile?.referredBy;
+    if (active) {
+      setPromoCode(active);
+      setPromoApplied(true);
+    } else if (profile?.discountPercent && profile.discountPercent > 0) {
+      setPromoApplied(true);
     }
-  }, [user]);
+  }, [profile]);
+
+  useEffect(() => {
+    if (user || profile) {
+      if (!name) setName(user?.user_metadata?.name || profile?.name || '');
+      if (!email) setEmail(user?.email || profile?.email || '');
+    }
+  }, [user, profile]);
 
   const basePrice = selectedFormat === 'online' ? course.onlinePrice : course.physicalPrice;
-  const isDiscountValid = promoApplied && promoCode.trim().length > 0;
+  const isDiscountValid = promoApplied;
   const discountAmount = isDiscountValid ? Math.round(basePrice * 0.05) : 0;
   const finalPrice = basePrice - discountAmount;
 
   const handleApplyPromo = () => {
-    if (promoCode.trim()) {
-      setManualReferralCode(promoCode.trim().toUpperCase());
+    setPromoError('');
+    if (!promoCode.trim()) {
+      setPromoApplied(false);
+      return;
+    }
+    const val = validatePromoCode(promoCode, knownAffiliateCodes);
+    if (val.isValid) {
+      setManualReferralCode(val.code);
+      setPromoCode(val.code);
       setPromoApplied(true);
+      setPromoError('');
+    } else {
+      setPromoApplied(false);
+      setPromoError(`Invalid promo / referral code "${promoCode.trim().toUpperCase()}". Code does not exist.`);
     }
   };
 
@@ -489,11 +513,15 @@ export default function CourseDetails() {
                   </button>
                 </div>
 
-                {promoApplied && promoCode && (
-                  <p className="text-[11px] text-emerald-400 font-mono mt-1 flex items-center gap-1">
-                    <Check size={12} /> 5% Ambassador Discount Applied (-{formatNaira(discountAmount)})
+                {promoApplied ? (
+                  <p className="text-[11px] text-emerald-400 font-mono mt-1.5 flex items-center gap-1 bg-emerald-950/40 border border-emerald-800/50 p-2 rounded-sm">
+                    <Check size={12} /> 5% Ambassador Discount Active (-{formatNaira(discountAmount)})
                   </p>
-                )}
+                ) : promoError ? (
+                  <p className="text-[11px] text-amber-400 font-mono mt-1.5 flex items-center gap-1 bg-amber-950/40 border border-amber-800/50 p-2 rounded-sm">
+                    <span>{promoError}</span>
+                  </p>
+                ) : null}
               </div>
 
               {/* TUITION BREAKDOWN SUMMARY */}

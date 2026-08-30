@@ -34,11 +34,11 @@ export default function Academy() {
 
   useEffect(() => {
     const urlRef = captureUrlReferral();
-    const active = urlRef || getActiveReferralCode();
+    const active = urlRef || getActiveReferralCode() || profile?.appliedPromoCode || profile?.referredBy || (profile?.discountPercent ? '5% DISCOUNT' : null);
     if (active) {
       setActivePromo(active);
     }
-  }, []);
+  }, [profile]);
 
   const categories = ['All', 'Engineering', 'Analytics', 'Security', 'Design', 'Management', 'Automation', 'Business & Tech'];
 

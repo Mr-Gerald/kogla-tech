@@ -26,14 +26,10 @@ export default function Footer() {
         {/* Column 1: Brand & Security Compliance */}
         <div className="space-y-4 lg:col-span-1">
           <Link to="/" className="text-lg font-display font-bold text-white tracking-widest flex items-center gap-2 uppercase">
-            {config.logoUrl ? (
-              <img src={config.logoUrl} alt={config.companyName} className="h-8 border border-gold-500/50 p-1 rounded-sm bg-black/50 object-contain" />
+            {config.logoUrl || config.faviconUrl ? (
+              <img src={config.logoUrl || config.faviconUrl} alt={config.companyName} className="h-8 border border-gold-500/50 p-1 rounded-sm bg-black/50 object-contain" />
             ) : (
-              <span>
-                {config.logoText.split(' ').map((word, i) => (
-                  <span key={i} className={i === 1 ? 'text-gold-500' : 'text-white'}>{word} </span>
-                ))}
-              </span>
+              <img src="/apple-touch-icon.png" alt={config.companyName} className="h-8 border border-gold-500/50 p-1 rounded-sm bg-black/50 object-contain" />
             )}
           </Link>
           <p className="text-[11px] text-gray-400 leading-relaxed font-sans">

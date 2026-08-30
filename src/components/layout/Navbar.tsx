@@ -46,14 +46,10 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 w-full z-50 flex items-center justify-between p-4 bg-black/95 backdrop-blur-md border-b border-gray-900 font-sans">
       <Link to="/" onClick={() => setIsOpen(false)} className="shrink-0 transition-opacity hover:opacity-90 flex items-center gap-2">
-        {config.logoUrl ? (
-          <img src={config.logoUrl} alt={config.companyName} className="h-9 border border-gold-500/50 p-1 rounded-sm object-contain bg-black/50" />
+        {config.logoUrl || config.faviconUrl ? (
+          <img src={config.logoUrl || config.faviconUrl} alt={config.companyName} className="h-9 border border-gold-500/50 p-1 rounded-sm object-contain bg-black/50" />
         ) : (
-          <span className="text-lg font-display font-bold text-white tracking-widest uppercase flex items-center gap-1">
-            {config.logoText.split(' ').map((word, i) => (
-              <span key={i} className={i === 1 ? 'text-gold-500' : 'text-white'}>{word}</span>
-            ))}
-          </span>
+          <img src="/apple-touch-icon.png" alt={config.companyName} className="h-9 border border-gold-500/50 p-1 rounded-sm object-contain bg-black/50" />
         )}
       </Link>
       

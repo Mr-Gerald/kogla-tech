@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile, fetchFullUserRosterAsync, fetchUserProfileAsync } from '../../lib/supabase';
+import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile, fetchFullUserRosterAsync, fetchUserProfileAsync, isAccountPurgedOrDeleted } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { UserProfile } from '../../types';
 import { formatUserError } from '../../lib/errorUtils';
 import { isSystemAdminEmail } from '../../lib/authUtils';
 import { ShieldCheck, Mail, Lock, Loader2, Key, ArrowRight, Eye, EyeOff, RefreshCw, CheckCircle2, ShieldAlert } from 'lucide-react';
@@ -195,8 +196,30 @@ export default function Login() {
         throw new Error(`Email Verification Required: Please check your inbox (and Spam / Junk folder) for the confirmation email sent to ${trimmedEmail} and click the link to verify your account before logging in.`);
       }
 
+      // Check if user account was deleted / purged by an administrator
+      let existingDbProfile = await fetchUserProfileAsync(trimmedEmail);
+      if (!existingDbProfile && activeUser.id) {
+        existingDbProfile = await fetchUserProfileAsync(activeUser.id);
+      }
+
+      if (!isSystemAdmin) {
+        const isPurged = isAccountPurgedOrDeleted(trimmedEmail) || (activeUser?.id && isAccountPurgedOrDeleted(activeUser.id));
+        if (isPurged || !existingDbProfile) {
+          try {
+            await supabase.auth.signOut();
+            localStorage.removeItem('kogla_active_session');
+          } catch (_) {}
+          throw new Error('Account Not Found or Deleted: This account has been deleted by an administrator. If you wish to use Kogla Tech, please click "Create an Account" to register.');
+        }
+      }
+
       // 2. Build or sync profile directly with Supabase Database
-      const profile: UserProfile = {
+      const profile: UserProfile = existingDbProfile ? {
+        ...existingDbProfile,
+        emailVerified: isSystemAdmin || isVerified || existingDbProfile.emailVerified,
+        emailConfirmedAt: activeUser.email_confirmed_at || existingDbProfile.emailConfirmedAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      } : {
         uid: activeUser.id || activeUser.uid || `admin_${trimmedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
         name: activeUser.user_metadata?.name || (isSystemAdmin ? 'Gerald Emechebe' : trimmedEmail.split('@')[0]),
         email: trimmedEmail,

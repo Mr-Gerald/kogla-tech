@@ -550,6 +550,11 @@ export default function Profile() {
               <span className="px-2.5 py-0.5 bg-gold-500/10 border border-gold-500/30 text-gold-400 text-[10px] font-mono rounded uppercase font-bold">
                 {profile?.role === 'admin' ? 'Kogla Executive' : `Level ${level} Developer`}
               </span>
+              {(profile?.discountPercent || profile?.appliedPromoCode || profile?.referredBy) && (
+                <span className="px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono rounded uppercase font-bold flex items-center gap-1">
+                  <Tag size={10} /> 5% Discount Active ({profile.appliedPromoCode || profile.referredBy})
+                </span>
+              )}
             </div>
 
             {profile?.title && (

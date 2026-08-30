@@ -60,6 +60,9 @@ export function rowToUserProfile(row: any): UserProfile {
     isPaid: typeof extra.isPaid === 'boolean' ? extra.isPaid : (isAdmin ? true : false),
     emailVerified: typeof row.email_verified === 'boolean' ? row.email_verified : (isAdmin ? true : false),
     emailConfirmedAt: extra.emailConfirmedAt || (isAdmin ? '2026-01-01T00:00:00.000Z' : undefined),
+    discountPercent: typeof extra.discountPercent === 'number' ? extra.discountPercent : (extra.referredBy ? 5 : 0),
+    appliedPromoCode: extra.appliedPromoCode || extra.referredBy || undefined,
+    referredBy: extra.referredBy || extra.appliedPromoCode || null,
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || new Date().toISOString()
   };
@@ -85,7 +88,10 @@ export function userProfileToRow(profile: UserProfile): any {
     bio: JSON.stringify({
       avatarUrl: profile.avatarUrl || '',
       isPaid: isAdmin || !!profile.isPaid,
-      emailConfirmedAt: profile.emailConfirmedAt || (isAdmin ? '2026-01-01T00:00:00.000Z' : undefined)
+      emailConfirmedAt: profile.emailConfirmedAt || (isAdmin ? '2026-01-01T00:00:00.000Z' : undefined),
+      discountPercent: profile.discountPercent || (profile.referredBy ? 5 : 0),
+      appliedPromoCode: profile.appliedPromoCode || profile.referredBy || '',
+      referredBy: profile.referredBy || profile.appliedPromoCode || ''
     }),
     created_at: profile.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -99,6 +105,10 @@ export async function saveSupabaseUserProfile(profile: UserProfile): Promise<voi
   try {
     const normEmail = (profile.email || '').toLowerCase().trim();
     if (!normEmail && !profile.uid) return;
+
+    if (normEmail) {
+      unmarkAccountAsDeleted(normEmail);
+    }
 
     const row = userProfileToRow(profile);
 
@@ -166,7 +176,7 @@ export function getSupabaseUserProfiles(): UserProfile[] {
 
 /**
  * Loads the complete, cross-device user roster directly from Supabase Database.
- * IGNORES stale local storage from other browsers to ensure 100% database accuracy.
+ * Strictly deduplicates by email so every account appears ONCE and only ONCE.
  */
 export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
   try {
@@ -175,26 +185,40 @@ export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
       console.warn('[Supabase DB] Error selecting profiles:', error.message);
     }
 
-    const roster: UserProfile[] = [];
-    const seenEmails = new Set<string>();
+    const rosterMap = new Map<string, UserProfile>();
 
     if (Array.isArray(data)) {
       for (const row of data) {
         const p = rowToUserProfile(row);
         if (p.email) {
-          roster.push(p);
-          seenEmails.add(p.email);
+          const normKey = p.email.toLowerCase().trim();
+          if (rosterMap.has(normKey)) {
+            const existing = rosterMap.get(normKey)!;
+            const merged: UserProfile = {
+              ...existing,
+              ...p,
+              role: (existing.role === 'admin' || p.role === 'admin') ? 'admin' : (p.role || existing.role),
+              xp: Math.max(existing.xp || 0, p.xp || 0),
+              isPaid: existing.isPaid || p.isPaid,
+              emailVerified: existing.emailVerified || p.emailVerified,
+              discountPercent: p.discountPercent || existing.discountPercent || (p.referredBy ? 5 : 0),
+              appliedPromoCode: p.appliedPromoCode || existing.appliedPromoCode || p.referredBy || undefined
+            };
+            rosterMap.set(normKey, merged);
+          } else {
+            rosterMap.set(normKey, p);
+          }
         }
       }
     }
 
-    // Always guarantee system admin accounts exist in roster
-    const masterAdmins = [
+    // Always guarantee system admin accounts exist in roster map
+    const masterAdmins: UserProfile[] = [
       {
         uid: 'admin_master_gerald',
         name: 'Gerald Emechebe',
         email: 'solutions@koglatech.com',
-        role: 'admin' as const,
+        role: 'admin',
         xp: 1500,
         completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines', 'cyber-defense-protocols'],
         isPaid: true,
@@ -207,7 +231,7 @@ export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
         uid: 'admin_gerald_emechebe',
         name: 'Gerald Emechebe',
         email: 'emechebegerald@gmail.com',
-        role: 'admin' as const,
+        role: 'admin',
         xp: 1500,
         completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines'],
         isPaid: true,
@@ -219,12 +243,18 @@ export async function fetchFullUserRosterAsync(): Promise<UserProfile[]> {
     ];
 
     for (const admin of masterAdmins) {
-      if (!seenEmails.has(admin.email)) {
-        roster.push(admin);
-        // Persist missing admin into Supabase DB
+      const normAdminKey = admin.email.toLowerCase().trim();
+      if (!rosterMap.has(normAdminKey)) {
+        rosterMap.set(normAdminKey, admin);
         saveSupabaseUserProfile(admin);
+      } else {
+        // Upgrade existing admin row to ensure full admin permissions
+        const current = rosterMap.get(normAdminKey)!;
+        rosterMap.set(normAdminKey, { ...current, role: 'admin', isPaid: true, emailVerified: true });
       }
     }
+
+    const roster = Array.from(rosterMap.values());
 
     // Update local cache for current browser session
     try {
@@ -272,12 +302,70 @@ export function getSupabaseUserProfile(uidOrEmail: string): UserProfile | null {
 }
 
 /**
+ * Check if an email or UID has been purged/deleted by an administrator
+ */
+export function isAccountPurgedOrDeleted(uidOrEmail: string): boolean {
+  if (!uidOrEmail) return false;
+  const norm = uidOrEmail.toLowerCase().trim();
+  if (isSystemAdminEmail(norm)) return false;
+
+  try {
+    const raw = localStorage.getItem('kogla_deleted_users');
+    if (raw) {
+      const list: string[] = JSON.parse(raw);
+      if (list.some(item => item.toLowerCase().trim() === norm)) {
+        return true;
+      }
+    }
+  } catch (_) {}
+  return false;
+}
+
+/**
+ * Marks an account as deleted locally and across connected servers
+ */
+export function markAccountAsDeletedLocally(uidOrEmail: string): void {
+  if (!uidOrEmail) return;
+  const norm = uidOrEmail.toLowerCase().trim();
+  if (isSystemAdminEmail(norm)) return;
+
+  try {
+    const raw = localStorage.getItem('kogla_deleted_users');
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes(norm)) {
+      list.push(norm);
+      localStorage.setItem('kogla_deleted_users', JSON.stringify(list));
+    }
+  } catch (_) {}
+}
+
+/**
+ * Removes an account from deleted registry when user registers a new account
+ */
+export function unmarkAccountAsDeleted(email: string): void {
+  if (!email) return;
+  const norm = email.toLowerCase().trim();
+  try {
+    const raw = localStorage.getItem('kogla_deleted_users');
+    if (raw) {
+      const list: string[] = JSON.parse(raw);
+      const filtered = list.filter(item => item.toLowerCase().trim() !== norm);
+      localStorage.setItem('kogla_deleted_users', JSON.stringify(filtered));
+    }
+  } catch (_) {}
+}
+
+/**
  * Permanently purges a user profile directly from Supabase Database
  */
 export async function deleteSupabaseUserProfile(uid: string, email: string): Promise<void> {
   const normEmail = (email || '').toLowerCase().trim();
 
-  // 1. Delete from Supabase Database (profiles table)
+  // 1. Mark as deleted in local blacklist
+  if (normEmail) markAccountAsDeletedLocally(normEmail);
+  if (uid) markAccountAsDeletedLocally(uid);
+
+  // 2. Delete from Supabase Database (profiles table)
   try {
     if (uid) {
       await supabase.from('profiles').delete().eq('id', uid);
@@ -289,7 +377,7 @@ export async function deleteSupabaseUserProfile(uid: string, email: string): Pro
     console.warn('[Supabase DB] Delete profile error:', err);
   }
 
-  // 2. Remove from local storage cache
+  // 3. Remove from local storage cache
   try {
     const raw = localStorage.getItem('kogla_supabase_users');
     if (raw) {
@@ -299,7 +387,19 @@ export async function deleteSupabaseUserProfile(uid: string, email: string): Pro
     }
   } catch (_) {}
 
-  // 3. Background delete from Cloud Firestore and Server API
+  // 4. Clear active session if this was the logged-in user
+  try {
+    const sessionRaw = localStorage.getItem('kogla_active_session');
+    if (sessionRaw) {
+      const s = JSON.parse(sessionRaw);
+      if (s.id === uid || s.uid === uid || (s.email && s.email.toLowerCase().trim() === normEmail)) {
+        localStorage.removeItem('kogla_active_session');
+        supabase.auth.signOut().catch(() => {});
+      }
+    }
+  } catch (_) {}
+
+  // 5. Background delete from Cloud Firestore and Server API
   if (uid) {
     try {
       deleteDoc(doc(db, 'users', uid)).catch(() => {});

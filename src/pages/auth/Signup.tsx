@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile } from '../../types';
-import { supabase, saveSupabaseUserProfile } from '../../lib/supabase';
+import { supabase, saveSupabaseUserProfile, fetchFullUserRosterAsync } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserError } from '../../lib/errorUtils';
 import { 
@@ -12,6 +12,7 @@ import {
 import { captureUrlReferral, getActiveReferralCode, setManualReferralCode } from '../../lib/referralTracker';
 import { getUserReferralCode } from '../../lib/affiliates';
 import { isSystemAdminEmail } from '../../lib/authUtils';
+import { validatePromoCode } from '../../utils/promo';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -25,6 +26,16 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [promoCode, setPromoCode] = useState('');
+  const [knownAffiliateCodes, setKnownAffiliateCodes] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchFullUserRosterAsync().then(users => {
+      const codes = users.map(u => u.affiliateCode || '').filter(Boolean);
+      setKnownAffiliateCodes(codes);
+    }).catch(() => {});
+  }, []);
+
+  const promoValidation = validatePromoCode(promoCode, knownAffiliateCodes);
   
   // Legal Agreement State
   const [termsAgreed, setTermsAgreed] = useState(false);
@@ -202,7 +213,9 @@ export default function Signup() {
         affiliateCode: generatedCode,
         xp: 0,
         completedRooms: [],
-        referredBy: cleanPromo || null,
+        referredBy: promoValidation.isValid ? promoValidation.code : (cleanPromo || null),
+        appliedPromoCode: promoValidation.isValid ? promoValidation.code : undefined,
+        discountPercent: promoValidation.isValid ? 5 : 0,
         emailVerified: isSystemAdmin ? true : false,
         emailConfirmedAt: isSystemAdmin ? new Date().toISOString() : undefined,
         createdAt: new Date().toISOString(),
@@ -516,10 +529,18 @@ export default function Signup() {
               placeholder="e.g. AMBASSADOR (Leave blank for none)" 
               className="w-full p-3 bg-black border border-gray-800 focus:border-gold-500 focus:outline-none text-xs text-gold-400 font-mono uppercase placeholder:text-gray-700" 
             />
-            {promoCode && (
-              <p className="text-[10px] text-emerald-400 font-mono mt-1 flex items-center gap-1">
-                <Check size={11} /> Referral code <b>{promoCode}</b> applied (5% discount active).
-              </p>
+            {promoCode.trim() !== '' && (
+              promoValidation.isValid ? (
+                <p className="text-[10px] text-emerald-400 font-mono mt-1.5 flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800/50 p-2 rounded-sm">
+                  <Check size={12} className="text-emerald-400 shrink-0" />
+                  <span>Referral / Promo code <b>{promoValidation.code}</b> applied! (<b>5% discount active</b> on all tuition & services).</span>
+                </p>
+              ) : (
+                <p className="text-[10px] text-amber-400 font-mono mt-1.5 flex items-center gap-1.5 bg-amber-950/40 border border-amber-800/50 p-2 rounded-sm">
+                  <AlertTriangle size={12} className="text-amber-400 shrink-0" />
+                  <span>Invalid promo / referral code "<b>{promoCode.trim().toUpperCase()}</b>". Code does not exist.</span>
+                </p>
+              )
             )}
           </div>
 

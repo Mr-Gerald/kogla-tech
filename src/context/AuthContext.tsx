@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { LogOut } from 'lucide-react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile, fetchUserProfileAsync } from '../lib/supabase';
+import { supabase, saveSupabaseUserProfile, getSupabaseUserProfile, fetchUserProfileAsync, isAccountPurgedOrDeleted } from '../lib/supabase';
 import { UserProfile, NotificationRecord } from '../types';
 import { isSystemAdminEmail } from '../lib/authUtils';
 
@@ -71,6 +71,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      if (!isSystemAdmin) {
+        const isPurged = isAccountPurgedOrDeleted(currentUser.email) || (currentUser.id && isAccountPurgedOrDeleted(currentUser.id));
+        if (isPurged || !existingProfile) {
+          try {
+            localStorage.removeItem('kogla_active_session');
+            await supabase.auth.signOut();
+          } catch (_) {}
+          setUser(null);
+          setProfile(null);
+          setNotifications([]);
+          setLoading(false);
+          return;
+        }
+      }
+
       if (existingProfile) {
         let changed = false;
         if (isSystemAdmin && existingProfile.role !== 'admin') {
@@ -86,17 +101,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (changed) {
           saveSupabaseUserProfile(existingProfile);
         }
-      } else {
+      } else if (isSystemAdmin) {
         const newProfile: UserProfile = {
           uid: normalizedUser.id,
-          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || (isSystemAdmin ? 'Gerald Emechebe' : 'Member'),
+          name: currentUser.user_metadata?.name || (isSystemAdmin ? 'Gerald Emechebe' : 'Member'),
           email: currentUser.email || '',
-          role: role,
-          emailVerified: isSystemAdmin || !!currentUser.email_confirmed_at,
-          emailConfirmedAt: currentUser.email_confirmed_at || (isSystemAdmin ? new Date().toISOString() : undefined),
-          xp: 0,
-          completedRooms: [],
+          role: 'admin',
+          emailVerified: true,
+          emailConfirmedAt: currentUser.email_confirmed_at || new Date().toISOString(),
+          xp: 1500,
+          completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines'],
           avatarUrl: currentUser.user_metadata?.avatar_url || '',
+          isPaid: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };

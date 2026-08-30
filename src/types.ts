@@ -26,6 +26,8 @@ export interface UserProfile {
   linkedinUrl?: string;
   affiliateCode?: string;
   referredBy?: string | null;
+  discountPercent?: number;
+  appliedPromoCode?: string;
   preferences?: UserPreferences;
   savedItems?: string[];
   emailVerified?: boolean;

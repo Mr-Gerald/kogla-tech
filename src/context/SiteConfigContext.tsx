@@ -48,7 +48,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   footerCredits: 'Founded by Gerald Emechebe (Founder & CEO). All rights reserved.',
   fontSizeScale: 100,
   themeMode: 'dark',
-  faviconUrl: '',
+  faviconUrl: '/apple-touch-icon.png',
   // Default Cohort Settings (Target Start: September 24, 2026)
   cohortBatchName: 'COHORT CO-2026',
   cohortStatus: 'Admissions Open Now',
@@ -76,8 +76,8 @@ export function sanitizeSiteConfig(raw?: Partial<SiteConfig> | null): SiteConfig
   if (merged.logoUrl === '/logo512.png') {
     merged.logoUrl = '';
   }
-  if (merged.faviconUrl === '/favicon.svg') {
-    merged.faviconUrl = '';
+  if (merged.faviconUrl === '/favicon.svg' || !merged.faviconUrl) {
+    merged.faviconUrl = '/apple-touch-icon.png';
   }
 
   // Strict Phone & WhatsApp Enforcement (Always set to official +234 701 248 9041)
@@ -173,7 +173,7 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
   }, [config.themeMode]);
 
   useEffect(() => {
-    const favicon = config.faviconUrl?.trim() || config.logoUrl?.trim() || '/favicon.svg';
+    const favicon = config.faviconUrl?.trim() || config.logoUrl?.trim() || '/apple-touch-icon.png';
     const iconLinks = document.querySelectorAll<HTMLLinkElement>(
       "link[rel*='icon'], link[rel='apple-touch-icon'], link[rel='shortcut icon']"
     );
