@@ -211,30 +211,30 @@ export default function Academy() {
 
               {/* DUAL PRICING DISPLAY (ONLINE VS PHYSICAL) */}
               <div className="p-3.5 bg-black/60 border border-zinc-800/80 rounded space-y-2 font-mono text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400 flex items-center gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-zinc-400 flex items-center gap-1.5 shrink-0">
                     <Globe size={13} className="text-blue-400" /> Online Class:
                   </span>
                   {activePromo ? (
-                    <div className="text-right">
+                    <div className="text-right whitespace-nowrap shrink-0">
                       <span className="line-through text-zinc-500 text-[10px] mr-1.5">{formatNaira(course.onlinePrice)}</span>
                       <span className="font-bold text-emerald-400">{formatNaira(Math.round(course.onlinePrice * 0.95))}</span>
                     </div>
                   ) : (
-                    <span className="font-bold text-white">{formatNaira(course.onlinePrice)}</span>
+                    <span className="font-bold text-white whitespace-nowrap shrink-0">{formatNaira(course.onlinePrice)}</span>
                   )}
                 </div>
-                <div className="flex items-center justify-between border-t border-zinc-900 pt-1.5">
-                  <span className="text-zinc-400 flex items-center gap-1.5">
+                <div className="flex items-center justify-between border-t border-zinc-900 pt-1.5 gap-2">
+                  <span className="text-zinc-400 flex items-center gap-1.5 shrink-0">
                     <Building2 size={13} className="text-gold-400" /> Physical Hub:
                   </span>
                   {activePromo ? (
-                    <div className="text-right">
+                    <div className="text-right whitespace-nowrap shrink-0">
                       <span className="line-through text-zinc-500 text-[10px] mr-1.5">{formatNaira(course.physicalPrice)}</span>
                       <span className="font-bold text-gold-400">{formatNaira(Math.round(course.physicalPrice * 0.95))}</span>
                     </div>
                   ) : (
-                    <span className="font-bold text-gold-400">{formatNaira(course.physicalPrice)}</span>
+                    <span className="font-bold text-gold-400 whitespace-nowrap shrink-0">{formatNaira(course.physicalPrice)}</span>
                   )}
                 </div>
 

@@ -433,7 +433,7 @@ export default function CourseDetails() {
                   <button
                     type="button"
                     onClick={() => setSelectedFormat('online')}
-                    className={`p-3.5 rounded border text-left transition-all ${
+                    className={`p-3 sm:p-3.5 rounded border text-left transition-all ${
                       selectedFormat === 'online'
                         ? 'bg-gold-500/15 border-gold-500 text-white shadow-md'
                         : 'bg-black/40 border-zinc-850 text-zinc-400 hover:border-zinc-700'
@@ -443,17 +443,17 @@ export default function CourseDetails() {
                       <Globe size={13} className={selectedFormat === 'online' ? 'text-gold-400' : 'text-zinc-500'} />
                       Online Class
                     </div>
-                    <div className="text-sm font-mono font-bold text-gold-400 mt-1">
+                    <div className="mt-1 flex flex-col font-mono leading-tight">
                       {isDiscountValid ? (
-                        <div>
-                          <span className="line-through text-zinc-500 text-xs mr-1.5">{formatNaira(course.onlinePrice)}</span>
-                          <span className="text-emerald-400 font-black">{formatNaira(Math.round(course.onlinePrice * 0.95))}</span>
-                        </div>
+                        <>
+                          <span className="line-through text-zinc-500 text-[10px] whitespace-nowrap">{formatNaira(course.onlinePrice)}</span>
+                          <span className="text-emerald-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(Math.round(course.onlinePrice * 0.95))}</span>
+                        </>
                       ) : (
-                        formatNaira(course.onlinePrice)
+                        <span className="text-gold-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(course.onlinePrice)}</span>
                       )}
                     </div>
-                    <div className="text-[9px] text-zinc-500 font-mono mt-0.5">
+                    <div className="text-[9px] text-zinc-500 font-mono mt-1">
                       Live interactive evening sessions
                     </div>
                   </button>
@@ -461,7 +461,7 @@ export default function CourseDetails() {
                   <button
                     type="button"
                     onClick={() => setSelectedFormat('physical')}
-                    className={`p-3.5 rounded border text-left transition-all ${
+                    className={`p-3 sm:p-3.5 rounded border text-left transition-all ${
                       selectedFormat === 'physical'
                         ? 'bg-gold-500/15 border-gold-500 text-white shadow-md'
                         : 'bg-black/40 border-zinc-850 text-zinc-400 hover:border-zinc-700'
@@ -471,17 +471,17 @@ export default function CourseDetails() {
                       <Building2 size={13} className={selectedFormat === 'physical' ? 'text-gold-400' : 'text-zinc-500'} />
                       Physical Hub
                     </div>
-                    <div className="text-sm font-mono font-bold text-gold-400 mt-1">
+                    <div className="mt-1 flex flex-col font-mono leading-tight">
                       {isDiscountValid ? (
-                        <div>
-                          <span className="line-through text-zinc-500 text-xs mr-1.5">{formatNaira(course.physicalPrice)}</span>
-                          <span className="text-gold-400 font-black">{formatNaira(Math.round(course.physicalPrice * 0.95))}</span>
-                        </div>
+                        <>
+                          <span className="line-through text-zinc-500 text-[10px] whitespace-nowrap">{formatNaira(course.physicalPrice)}</span>
+                          <span className="text-gold-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(Math.round(course.physicalPrice * 0.95))}</span>
+                        </>
                       ) : (
-                        formatNaira(course.physicalPrice)
+                        <span className="text-gold-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(course.physicalPrice)}</span>
                       )}
                     </div>
-                    <div className="text-[9px] text-zinc-500 font-mono mt-0.5">
+                    <div className="text-[9px] text-zinc-500 font-mono mt-1">
                       In-person lab immersion
                     </div>
                   </button>
@@ -514,31 +514,32 @@ export default function CourseDetails() {
                 </div>
 
                 {promoApplied ? (
-                  <p className="text-[11px] text-emerald-400 font-mono mt-1.5 flex items-center gap-1 bg-emerald-950/40 border border-emerald-800/50 p-2 rounded-sm">
-                    <Check size={12} /> 5% Ambassador Discount Active (-{formatNaira(discountAmount)})
+                  <p className="text-[11px] text-emerald-400 font-mono mt-1.5 flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800/50 p-2 rounded-sm leading-tight">
+                    <Check size={12} className="shrink-0 text-emerald-400" /> 
+                    <span className="whitespace-nowrap">5% Ambassador Discount Active (-{formatNaira(discountAmount)})</span>
                   </p>
                 ) : promoError ? (
-                  <p className="text-[11px] text-amber-400 font-mono mt-1.5 flex items-center gap-1 bg-amber-950/40 border border-amber-800/50 p-2 rounded-sm">
+                  <p className="text-[11px] text-amber-400 font-mono mt-1.5 flex items-center gap-1.5 bg-amber-950/40 border border-amber-800/50 p-2 rounded-sm leading-tight">
                     <span>{promoError}</span>
                   </p>
                 ) : null}
               </div>
 
               {/* TUITION BREAKDOWN SUMMARY */}
-              <div className="p-3.5 bg-black/60 border border-zinc-850 rounded space-y-1.5 font-mono text-xs">
-                <div className="flex justify-between text-zinc-400">
-                  <span>Gross Tuition ({selectedFormat === 'online' ? 'Online' : 'Physical'}):</span>
-                  <span>{formatNaira(basePrice)}</span>
+              <div className="p-3.5 bg-black/60 border border-zinc-850 rounded space-y-2 font-mono text-xs">
+                <div className="flex items-center justify-between text-zinc-400 gap-2">
+                  <span className="truncate">Gross Tuition ({selectedFormat === 'online' ? 'Online' : 'Physical'}):</span>
+                  <span className="whitespace-nowrap font-bold text-zinc-300 shrink-0">{formatNaira(basePrice)}</span>
                 </div>
                 {promoApplied && discountAmount > 0 && (
-                  <div className="flex justify-between text-emerald-400 text-[11px]">
-                    <span>Creator Discount (-5%):</span>
-                    <span>-{formatNaira(discountAmount)}</span>
+                  <div className="flex items-center justify-between text-emerald-400 gap-2 text-[11px]">
+                    <span className="truncate">Creator Discount (-5%):</span>
+                    <span className="whitespace-nowrap font-bold shrink-0">-{formatNaira(discountAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-white font-bold text-sm pt-1.5 border-t border-zinc-800">
-                  <span>Net Payable Amount:</span>
-                  <span className="text-gold-400 font-black">{formatNaira(finalPrice)}</span>
+                <div className="flex items-center justify-between text-white font-bold text-xs sm:text-sm pt-2 border-t border-zinc-800 gap-2">
+                  <span className="shrink-0">Net Payable Amount:</span>
+                  <span className="text-gold-400 font-black text-sm sm:text-base font-mono whitespace-nowrap shrink-0">{formatNaira(finalPrice)}</span>
                 </div>
               </div>
 
