@@ -217,6 +217,30 @@ export async function getAllAffiliates(): Promise<AffiliatePartner[]> {
   } catch (_) {}
 
   const finalAffiliates = Array.from(partnerMap.values());
+
+  // Dynamically sync partner stats from sanitized referral records
+  try {
+    const allRefs = await getAllReferrals();
+    for (const partner of finalAffiliates) {
+      const partnerCodeNorm = partner.code.toUpperCase().trim();
+      const partnerRefs = allRefs.filter(r => r.affiliateCode.toUpperCase().trim() === partnerCodeNorm);
+
+      const totalReferrals = partnerRefs.length;
+      const confirmedLeads = partnerRefs.filter(r => r.status === 'confirmed' || r.status === 'paid_out');
+      const confirmedCount = confirmedLeads.length;
+      const totalEarned = confirmedLeads.reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
+      const totalPaidOut = partnerRefs.filter(r => r.status === 'paid_out').reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
+      const pendingPayout = partnerRefs.filter(r => r.status === 'confirmed').reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
+
+      partner.totalReferrals = totalReferrals;
+      partner.confirmedCount = confirmedCount;
+      partner.totalEarned = totalEarned;
+      partner.totalPaidOut = totalPaidOut;
+      partner.pendingPayout = pendingPayout;
+      partner.tier = confirmedCount >= 3 ? 2 : 1;
+    }
+  } catch (_) {}
+
   saveCachedAffiliates(finalAffiliates);
   return finalAffiliates;
 }
@@ -332,6 +356,29 @@ export async function getAllReferrals(): Promise<ReferralLead[]> {
               created_at: synLead.createdAt
             }).then(() => {});
           } catch (_) {}
+        }
+      }
+    }
+  } catch (_) {}
+
+  // 4. Strict Sanitizer: Enforce 'pending' for any leads where payment has not been verified by Admin or student is not paid
+  try {
+    const userProfiles = getSupabaseUserProfiles();
+    const userPaidMap = new Map<string, boolean>();
+    for (const u of userProfiles) {
+      if (u.email) userPaidMap.set(u.email.toLowerCase().trim(), Boolean(u.isPaid));
+    }
+
+    for (const lead of referralMap.values()) {
+      if (lead.status === 'confirmed') {
+        const studentEmailNorm = (lead.studentEmail || '').toLowerCase().trim();
+        const isUserPaid = userPaidMap.get(studentEmailNorm);
+        const hasAdminApprovalNote = Boolean(lead.paymentProofNote && lead.paymentProofNote.trim());
+
+        // If the student user is not paid AND admin has not issued an approval note, revert lead to pending payment
+        if (!isUserPaid && !hasAdminApprovalNote) {
+          lead.status = 'pending';
+          lead.confirmedAt = undefined;
         }
       }
     }
