@@ -28,6 +28,8 @@ import {
   Zap, 
   RefreshCw, 
   Lock, 
+  Search,
+  X,
   Eye, 
   Briefcase, 
   Sparkles, 
@@ -332,6 +334,11 @@ export default function AdminPortal() {
   const [isGeneratingAgreement, setIsGeneratingAgreement] = useState(false);
   const [lastGeneratedInfo, setLastGeneratedInfo] = useState<{name: string; email: string; code: string} | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // User Filtering & Promo Code Inspection States
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userPromoFilter, setUserPromoFilter] = useState('ALL');
+  const [selectedPromoModalCode, setSelectedPromoModalCode] = useState<string | null>(null);
 
   // Certificates State
   const [certificates, setCertificates] = useState<CertificateRecord[]>([]);
@@ -2196,7 +2203,15 @@ Kogla Tech Global Admissions & Partnerships`;
                             )}
                           </td>
                           <td className="py-4 pl-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPromoModalCode(aff.code)}
+                                className="px-2.5 py-1.5 bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/40 text-gold-400 font-bold text-[10px] uppercase font-mono rounded flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                                title={`View all student profiles created under promo code ${aff.code}`}
+                              >
+                                <Users size={12} /> View Profiles ({users.filter(u => (u.appliedPromoCode || u.referredBy || '').toUpperCase().trim() === aff.code.toUpperCase().trim()).length})
+                              </button>
                               <button
                                 onClick={() => handleDownloadPartnerAgreementDirect(aff)}
                                 className="px-3 py-1.5 bg-gold-500 hover:bg-gold-600 text-black font-bold text-[10px] uppercase tracking-wider font-display rounded transition-all shadow flex items-center gap-1 cursor-pointer"
@@ -2892,11 +2907,81 @@ Kogla Tech Global Admissions & Partnerships`;
                   </span>
                 </div>
 
+                {/* Filter and Search Controls Bar */}
+                <div className="p-3 bg-zinc-900/60 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                  <div className="flex-1 min-w-[220px] flex items-center gap-2 bg-black border border-zinc-800 rounded px-3 py-1.5 focus-within:border-gold-500/50">
+                    <Search size={14} className="text-zinc-500" />
+                    <input
+                      type="text"
+                      placeholder="Search name, email, or promo code..."
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      className="w-full bg-transparent text-white text-xs focus:outline-none placeholder:text-zinc-600"
+                    />
+                    {userSearchQuery && (
+                      <button onClick={() => setUserSearchQuery('')} className="text-zinc-500 hover:text-white">
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-zinc-400 uppercase flex items-center gap-1">
+                      <Tag size={11} className="text-gold-400" /> Filter:
+                    </span>
+                    <select
+                      value={userPromoFilter}
+                      onChange={(e) => setUserPromoFilter(e.target.value)}
+                      className="bg-black border border-zinc-800 rounded px-3 py-1.5 text-xs text-gold-400 focus:outline-none cursor-pointer"
+                    >
+                      <option value="ALL">All Registered Users ({users.length})</option>
+                      <option value="PROMO_ONLY">
+                        Used Promo Code ({users.filter(u => u.appliedPromoCode || u.referredBy).length})
+                      </option>
+                      {Array.from(new Set(users.map(u => (u.appliedPromoCode || u.referredBy || '').toUpperCase().trim()).filter(Boolean))).sort().map(code => {
+                        const count = users.filter(u => (u.appliedPromoCode || u.referredBy || '').toUpperCase().trim() === code).length;
+                        return (
+                          <option key={code} value={code}>
+                            Promo: {code} ({count} student{count === 1 ? '' : 's'})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+
                 {users.length === 0 ? (
                   <div className="p-16 text-center text-gray-500 text-xs font-mono">
                     [EMPTY DATABASE]: No developer registry profiles discovered.
                   </div>
-                ) : (
+                ) : (() => {
+                  const filteredUsers = users.filter((u) => {
+                    const query = userSearchQuery.trim().toLowerCase();
+                    const matchesSearch = !query || 
+                      u.name.toLowerCase().includes(query) || 
+                      u.email.toLowerCase().includes(query) || 
+                      (u.appliedPromoCode && u.appliedPromoCode.toLowerCase().includes(query)) ||
+                      (u.referredBy && u.referredBy.toLowerCase().includes(query));
+
+                    const promoCode = (u.appliedPromoCode || u.referredBy || '').toUpperCase().trim();
+                    const matchesPromo = userPromoFilter === 'ALL' 
+                      ? true 
+                      : userPromoFilter === 'PROMO_ONLY' 
+                        ? !!promoCode 
+                        : promoCode === userPromoFilter.toUpperCase().trim();
+
+                    return matchesSearch && matchesPromo;
+                  });
+
+                  if (filteredUsers.length === 0) {
+                    return (
+                      <div className="p-12 text-center text-zinc-500 text-xs font-mono">
+                        No profiles matched your search query or promo filter "{userPromoFilter}".
+                      </div>
+                    );
+                  }
+
+                  return (
                   <div className="divide-y divide-gray-900 overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
@@ -2909,8 +2994,9 @@ Kogla Tech Global Admissions & Partnerships`;
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-900">
-                        {users.map((item) => {
+                        {filteredUsers.map((item) => {
                           const isVerified = !!(item.emailVerified || item.emailConfirmedAt || isSystemAdminEmail(item.email));
+                          const promoUsed = (item.appliedPromoCode || item.referredBy || '').toUpperCase().trim();
                           return (
                             <tr 
                               key={item.uid}
@@ -2928,6 +3014,22 @@ Kogla Tech Global Admissions & Partnerships`;
                                   )}
                                 </div>
                                 <div className="text-gray-400 font-mono text-[10px]">{item.email}</div>
+                                {promoUsed && (
+                                  <div className="mt-1 flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedPromoModalCode(promoUsed);
+                                      }}
+                                      className="px-2 py-0.5 bg-gold-500/15 hover:bg-gold-500/25 border border-gold-500/35 text-gold-400 font-mono text-[9px] font-bold rounded uppercase flex items-center gap-1 transition-all cursor-pointer"
+                                      title="Click to view all profiles created under this promo code"
+                                    >
+                                      <Tag size={10} /> PROMO: {promoUsed}
+                                    </button>
+                                    <span className="text-[9px] text-emerald-400 font-mono font-bold">(5% OFF)</span>
+                                  </div>
+                                )}
                               </td>
                               <td className="p-4 font-mono text-[10px]">
                                 <div className="flex flex-col gap-1 items-start">
@@ -2985,7 +3087,8 @@ Kogla Tech Global Admissions & Partnerships`;
                       </tbody>
                     </table>
                   </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
 
@@ -3042,6 +3145,52 @@ Kogla Tech Global Admissions & Partnerships`;
                         {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Promo Code & Attribution Summary */}
+                  <div className="p-3.5 bg-black/80 border border-gold-500/30 rounded space-y-2 font-mono text-[10px]">
+                    <div className="text-gold-400 font-bold uppercase tracking-wider flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Tag size={12} /> Promo Code &amp; Attribution
+                      </span>
+                      {selectedUser.appliedPromoCode || selectedUser.referredBy ? (
+                        <span className="px-2 py-0.5 bg-gold-500/20 text-gold-400 border border-gold-500/40 text-[9px] font-bold rounded">
+                          ATTRIBUTED
+                        </span>
+                      ) : (
+                        <span className="text-zinc-500 text-[9px]">DIRECT</span>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between items-center text-zinc-300 pt-1 border-t border-zinc-900">
+                      <span>Applied Promo Code:</span>
+                      {selectedUser.appliedPromoCode || selectedUser.referredBy ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPromoModalCode((selectedUser.appliedPromoCode || selectedUser.referredBy || '').toUpperCase().trim())}
+                          className="px-2 py-0.5 bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/30 text-gold-400 font-bold rounded text-[10px] uppercase transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          {(selectedUser.appliedPromoCode || selectedUser.referredBy || '').toUpperCase()} <ExternalLink size={9} />
+                        </button>
+                      ) : (
+                        <span className="text-zinc-500 italic">None (Direct Registration)</span>
+                      )}
+                    </div>
+
+                    {(selectedUser.appliedPromoCode || selectedUser.referredBy) && (
+                      <>
+                        <div className="flex justify-between items-center text-zinc-300">
+                          <span>Tuition Benefit:</span>
+                          <span className="text-emerald-400 font-bold">5% Discount Applied</span>
+                        </div>
+                        <div className="flex justify-between items-center text-zinc-300">
+                          <span>Referred Ambassador:</span>
+                          <span className="text-white font-bold">
+                            {affiliates.find(a => a.code.toUpperCase() === (selectedUser.appliedPromoCode || selectedUser.referredBy || '').toUpperCase())?.name || 'Ambassador Partner'}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Verification & Access Actions */}
@@ -4482,6 +4631,151 @@ Kogla Tech Global Admissions & Partnerships`;
             </div>
           </div>
         </motion.div>
+      )}
+
+      {/* PROMO CODE PROFILES INSPECTION MODAL */}
+      {selectedPromoModalCode && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-zinc-950 border-2 border-gold-500/40 rounded-lg max-w-4xl w-full p-6 shadow-2xl space-y-6 relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={() => setSelectedPromoModalCode(null)}
+              className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white bg-zinc-900 rounded-full border border-zinc-800 transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+
+            {/* Modal Header */}
+            <div className="border-b border-zinc-850 pb-4 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 bg-gold-500/20 border border-gold-500/40 text-gold-400 font-mono text-xs font-bold rounded uppercase">
+                  PROMO CODE: {selectedPromoModalCode}
+                </span>
+                <span className="text-xs text-zinc-400 font-mono">
+                  Student Attribution Registry
+                </span>
+              </div>
+              <h2 className="text-xl font-display font-bold text-white uppercase tracking-tight">
+                Profiles Created Under Promo Code <span className="text-gold-400">{selectedPromoModalCode}</span>
+              </h2>
+              {(() => {
+                const partner = affiliates.find(a => a.code.toUpperCase() === selectedPromoModalCode.toUpperCase());
+                return partner ? (
+                  <p className="text-xs text-zinc-300 font-sans">
+                    Attributed Ambassador / Creator: <b>{partner.name}</b> ({partner.email || partner.instagramHandle || 'Partner'})
+                  </p>
+                ) : null;
+              })()}
+            </div>
+
+            {/* Profiles Table */}
+            {(() => {
+              const promoUsers = users.filter(
+                u => (u.appliedPromoCode || u.referredBy || '').toUpperCase().trim() === selectedPromoModalCode.toUpperCase()
+              );
+
+              if (promoUsers.length === 0) {
+                return (
+                  <div className="p-10 text-center border border-dashed border-zinc-800 rounded bg-black/40 space-y-2 font-mono text-xs text-zinc-500">
+                    <Users size={32} className="mx-auto text-zinc-600 mb-2" />
+                    <p>No student user accounts found registered under promo code <b className="text-gold-400">{selectedPromoModalCode}</b>.</p>
+                    <p className="text-[11px] text-zinc-600">Students entering this code during sign-up will automatically appear here.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
+                    <span>{promoUsers.length} Registered Profile{promoUsers.length === 1 ? '' : 's'} Attributed</span>
+                    <span className="text-emerald-400 font-bold">5% Student Discount Granted</span>
+                  </div>
+
+                  <div className="overflow-x-auto max-h-[400px] border border-zinc-850 rounded">
+                    <table className="w-full text-left text-xs font-mono">
+                      <thead>
+                        <tr className="bg-black/60 border-b border-zinc-850 text-[10px] uppercase text-zinc-500">
+                          <th className="p-3">Student Name</th>
+                          <th className="p-3">Email Address</th>
+                          <th className="p-3">Verification</th>
+                          <th className="p-3">Academy Status</th>
+                          <th className="p-3">Signup Date</th>
+                          <th className="p-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-850 text-zinc-300">
+                        {promoUsers.map((u) => {
+                          const isVerified = !!(u.emailVerified || u.emailConfirmedAt || isSystemAdminEmail(u.email));
+                          return (
+                            <tr key={u.uid} className="hover:bg-zinc-900/50 transition-colors">
+                              <td className="p-3 font-bold text-white font-sans text-sm">
+                                {u.name}
+                              </td>
+                              <td className="p-3 text-zinc-400">
+                                {u.email}
+                              </td>
+                              <td className="p-3">
+                                {isVerified ? (
+                                  <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] rounded font-bold uppercase inline-flex items-center gap-1">
+                                    <CheckCircle2 size={10} /> Verified
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] rounded font-bold uppercase inline-flex items-center gap-1">
+                                    <Clock size={10} /> Pending
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3">
+                                {u.isPaid ? (
+                                  <span className="px-2 py-0.5 bg-gold-500/20 border border-gold-500/40 text-gold-400 text-[10px] rounded font-bold uppercase">
+                                    ✓ Paid Member
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 bg-zinc-800 text-zinc-400 text-[10px] rounded uppercase">
+                                    Registered User
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-zinc-500 text-[11px]">
+                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
+                              </td>
+                              <td className="p-3 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUser(u);
+                                    setSelectedPromoModalCode(null);
+                                    setTab('users');
+                                  }}
+                                  className="px-2.5 py-1 bg-gold-500 hover:bg-gold-600 text-black font-bold text-[10px] uppercase rounded font-display transition-all cursor-pointer"
+                                >
+                                  Inspect Profile
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="pt-4 border-t border-zinc-850 flex items-center justify-between font-mono text-xs">
+              <span className="text-zinc-500">
+                Attribution system matches student profiles against active promo codes in real time.
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedPromoModalCode(null)}
+                className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold rounded uppercase cursor-pointer"
+              >
+                Close Window
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
