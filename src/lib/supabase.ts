@@ -144,6 +144,34 @@ export async function saveSupabaseUserProfile(profile: UserProfile): Promise<voi
       console.warn('[Supabase DB] Error upserting profile:', error.message);
     }
 
+    // 1b. Update Supabase Auth Metadata if user is logged in
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && (session.user.id === profile.uid || session.user.email?.toLowerCase().trim() === normEmail)) {
+        await supabase.auth.updateUser({
+          data: {
+            name: profile.name,
+            avatar_url: profile.avatarUrl,
+            phone: profile.phone
+          }
+        });
+      }
+    } catch (_) {}
+
+    // 1c. Sync ambassador name/email to affiliates table if user is an ambassador
+    if (profile.isAmbassador || profile.affiliateCode) {
+      try {
+        const code = (profile.affiliateCode || '').toUpperCase().trim();
+        if (code) {
+          await supabase.from('affiliates').update({
+            name: profile.name,
+            email: normEmail,
+            updated_at: new Date().toISOString()
+          }).eq('code', code);
+        }
+      } catch (_) {}
+    }
+
     // 2. Update local storage session cache for snappy UI response in current browser
     const existingRaw = localStorage.getItem('kogla_supabase_users');
     let profiles: UserProfile[] = existingRaw ? JSON.parse(existingRaw) : [];

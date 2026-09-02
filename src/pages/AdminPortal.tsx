@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSiteConfig, SiteConfig } from '../context/SiteConfigContext';
 import { supabase, getSupabaseUserProfiles, saveSupabaseUserProfile, fetchFullUserRosterAsync, deleteSupabaseUserProfile, purgeAllUsersAndDatabaseRecords } from '../lib/supabase';
 import { isSystemAdminEmail } from '../lib/authUtils';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   getImageConfig, 
   saveImageConfig, 
@@ -343,6 +343,13 @@ export default function AdminPortal() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userPromoFilter, setUserPromoFilter] = useState('ALL');
   const [selectedPromoModalCode, setSelectedPromoModalCode] = useState<string | null>(null);
+
+  // Ambassador Agreement Email Customization & Inline Editing States
+  const [editingAgreementPartner, setEditingAgreementPartner] = useState<AffiliatePartner | null>(null);
+  const [editingAgreementEmail, setEditingAgreementEmail] = useState('');
+  const [isGeneratingModalAgreement, setIsGeneratingModalAgreement] = useState(false);
+  const [inlineEditingCode, setInlineEditingCode] = useState<string | null>(null);
+  const [inlineEditingEmail, setInlineEditingEmail] = useState('');
 
   // Certificates State
   const [certificates, setCertificates] = useState<CertificateRecord[]>([]);
@@ -703,28 +710,73 @@ Kogla Tech Global Admissions & Partnerships`;
     triggerSuccess('Email template & onboarding instructions copied to clipboard!');
   };
 
-  const handleDownloadPartnerAgreementDirect = async (partner: AffiliatePartner) => {
+  const handleOpenAgreementModal = (partner: AffiliatePartner) => {
+    setEditingAgreementPartner(partner);
+    setEditingAgreementEmail(partner.email || '');
+  };
+
+  const handleSaveAndDownloadModalAgreement = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!editingAgreementPartner) return;
+
+    const newEmail = editingAgreementEmail.trim();
+    setIsGeneratingModalAgreement(true);
     try {
+      const updatedPartner: AffiliatePartner = {
+        ...editingAgreementPartner,
+        email: newEmail,
+        agreementDownloaded: true,
+        agreementDownloadedAt: new Date().toISOString()
+      };
+      await saveAffiliatePartner(updatedPartner);
       await generateAmbassadorAgreementPdf({
-        ambassadorName: partner.name,
-        promoCode: partner.code,
-        email: partner.email || '',
-        instagramHandle: partner.instagramHandle || '',
-        tier1Rate: partner.baseRate || 6,
-        tier2Rate: partner.boostedRate || 10,
-        discountRate: partner.discountOffered || 5,
-        bankName: partner.bankDetails?.bankName,
-        accountNumber: partner.bankDetails?.accountNumber,
+        ambassadorName: updatedPartner.name,
+        promoCode: updatedPartner.code,
+        email: newEmail,
+        instagramHandle: updatedPartner.instagramHandle || '',
+        tier1Rate: updatedPartner.baseRate || 6,
+        tier2Rate: updatedPartner.boostedRate || 10,
+        discountRate: updatedPartner.discountOffered || 5,
+        bankName: updatedPartner.bankDetails?.bankName,
+        accountNumber: updatedPartner.bankDetails?.accountNumber,
         cohortBatchName: config.cohortBatchName || 'COHORT CO-2026',
         cohortStartDate: config.cohortStartDate ? new Date(config.cohortStartDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'September 24, 2026',
         cohortEndDate: config.cohortEndDate ? new Date(config.cohortEndDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'December 18, 2026',
         logoUrl: config.logoUrl
       });
-      triggerSuccess(`Legal Agreement PDF downloaded for ${partner.name} (${partner.code})`);
+      triggerSuccess(`Official Legal Agreement PDF generated for ${updatedPartner.name} (${updatedPartner.code}) with email: ${newEmail || '(None)'}`);
+      setEditingAgreementPartner(null);
+      setEditingAgreementEmail('');
+      await loadAffiliatesData();
     } catch (err: any) {
       console.error('Failed generating PDF:', err);
       setErrorMsg(`Failed generating agreement PDF: ${err.message}`);
+    } finally {
+      setIsGeneratingModalAgreement(false);
     }
+  };
+
+  const handleSaveInlineAmbassadorEmail = async (partner: AffiliatePartner) => {
+    if (!inlineEditingCode) return;
+    const newEmail = inlineEditingEmail.trim();
+    try {
+      const updatedPartner: AffiliatePartner = {
+        ...partner,
+        email: newEmail
+      };
+      await saveAffiliatePartner(updatedPartner);
+      triggerSuccess(`Ambassador email for ${partner.name} (${partner.code}) updated to ${newEmail || '(None)'}`);
+      setInlineEditingCode(null);
+      setInlineEditingEmail('');
+      await loadAffiliatesData();
+    } catch (err: any) {
+      console.error('Failed updating email:', err);
+      setErrorMsg(`Failed updating email: ${err.message}`);
+    }
+  };
+
+  const handleDownloadPartnerAgreementDirect = async (partner: AffiliatePartner) => {
+    handleOpenAgreementModal(partner);
   };
 
 
@@ -2214,7 +2266,52 @@ Kogla Tech Global Admissions & Partnerships`;
                         <tr key={aff.code || aff.id} className="hover:bg-zinc-900/40 transition-colors">
                           <td className="py-4 pr-3">
                             <span className="font-bold text-white font-sans text-sm block">{aff.name}</span>
-                            <span className="text-[10px] text-zinc-400">{aff.email || 'No email provided'}</span>
+                            {inlineEditingCode === aff.code ? (
+                              <div className="flex items-center gap-1 mt-1">
+                                <input
+                                  type="email"
+                                  value={inlineEditingEmail}
+                                  onChange={(e) => setInlineEditingEmail(e.target.value)}
+                                  placeholder="Enter agreement email"
+                                  className="px-2 py-1 bg-black border border-gold-500 rounded text-[11px] font-mono text-white focus:outline-none w-44"
+                                  autoFocus
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveInlineAmbassadorEmail(aff)}
+                                  className="p-1 bg-emerald-500 hover:bg-emerald-400 text-black rounded transition-colors cursor-pointer"
+                                  title="Save Email"
+                                >
+                                  <CheckCircle2 size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setInlineEditingCode(null);
+                                    setInlineEditingEmail('');
+                                  }}
+                                  className="p-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded transition-colors cursor-pointer"
+                                  title="Cancel"
+                                >
+                                  <EyeOff size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 mt-0.5 group">
+                                <span className="text-[10px] text-zinc-400">{aff.email || 'No email provided'}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setInlineEditingCode(aff.code);
+                                    setInlineEditingEmail(aff.email || '');
+                                  }}
+                                  className="text-zinc-500 hover:text-gold-400 opacity-70 group-hover:opacity-100 transition-opacity p-0.5 cursor-pointer"
+                                  title="Click to edit/update email for agreement"
+                                >
+                                  <Settings size={10} />
+                                </button>
+                              </div>
+                            )}
                             {aff.instagramHandle && (
                               <span className="text-[10px] text-gold-400 block">{aff.instagramHandle}</span>
                             )}
@@ -4859,6 +4956,94 @@ Kogla Tech Global Admissions & Partnerships`;
           </div>
         </div>
       )}
+
+      {/* AMBASSADOR AGREEMENT EMAIL CUSTOMIZATION MODAL */}
+      <AnimatePresence>
+        {editingAgreementPartner && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-950 border-2 border-gold-500/40 rounded-lg p-6 max-w-lg w-full shadow-2xl space-y-5 relative"
+            >
+              <button
+                type="button"
+                onClick={() => setEditingAgreementPartner(null)}
+                className="absolute top-4 right-4 p-1.5 text-zinc-400 hover:text-white bg-zinc-900 rounded-full border border-zinc-800 transition-colors cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+
+              <div className="border-b border-zinc-850 pb-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-gold-500/20 border border-gold-500/40 text-gold-400 font-mono text-[10px] font-bold rounded uppercase">
+                    PROMO: {editingAgreementPartner.code}
+                  </span>
+                  <span className="text-xs text-zinc-400 font-mono">Official Legal Agreement</span>
+                </div>
+                <h3 className="text-lg font-bold font-display text-white uppercase tracking-tight">
+                  Ambassador Agreement Download
+                </h3>
+              </div>
+
+              <div className="p-3 bg-gold-500/10 border border-gold-500/30 rounded text-xs text-gold-300 font-sans space-y-1">
+                <p className="font-bold font-mono flex items-center gap-1.5 text-gold-400">
+                  <ShieldCheck size={14} /> Ambassador: {editingAgreementPartner.name}
+                </p>
+                <p className="text-[11px] text-zinc-300">
+                  You can update the email address below to be printed on this legal agreement. Saving will store the email address in the database roster for this ambassador.
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveAndDownloadModalAgreement} className="space-y-4 font-mono text-xs">
+                <div>
+                  <label className="block text-[10px] uppercase text-zinc-400 mb-1 font-bold">
+                    Agreement Document Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={editingAgreementEmail}
+                    onChange={(e) => setEditingAgreementEmail(e.target.value)}
+                    placeholder="e.g. ambassador@example.com"
+                    className="w-full px-3 py-2.5 bg-black border border-zinc-800 focus:border-gold-500 rounded text-xs text-white focus:outline-none font-mono"
+                    required
+                    autoFocus
+                  />
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    This email will appear on the agreement PDF and update the Active Ambassador record.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingAgreementPartner(null)}
+                    className="py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 font-mono text-xs uppercase font-bold rounded transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isGeneratingModalAgreement}
+                    className="py-2.5 bg-gold-500 hover:bg-gold-400 text-black font-display text-xs uppercase font-bold rounded flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-gold-500/10 disabled:opacity-50"
+                  >
+                    {isGeneratingModalAgreement ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" /> Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Download size={14} /> Save & Download PDF
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

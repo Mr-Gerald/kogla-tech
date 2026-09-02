@@ -69,6 +69,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Always fetch fresh profile from DB asynchronously to ensure cross-device consistency
+      fetchUserProfileAsync(normalizedUser.id).then(freshDbProfile => {
+        if (freshDbProfile) {
+          setProfile(prev => {
+            const merged = { ...(prev || {}), ...freshDbProfile };
+            saveSupabaseUserProfile(merged);
+            return merged;
+          });
+        }
+      }).catch(() => {});
+
       if (!isSystemAdmin) {
         const isPurged = isAccountPurgedOrDeleted(currentUser.email) || (currentUser.id && isAccountPurgedOrDeleted(currentUser.id));
         if (isPurged || !existingProfile) {
@@ -249,7 +260,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!profile) return;
     const updated = { ...profile, ...data, updatedAt: new Date().toISOString() };
     setProfile(updated);
-    saveSupabaseUserProfile(updated);
+    await saveSupabaseUserProfile(updated);
+    try {
+      window.dispatchEvent(new CustomEvent('kogla_auth_sync', { detail: user }));
+    } catch (_) {}
   };
 
   const completeRoom = async (roomSlug: string, xpReward: number) => {
