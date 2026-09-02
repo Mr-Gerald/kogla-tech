@@ -30,6 +30,7 @@ import Profile from './pages/Profile';
 import AffiliatePortal from './pages/AffiliatePortal';
 import MonetizationHub from './pages/MonetizationHub';
 import VerifyCertificate from './pages/VerifyCertificate';
+import DesignStudio from './pages/DesignStudio';
 import NotFound from './pages/NotFound';
 import { AiAssistantChat } from './components/AiAssistantChat';
 
@@ -66,6 +67,9 @@ export default function App() {
                 <Route path="/how-to-make-money-from-tech" element={<MonetizationHub />} />
                 <Route path="/verify-certificate" element={<VerifyCertificate />} />
                 <Route path="/verify-certificate/:certId" element={<VerifyCertificate />} />
+                <Route path="/design-studio" element={<DesignStudio />} />
+                <Route path="/brand-studio" element={<DesignStudio />} />
+                <Route path="/flyers" element={<DesignStudio />} />
                 <Route path="/study" element={<StudyRoom />} />
                 <Route path="/study/:slug" element={<StudyRoom />} />
                 <Route path="/study/:slug/room/:roomId" element={<StudyRoom />} />

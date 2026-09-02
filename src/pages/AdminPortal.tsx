@@ -2226,13 +2226,23 @@ Kogla Tech Global Admissions & Partnerships`;
 
           {/* ACTIVE AMBASSADORS ROSTER TABLE */}
           <div className="bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-850 pb-3 font-mono">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-850 pb-3 font-mono">
               <span className="text-xs font-display font-semibold text-gold-400 uppercase tracking-wider">
                 Active Ambassadors Roster & Legal Agreements Tracker
               </span>
-              <span className="text-[10px] text-zinc-400 uppercase">
-                {affiliates.length} Registered Ambassadors
-              </span>
+              <div className="flex items-center gap-3">
+                <a
+                  href="/design-studio"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/40 text-gold-400 hover:text-gold-300 text-[10px] font-bold rounded uppercase flex items-center gap-1 transition-all"
+                >
+                  <Sparkles size={11} /> Creator Flyer Studio ↗
+                </a>
+                <span className="text-[10px] text-zinc-400 uppercase">
+                  {affiliates.length} Registered Ambassadors
+                </span>
+              </div>
             </div>
 
             {affiliates.length === 0 ? (
