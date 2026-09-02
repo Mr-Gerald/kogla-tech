@@ -16,6 +16,7 @@ import {
 } from '../utils/storage';
 import { UserProfile, AffiliatePartner, ReferralLead, CertificateRecord } from '../types';
 import { Link } from 'react-router-dom';
+import DesignStudio from './DesignStudio';
 import { 
   Settings, 
   Layers, 
@@ -123,7 +124,7 @@ export default function AdminPortal() {
 
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [tab, setTab] = useState<'leads' | 'affiliates' | 'pricing' | 'certificates' | 'users' | 'images' | 'settings' | 'diagnostics'>('leads');
+  const [tab, setTab] = useState<'leads' | 'affiliates' | 'pricing' | 'certificates' | 'users' | 'images' | 'settings' | 'diagnostics' | 'flyers'>('leads');
 
   // Email & SMTP Diagnostics State
   const [diagEmail, setDiagEmail] = useState(user?.email || 'solutions@koglatech.com');
@@ -1464,12 +1465,20 @@ Kogla Tech Global Admissions & Partnerships`;
               <span className="h-2 w-2 rounded-full bg-gold-500 animate-pulse"></span>
               <span className="text-[10px] text-gray-400 font-display tracking-widest uppercase">Kogla Administrator Suite</span>
             </div>
-            <button 
-              onClick={() => logout()}
-              className="px-2 py-0.5 border border-red-500/30 hover:border-red-500 text-red-400 hover:text-red-300 text-[9px] uppercase tracking-wider rounded-sm transition-all bg-red-950/20"
-            >
-              Sign Out
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/design-studio"
+                className="px-2.5 py-1 bg-gold-500 hover:bg-gold-400 text-black text-[10px] font-display uppercase font-bold tracking-wider rounded-sm transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+              >
+                <Sparkles size={12} /> Marketing Flyer Studio ↗
+              </Link>
+              <button 
+                onClick={() => logout()}
+                className="px-2 py-1 border border-red-500/30 hover:border-red-500 text-red-400 hover:text-red-300 text-[9px] uppercase tracking-wider rounded-sm transition-all bg-red-950/20 cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
           <h1 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight flex items-center gap-3">
             Operations command console
@@ -1591,6 +1600,16 @@ Kogla Tech Global Admissions & Partnerships`;
           }`}
         >
           <Settings size={13} /> Dynamic Site Settings
+        </button>
+        <button 
+          onClick={() => setTab('flyers')}
+          className={`flex-1 md:flex-none px-4 py-3 text-[10px] md:text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-1.5 ${
+            tab === 'flyers' 
+              ? 'bg-gold-500 text-black font-bold' 
+              : 'text-gold-400 hover:text-white hover:bg-gold-950/40'
+          }`}
+        >
+          <Sparkles size={13} /> Marketing Flyers & UI/UX Studio
         </button>
         <button 
           onClick={() => setTab('diagnostics')}
@@ -4819,6 +4838,18 @@ Kogla Tech Global Admissions & Partnerships`;
               </div>
             </div>
           </div>
+        </motion.div>
+      )}
+
+      {/* Tab: Marketing & Flyer Studio */}
+      {tab === 'flyers' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-6"
+        >
+          <DesignStudio />
         </motion.div>
       )}
 
