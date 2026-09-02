@@ -62,6 +62,8 @@ export default function DesignStudio() {
   const [cohortName, setCohortName] = useState(config.cohortBatchName || 'COHORT CO-2026');
   const [cohortDate, setCohortDate] = useState('September 2026');
   const [customSubtitle, setCustomSubtitle] = useState('From Zero to Industry-Ready & Talent Whitelisted');
+  const [customPhone, setCustomPhone] = useState(config.contactPhone || '+234 701 248 9041');
+  const [customEmail, setCustomEmail] = useState(config.contactEmail || 'solutions@koglatech.com');
   
   // View & Option States (Defaulted to Option 3 as requested)
   const [selectedOption, setSelectedOption] = useState<'option1' | 'option2' | 'option3'>('option3');
@@ -331,6 +333,9 @@ export default function DesignStudio() {
     },
   ];
 
+  const displayPhone = customPhone || config.contactPhone || '+234 701 248 9041';
+  const displayEmail = customEmail || config.contactEmail || 'solutions@koglatech.com';
+
   const promotionalScript = `🚀 LAUNCH YOUR TECH CAREER WITH KOGLA TECH
 ✦ Admissions Open for ${cohortName} (${cohortDate})
 
@@ -359,7 +364,8 @@ export default function DesignStudio() {
 We also engineer custom web/mobile software, AI integrations, security audits, and cloud infrastructures for businesses worldwide.
 
 🌐 Apply Now: koglatech.com/academy
-📩 Inquiries: solutions@koglatech.com`;
+📞 Phone / WhatsApp: ${displayPhone}
+📩 Email: ${displayEmail}`;
 
   const handleCopyCaption = () => {
     navigator.clipboard.writeText(promotionalScript);
@@ -601,28 +607,49 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               </button>
             </div>
 
-            {/* Quick Cohort Customizer */}
-            <div className="lg:col-span-4 bg-zinc-950 border border-zinc-850 rounded-xl p-4 flex flex-col justify-center">
-              <div className="text-[11px] font-mono text-gold-400 uppercase font-bold mb-2 flex items-center gap-1.5">
-                <Palette size={12} /> Custom Text Controls:
+            {/* Quick Cohort & Contact Customizer */}
+            <div className="lg:col-span-4 bg-zinc-950 border border-zinc-850 rounded-xl p-3.5 flex flex-col justify-center">
+              <div className="text-[11px] font-mono text-gold-400 uppercase font-bold mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-1.5"><Palette size={12} /> Custom Text Controls:</span>
+                <span className="text-[9px] text-zinc-400 font-normal">Live Sync</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-zinc-400 font-mono block">Cohort Name</label>
+                  <label className="text-[9.5px] text-zinc-400 font-mono block mb-0.5">Cohort Name</label>
                   <input
                     type="text"
                     value={cohortName}
                     onChange={(e) => setCohortName(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 outline-none"
+                    className="w-full px-2 py-1 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-zinc-400 font-mono block">Start Date</label>
+                  <label className="text-[9.5px] text-zinc-400 font-mono block mb-0.5">Start Date</label>
                   <input
                     type="text"
                     value={cohortDate}
                     onChange={(e) => setCohortDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 outline-none"
+                    className="w-full px-2 py-1 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9.5px] text-zinc-400 font-mono block mb-0.5">Contact Phone</label>
+                  <input
+                    type="text"
+                    value={customPhone}
+                    onChange={(e) => setCustomPhone(e.target.value)}
+                    placeholder="+234 701 248 9041"
+                    className="w-full px-2 py-1 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9.5px] text-zinc-400 font-mono block mb-0.5">Company Email</label>
+                  <input
+                    type="text"
+                    value={customEmail}
+                    onChange={(e) => setCustomEmail(e.target.value)}
+                    placeholder="solutions@koglatech.com"
+                    className="w-full px-2 py-1 bg-black border border-zinc-800 rounded text-xs text-white font-mono focus:border-gold-500 outline-none"
                   />
                 </div>
               </div>
@@ -743,23 +770,23 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             </div>
 
             {/* 2. Pricing Clarification & Legend Bar (Physical on-site vs Online remote) */}
-            <div className="relative z-10 flex items-center justify-between bg-zinc-950/95 border border-gold-500/35 rounded-lg px-2.5 py-1 text-[8.5px] font-mono shadow-sm">
-              <div className="flex items-center gap-1.5 text-gold-400 font-bold uppercase tracking-wider">
+            <div className="relative z-10 flex items-center justify-between bg-zinc-950/95 border border-gold-500/40 rounded-lg px-2.5 py-1 text-[8.5px] font-mono shadow-sm">
+              <div className="flex items-center gap-1.5 text-gold-400 font-black uppercase tracking-wider">
                 <Sparkles size={11} className="text-gold-400 shrink-0" />
-                <span>11 Career Tracks • Tuition</span>
+                <span className="font-extrabold">11 CAREER TRACKS • TUITION</span>
               </div>
               
               <div className="flex items-center gap-2 font-mono">
                 {/* Physical Legend */}
                 <div className="flex items-center gap-1 text-amber-300 font-bold">
-                  <span className="px-1 py-0.2 bg-amber-500/20 border border-amber-500/40 rounded text-[7.5px] uppercase">
+                  <span className="px-1.5 py-0.5 bg-amber-500/25 border border-amber-500/50 rounded text-[7.5px] uppercase font-black">
                     🏢 PHYSICAL (Above)
                   </span>
                 </div>
                 <span className="text-zinc-600">/</span>
                 {/* Online Legend */}
-                <div className="flex items-center gap-1 text-zinc-300 font-bold">
-                  <span className="px-1 py-0.2 bg-zinc-800 border border-zinc-700 rounded text-[7.5px] uppercase">
+                <div className="flex items-center gap-1 text-zinc-200 font-bold">
+                  <span className="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[7.5px] uppercase font-black">
                     🌐 ONLINE (Below)
                   </span>
                 </div>
@@ -776,17 +803,17 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                   return (
                     <div 
                       key={idx}
-                      className="bg-zinc-950/90 border border-zinc-850/90 hover:border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all"
+                      className="bg-zinc-950/95 border border-zinc-800/90 hover:border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all shadow-sm"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="p-1 rounded bg-gold-500/10 text-gold-400 shrink-0">
-                          <Icon size={10} />
+                        <div className="p-1 rounded bg-gold-500/15 text-gold-400 shrink-0">
+                          <Icon size={11} className="stroke-[2.5]" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[9.5px] font-bold text-zinc-100 truncate leading-tight font-sans">
+                          <div className="text-[10px] font-black text-white truncate leading-tight font-sans tracking-tight">
                             {course.shortTitle}
                           </div>
-                          <div className="text-[7.5px] text-zinc-400 font-mono truncate leading-none">
+                          <div className="text-[7.5px] text-zinc-300 font-mono font-medium truncate leading-none">
                             {course.tag}
                           </div>
                         </div>
@@ -795,15 +822,15 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                       {/* Stacked Pricing: Physical STRICTLY ABOVE Online */}
                       <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
                         {/* Physical Price (Top) */}
-                        <div className="text-[9px] font-bold text-amber-300 flex items-center gap-1">
-                          <span className="text-[7px] text-amber-400/90 font-semibold px-0.5 py-0.2 bg-amber-500/15 rounded">
+                        <div className="text-[9.5px] font-black text-amber-300 flex items-center gap-1">
+                          <span className="text-[7px] text-amber-400 font-extrabold px-0.5 py-0.2 bg-amber-500/20 rounded">
                             PHY
                           </span>
                           <span>{course.physicalFormatted}</span>
                         </div>
                         {/* Online Price (Bottom) */}
-                        <div className="text-[8px] font-medium text-zinc-300 flex items-center gap-1">
-                          <span className="text-[7px] text-zinc-400 font-semibold px-0.5 py-0.2 bg-zinc-800 rounded">
+                        <div className="text-[8.5px] font-bold text-zinc-200 flex items-center gap-1">
+                          <span className="text-[7px] text-zinc-300 font-bold px-0.5 py-0.2 bg-zinc-800 rounded">
                             ONL
                           </span>
                           <span>{course.onlineFormatted}</span>
@@ -821,17 +848,17 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                   return (
                     <div 
                       key={idx}
-                      className="bg-zinc-950/90 border border-zinc-850/90 hover:border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all"
+                      className="bg-zinc-950/95 border border-zinc-800/90 hover:border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all shadow-sm"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="p-1 rounded bg-gold-500/10 text-gold-400 shrink-0">
-                          <Icon size={10} />
+                        <div className="p-1 rounded bg-gold-500/15 text-gold-400 shrink-0">
+                          <Icon size={11} className="stroke-[2.5]" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[9.5px] font-bold text-zinc-100 truncate leading-tight font-sans">
+                          <div className="text-[10px] font-black text-white truncate leading-tight font-sans tracking-tight">
                             {course.shortTitle}
                           </div>
-                          <div className="text-[7.5px] text-zinc-400 font-mono truncate leading-none">
+                          <div className="text-[7.5px] text-zinc-300 font-mono font-medium truncate leading-none">
                             {course.tag}
                           </div>
                         </div>
@@ -840,15 +867,15 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                       {/* Stacked Pricing: Physical STRICTLY ABOVE Online */}
                       <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
                         {/* Physical Price (Top) */}
-                        <div className="text-[9px] font-bold text-amber-300 flex items-center gap-1">
-                          <span className="text-[7px] text-amber-400/90 font-semibold px-0.5 py-0.2 bg-amber-500/15 rounded">
+                        <div className="text-[9.5px] font-black text-amber-300 flex items-center gap-1">
+                          <span className="text-[7px] text-amber-400 font-extrabold px-0.5 py-0.2 bg-amber-500/20 rounded">
                             PHY
                           </span>
                           <span>{course.physicalFormatted}</span>
                         </div>
                         {/* Online Price (Bottom) */}
-                        <div className="text-[8px] font-medium text-zinc-300 flex items-center gap-1">
-                          <span className="text-[7px] text-zinc-400 font-semibold px-0.5 py-0.2 bg-zinc-800 rounded">
+                        <div className="text-[8.5px] font-bold text-zinc-200 flex items-center gap-1">
+                          <span className="text-[7px] text-zinc-300 font-bold px-0.5 py-0.2 bg-zinc-800 rounded">
                             ONL
                           </span>
                           <span>{course.onlineFormatted}</span>
@@ -862,18 +889,18 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                 <div className="bg-gradient-to-r from-gold-500/15 via-zinc-900 to-amber-500/10 border border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
-                      <Award size={10} />
+                      <Award size={11} className="stroke-[2.5]" />
                     </div>
                     <div className="min-w-0 leading-tight">
-                      <div className="text-[8.5px] font-bold font-display text-gold-400 uppercase truncate">
+                      <div className="text-[9px] font-black font-display text-gold-400 uppercase truncate">
                         Talent Whitelisting
                       </div>
-                      <div className="text-[7.5px] text-zinc-300 font-mono truncate">
+                      <div className="text-[7.5px] text-zinc-200 font-mono font-medium truncate">
                         Live Labs & Hiring Pool
                       </div>
                     </div>
                   </div>
-                  <span className="text-[7px] font-mono px-1 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded uppercase font-bold shrink-0">
+                  <span className="text-[7.5px] font-mono px-1 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded uppercase font-black shrink-0">
                     Direct
                   </span>
                 </div>
@@ -881,41 +908,55 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
 
             </div>
 
-            {/* 4. Bottom Strip: Enterprise IT & Enrollment URL */}
-            <div className="relative z-10 space-y-1.5 pt-1">
+            {/* 4. Bottom Strip: Enterprise IT, Contact (Number & Email) & Registration */}
+            <div className="relative z-10 space-y-1 pt-0.5">
               {/* Enterprise IT Solutions Sub-Bar */}
-              <div className="bg-zinc-950/90 border border-zinc-850 px-2 py-1 rounded-lg flex items-center justify-between text-[8px] font-mono">
+              <div className="bg-zinc-950/90 border border-zinc-850 px-2 py-0.5 rounded-md flex items-center justify-between text-[7.5px] font-mono">
                 <div className="flex items-center gap-1 text-gold-400 font-bold uppercase truncate">
-                  <Server size={10} className="shrink-0" />
+                  <Server size={9} className="shrink-0" />
                   <span>IT Solutions:</span>
                   <span className="text-zinc-300 font-normal normal-case truncate">
                     Custom Web/Apps • Pentesting • Cloud & AI Systems
                   </span>
                 </div>
-                <span className="text-[7.5px] text-emerald-400 font-bold uppercase shrink-0 pl-1">
-                  Enterprise
+                <span className="text-[7px] text-emerald-400 font-bold uppercase shrink-0 pl-1">
+                  Enterprise Ready
                 </span>
               </div>
 
-              {/* Master Registration & Certification Bar */}
-              <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-gold-500/50 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              {/* Master Registration, Phone, Email & Certification Bar */}
+              <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-gold-500/50 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2">
+                {/* Left: Apply Link */}
+                <div className="flex items-center gap-1.5 min-w-0">
                   <div className="p-1 rounded bg-gold-500/15 text-gold-400 shrink-0">
                     <Globe size={12} />
                   </div>
-                  <div>
-                    <div className="text-[7.5px] font-mono text-zinc-400 uppercase leading-none">Apply & Register:</div>
-                    <div className="text-xs font-black font-mono text-gold-400 tracking-wide leading-tight">
+                  <div className="min-w-0">
+                    <div className="text-[7px] font-mono text-zinc-400 uppercase leading-none">Enroll / Apply:</div>
+                    <div className="text-[11px] font-black font-mono text-gold-400 tracking-wide leading-tight truncate">
                       koglatech.com/academy
                     </div>
                   </div>
                 </div>
 
-                <div className="text-right font-mono text-[8px] text-zinc-300 leading-tight">
+                {/* Center: Phone Number & Company Email */}
+                <div className="flex flex-col items-center justify-center font-mono text-[7.5px] border-x border-zinc-800/90 px-2 leading-tight shrink-0">
+                  <div className="text-white font-bold flex items-center gap-1">
+                    <Phone size={8.5} className="text-amber-400 shrink-0" />
+                    <span className="font-bold tracking-tight">{displayPhone}</span>
+                  </div>
+                  <div className="text-zinc-300 flex items-center gap-1 mt-0.5">
+                    <Mail size={8.5} className="text-gold-400 shrink-0" />
+                    <span className="text-[7.5px]">{displayEmail}</span>
+                  </div>
+                </div>
+
+                {/* Right: Badge */}
+                <div className="text-right font-mono text-[7.5px] text-zinc-300 leading-tight shrink-0">
                   <div className="text-white font-bold flex items-center gap-1 justify-end">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 100% Practical Labs
                   </div>
-                  <div className="text-gold-300 font-medium">Verified Cryptographic Certs</div>
+                  <div className="text-gold-300 font-medium text-[7px]">Verified Certs • Whitelist</div>
                 </div>
               </div>
             </div>
@@ -989,17 +1030,17 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                   return (
                     <div 
                       key={idx}
-                      className="bg-zinc-950/90 border border-zinc-850 hover:border-gold-500/40 p-2 rounded-xl flex items-center justify-between gap-1.5"
+                      className="bg-zinc-950/90 border border-zinc-850 hover:border-gold-500/40 p-2 rounded-xl flex items-center justify-between gap-1.5 shadow-sm"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="p-1 rounded bg-gold-500/10 text-gold-400 shrink-0">
-                          <Icon size={12} />
+                        <div className="p-1 rounded bg-gold-500/15 text-gold-400 shrink-0">
+                          <Icon size={12} className="stroke-[2.5]" />
                         </div>
                         <div className="min-w-0">
-                          <span className="font-semibold text-zinc-200 text-[10.5px] block truncate">
+                          <span className="font-black text-white text-[11px] block truncate tracking-tight font-sans">
                             {course.shortTitle}
                           </span>
-                          <span className="text-[8px] text-zinc-400 truncate block">
+                          <span className="text-[8px] text-zinc-300 truncate block font-medium">
                             {course.tag}
                           </span>
                         </div>
@@ -1007,11 +1048,11 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
 
                       {/* Stacked Prices: Physical (Above) / Online (Below) */}
                       <div className="shrink-0 text-right leading-tight">
-                        <div className="text-[9.5px] font-bold text-amber-300">
-                          <span className="text-[7.5px] text-amber-400/80 mr-1">PHY</span>{course.physicalFormatted}
+                        <div className="text-[10px] font-black text-amber-300">
+                          <span className="text-[7.5px] text-amber-400 font-extrabold mr-1">PHY</span>{course.physicalFormatted}
                         </div>
-                        <div className="text-[8.5px] font-medium text-zinc-300">
-                          <span className="text-[7.5px] text-zinc-400 mr-1">ONL</span>{course.onlineFormatted}
+                        <div className="text-[8.5px] font-bold text-zinc-200">
+                          <span className="text-[7.5px] text-zinc-400 font-semibold mr-1">ONL</span>{course.onlineFormatted}
                         </div>
                       </div>
                     </div>
@@ -1023,8 +1064,8 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             {/* 5. Talent Whitelisting Box */}
             <div className="relative z-10 bg-gradient-to-r from-gold-500/10 via-zinc-900 to-gold-500/10 border border-gold-500/40 rounded-2xl p-3 space-y-1.5">
               <div className="flex items-center gap-2 text-gold-400 text-xs font-bold font-display uppercase tracking-wider">
-                <UserCheck size={14} className="text-gold-400" />
-                <span>Training to Talent Whitelisting Guarantee</span>
+                <UserCheck size={14} className="text-gold-400 stroke-[2.5]" />
+                <span className="font-black">Training to Talent Whitelisting Guarantee</span>
               </div>
               <p className="text-[10.5px] text-zinc-200 leading-relaxed font-sans">
                 Every cohort participant works on <strong>live enterprise client environments</strong>. High-performing graduates are directly <strong>whitelisted into our talent network</strong> for client contracts and hiring.
@@ -1043,14 +1084,19 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               </div>
             </div>
 
-            {/* 6. Footer: Website & Contact */}
+            {/* 6. Footer: Website, Phone & Email */}
             <div className="relative z-10 pt-2 border-t border-zinc-850 flex items-center justify-between text-xs font-mono">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Globe size={13} className="text-gold-400" />
-                <span className="font-bold text-white tracking-wide">koglatech.com/academy</span>
+                <span className="font-black text-white tracking-wide">koglatech.com/academy</span>
               </div>
-              <div className="flex items-center gap-2 text-zinc-400 text-[11px]">
-                <span>solutions@koglatech.com</span>
+              <div className="flex items-center gap-3 text-zinc-300 text-[10.5px]">
+                <span className="flex items-center gap-1 text-white font-bold">
+                  <Phone size={11} className="text-amber-400" /> {displayPhone}
+                </span>
+                <span className="flex items-center gap-1 text-zinc-300">
+                  <Mail size={11} className="text-gold-400" /> {displayEmail}
+                </span>
               </div>
             </div>
           </div>
@@ -1101,23 +1147,23 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
 
             {/* Middle Section: All 11 Courses Showcase with Physical (Above) & Online (Below) Pricing */}
             <div className="relative z-10 space-y-1.5 my-auto py-1">
-              <div className="flex items-center justify-between text-[11px] font-display font-bold text-gold-400 uppercase">
+              <div className="flex items-center justify-between text-[11px] font-display font-extrabold text-gold-400 uppercase">
                 <span>✦ 11 Tracks • Tuition Breakdown</span>
-                <span className="text-[8.5px] font-mono text-amber-300">PHY (Above) / ONL (Below)</span>
+                <span className="text-[8.5px] font-mono text-amber-300 font-bold">PHY (Above) / ONL (Below)</span>
               </div>
 
               <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-2.5 space-y-1 text-[9.5px] font-mono">
                 <div className="grid grid-cols-2 gap-1">
                   {officialAllCourses.map((course, idx) => (
                     <div key={idx} className="bg-black/60 p-1.5 rounded-lg border border-zinc-800/80 flex items-center justify-between gap-1">
-                      <div className="truncate font-sans font-medium text-zinc-200 text-[9px]">
+                      <div className="truncate font-sans font-black text-white text-[9.5px]">
                         {course.shortTitle}
                       </div>
                       <div className="text-right leading-none shrink-0">
-                        <div className="text-[8.5px] font-bold text-amber-300">
+                        <div className="text-[9px] font-black text-amber-300">
                           {course.physicalFormatted}
                         </div>
-                        <div className="text-[7.5px] text-zinc-400 font-medium">
+                        <div className="text-[7.5px] text-zinc-300 font-semibold">
                           {course.onlineFormatted}
                         </div>
                       </div>
@@ -1129,7 +1175,7 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               {/* Whitelist Quality Box */}
               <div className="bg-gold-500/10 border border-gold-500/30 rounded-xl p-2 text-xs text-zinc-200 space-y-0.5">
                 <div className="font-bold text-gold-400 font-display text-[10px] uppercase flex items-center gap-1">
-                  <Award size={11} /> Training to Talent Whitelist
+                  <Award size={11} className="stroke-[2.5]" /> Training to Talent Whitelist
                 </div>
                 <p className="text-[9px] leading-tight text-zinc-300">
                   Graduate directly onto our talent whitelist for client contracts, remote roles, and hiring partnerships.
@@ -1143,14 +1189,14 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               </div>
             </div>
 
-            {/* Footer: Web URL and Registration Info */}
+            {/* Footer: Web URL, Phone, Email and Registration Info */}
             <div className="relative z-10 pt-2 border-t border-zinc-850 space-y-1.5">
               <div className="bg-gradient-to-r from-gold-500 via-amber-400 to-yellow-500 text-black p-2 rounded-xl text-center font-display font-black text-xs uppercase tracking-wider shadow-lg">
                 ENROLL NOW: KOGLATECH.COM/ACADEMY
               </div>
-              <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400 px-1">
-                <span>Admissions: {cohortDate}</span>
-                <span>solutions@koglatech.com</span>
+              <div className="flex items-center justify-between text-[8.5px] font-mono text-zinc-300 px-1">
+                <span className="text-white font-bold flex items-center gap-1"><Phone size={9} className="text-amber-400" /> {displayPhone}</span>
+                <span className="flex items-center gap-1"><Mail size={9} className="text-gold-400" /> {displayEmail}</span>
               </div>
             </div>
           </div>
