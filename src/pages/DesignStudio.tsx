@@ -803,17 +803,17 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                   return (
                     <div 
                       key={idx}
-                      className="bg-zinc-950/95 border border-zinc-800/90 hover:border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all shadow-sm"
+                      className="bg-zinc-950/95 border border-zinc-800 hover:border-gold-500/50 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all shadow-sm"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="p-1 rounded bg-gold-500/15 text-gold-400 shrink-0">
-                          <Icon size={11} className="stroke-[2.5]" />
+                        <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
+                          <Icon size={12} className="stroke-[2.5]" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[10px] font-black text-white truncate leading-tight font-sans tracking-tight">
+                          <div className="text-[10.5px] font-black text-white truncate leading-tight font-sans tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                             {course.shortTitle}
                           </div>
-                          <div className="text-[7.5px] text-zinc-300 font-mono font-medium truncate leading-none">
+                          <div className="text-[7.5px] text-zinc-200 font-mono font-bold truncate leading-none">
                             {course.tag}
                           </div>
                         </div>
@@ -822,14 +822,14 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                       {/* Stacked Pricing: Physical STRICTLY ABOVE Online */}
                       <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
                         {/* Physical Price (Top) */}
-                        <div className="text-[9.5px] font-black text-amber-300 flex items-center gap-1">
-                          <span className="text-[7px] text-amber-400 font-extrabold px-0.5 py-0.2 bg-amber-500/20 rounded">
+                        <div className="text-[10px] font-black text-amber-300 flex items-center gap-1">
+                          <span className="text-[7px] text-amber-400 font-black px-0.5 py-0.2 bg-amber-500/25 rounded">
                             PHY
                           </span>
                           <span>{course.physicalFormatted}</span>
                         </div>
                         {/* Online Price (Bottom) */}
-                        <div className="text-[8.5px] font-bold text-zinc-200 flex items-center gap-1">
+                        <div className="text-[8.5px] font-black text-zinc-100 flex items-center gap-1">
                           <span className="text-[7px] text-zinc-300 font-bold px-0.5 py-0.2 bg-zinc-800 rounded">
                             ONL
                           </span>
@@ -848,17 +848,17 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                   return (
                     <div 
                       key={idx}
-                      className="bg-zinc-950/95 border border-zinc-800/90 hover:border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all shadow-sm"
+                      className="bg-zinc-950/95 border border-zinc-800 hover:border-gold-500/50 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all shadow-sm"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="p-1 rounded bg-gold-500/15 text-gold-400 shrink-0">
-                          <Icon size={11} className="stroke-[2.5]" />
+                        <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
+                          <Icon size={12} className="stroke-[2.5]" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[10px] font-black text-white truncate leading-tight font-sans tracking-tight">
+                          <div className="text-[10.5px] font-black text-white truncate leading-tight font-sans tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                             {course.shortTitle}
                           </div>
-                          <div className="text-[7.5px] text-zinc-300 font-mono font-medium truncate leading-none">
+                          <div className="text-[7.5px] text-zinc-200 font-mono font-bold truncate leading-none">
                             {course.tag}
                           </div>
                         </div>
@@ -867,14 +867,14 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                       {/* Stacked Pricing: Physical STRICTLY ABOVE Online */}
                       <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
                         {/* Physical Price (Top) */}
-                        <div className="text-[9.5px] font-black text-amber-300 flex items-center gap-1">
-                          <span className="text-[7px] text-amber-400 font-extrabold px-0.5 py-0.2 bg-amber-500/20 rounded">
+                        <div className="text-[10px] font-black text-amber-300 flex items-center gap-1">
+                          <span className="text-[7px] text-amber-400 font-black px-0.5 py-0.2 bg-amber-500/25 rounded">
                             PHY
                           </span>
                           <span>{course.physicalFormatted}</span>
                         </div>
                         {/* Online Price (Bottom) */}
-                        <div className="text-[8.5px] font-bold text-zinc-200 flex items-center gap-1">
+                        <div className="text-[8.5px] font-black text-zinc-100 flex items-center gap-1">
                           <span className="text-[7px] text-zinc-300 font-bold px-0.5 py-0.2 bg-zinc-800 rounded">
                             ONL
                           </span>
@@ -886,21 +886,21 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                 })}
 
                 {/* 6th Slot in Col 2: Whitelisting & Quality Guarantee Box */}
-                <div className="bg-gradient-to-r from-gold-500/15 via-zinc-900 to-amber-500/10 border border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5">
+                <div className="bg-gradient-to-r from-gold-500/20 via-zinc-900 to-amber-500/15 border border-gold-500/50 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
-                      <Award size={11} className="stroke-[2.5]" />
+                    <div className="p-1 rounded bg-gold-500/25 text-gold-400 shrink-0">
+                      <Award size={12} className="stroke-[2.5]" />
                     </div>
                     <div className="min-w-0 leading-tight">
-                      <div className="text-[9px] font-black font-display text-gold-400 uppercase truncate">
+                      <div className="text-[9.5px] font-black font-display text-gold-300 uppercase truncate">
                         Talent Whitelisting
                       </div>
-                      <div className="text-[7.5px] text-zinc-200 font-mono font-medium truncate">
+                      <div className="text-[7.5px] text-zinc-200 font-mono font-bold truncate">
                         Live Labs & Hiring Pool
                       </div>
                     </div>
                   </div>
-                  <span className="text-[7.5px] font-mono px-1 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded uppercase font-black shrink-0">
+                  <span className="text-[7.5px] font-mono px-1.5 py-0.5 bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 rounded uppercase font-black shrink-0">
                     Direct
                   </span>
                 </div>
@@ -912,51 +912,51 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             <div className="relative z-10 space-y-1 pt-0.5">
               {/* Enterprise IT Solutions Sub-Bar */}
               <div className="bg-zinc-950/90 border border-zinc-850 px-2 py-0.5 rounded-md flex items-center justify-between text-[7.5px] font-mono">
-                <div className="flex items-center gap-1 text-gold-400 font-bold uppercase truncate">
+                <div className="flex items-center gap-1 text-gold-400 font-extrabold uppercase truncate">
                   <Server size={9} className="shrink-0" />
                   <span>IT Solutions:</span>
-                  <span className="text-zinc-300 font-normal normal-case truncate">
+                  <span className="text-zinc-200 font-bold normal-case truncate">
                     Custom Web/Apps • Pentesting • Cloud & AI Systems
                   </span>
                 </div>
-                <span className="text-[7px] text-emerald-400 font-bold uppercase shrink-0 pl-1">
+                <span className="text-[7px] text-emerald-400 font-extrabold uppercase shrink-0 pl-1">
                   Enterprise Ready
                 </span>
               </div>
 
               {/* Master Registration, Phone, Email & Certification Bar */}
-              <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-gold-500/50 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2">
+              <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-gold-500/60 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2 shadow-lg">
                 {/* Left: Apply Link */}
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <div className="p-1 rounded bg-gold-500/15 text-gold-400 shrink-0">
-                    <Globe size={12} />
+                  <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
+                    <Globe size={13} className="stroke-[2.5]" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[7px] font-mono text-zinc-400 uppercase leading-none">Enroll / Apply:</div>
-                    <div className="text-[11px] font-black font-mono text-gold-400 tracking-wide leading-tight truncate">
+                    <div className="text-[7px] font-mono text-zinc-300 font-bold uppercase leading-none">Enroll / Apply:</div>
+                    <div className="text-[11.5px] font-black font-mono text-gold-400 tracking-wide leading-tight truncate">
                       koglatech.com/academy
                     </div>
                   </div>
                 </div>
 
-                {/* Center: Phone Number & Company Email */}
-                <div className="flex flex-col items-center justify-center font-mono text-[7.5px] border-x border-zinc-800/90 px-2 leading-tight shrink-0">
-                  <div className="text-white font-bold flex items-center gap-1">
-                    <Phone size={8.5} className="text-amber-400 shrink-0" />
-                    <span className="font-bold tracking-tight">{displayPhone}</span>
+                {/* Center: Phone Number & Company Email (High Boldness) */}
+                <div className="flex flex-col items-center justify-center font-mono text-[8px] bg-black/60 border border-gold-500/30 rounded-lg px-2.5 py-0.5 leading-tight shrink-0 shadow-inner">
+                  <div className="text-white font-black flex items-center gap-1.5 tracking-tight">
+                    <Phone size={9.5} className="text-amber-400 shrink-0 stroke-[2.5]" />
+                    <span className="font-black text-white text-[8.5px]">{displayPhone}</span>
                   </div>
-                  <div className="text-zinc-300 flex items-center gap-1 mt-0.5">
-                    <Mail size={8.5} className="text-gold-400 shrink-0" />
-                    <span className="text-[7.5px]">{displayEmail}</span>
+                  <div className="text-zinc-100 font-bold flex items-center gap-1.5 mt-0.5">
+                    <Mail size={9.5} className="text-gold-400 shrink-0 stroke-[2.5]" />
+                    <span className="text-[8px] font-extrabold text-gold-200/90">{displayEmail}</span>
                   </div>
                 </div>
 
                 {/* Right: Badge */}
                 <div className="text-right font-mono text-[7.5px] text-zinc-300 leading-tight shrink-0">
-                  <div className="text-white font-bold flex items-center gap-1 justify-end">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 100% Practical Labs
+                  <div className="text-white font-black flex items-center gap-1 justify-end">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"></span> 100% Practical Labs
                   </div>
-                  <div className="text-gold-300 font-medium text-[7px]">Verified Certs • Whitelist</div>
+                  <div className="text-gold-300 font-bold text-[7.5px]">Verified Certs • Whitelist</div>
                 </div>
               </div>
             </div>
@@ -1030,29 +1030,29 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                   return (
                     <div 
                       key={idx}
-                      className="bg-zinc-950/90 border border-zinc-850 hover:border-gold-500/40 p-2 rounded-xl flex items-center justify-between gap-1.5 shadow-sm"
+                      className="bg-zinc-950/95 border border-zinc-800 hover:border-gold-500/50 p-2 rounded-xl flex items-center justify-between gap-1.5 shadow-sm"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="p-1 rounded bg-gold-500/15 text-gold-400 shrink-0">
-                          <Icon size={12} className="stroke-[2.5]" />
+                        <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
+                          <Icon size={13} className="stroke-[2.5]" />
                         </div>
                         <div className="min-w-0">
-                          <span className="font-black text-white text-[11px] block truncate tracking-tight font-sans">
+                          <span className="font-black text-white text-[11.5px] block truncate tracking-tight font-sans drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                             {course.shortTitle}
                           </span>
-                          <span className="text-[8px] text-zinc-300 truncate block font-medium">
+                          <span className="text-[8px] text-zinc-200 truncate block font-bold">
                             {course.tag}
                           </span>
                         </div>
                       </div>
 
                       {/* Stacked Prices: Physical (Above) / Online (Below) */}
-                      <div className="shrink-0 text-right leading-tight">
-                        <div className="text-[10px] font-black text-amber-300">
-                          <span className="text-[7.5px] text-amber-400 font-extrabold mr-1">PHY</span>{course.physicalFormatted}
+                      <div className="shrink-0 text-right leading-tight font-mono">
+                        <div className="text-[10.5px] font-black text-amber-300">
+                          <span className="text-[7.5px] text-amber-400 font-black mr-1">PHY</span>{course.physicalFormatted}
                         </div>
-                        <div className="text-[8.5px] font-bold text-zinc-200">
-                          <span className="text-[7.5px] text-zinc-400 font-semibold mr-1">ONL</span>{course.onlineFormatted}
+                        <div className="text-[9px] font-black text-zinc-100">
+                          <span className="text-[7.5px] text-zinc-400 font-bold mr-1">ONL</span>{course.onlineFormatted}
                         </div>
                       </div>
                     </div>
@@ -1062,9 +1062,9 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             </div>
 
             {/* 5. Talent Whitelisting Box */}
-            <div className="relative z-10 bg-gradient-to-r from-gold-500/10 via-zinc-900 to-gold-500/10 border border-gold-500/40 rounded-2xl p-3 space-y-1.5">
-              <div className="flex items-center gap-2 text-gold-400 text-xs font-bold font-display uppercase tracking-wider">
-                <UserCheck size={14} className="text-gold-400 stroke-[2.5]" />
+            <div className="relative z-10 bg-gradient-to-r from-gold-500/15 via-zinc-900 to-gold-500/15 border border-gold-500/50 rounded-2xl p-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-gold-300 text-xs font-black font-display uppercase tracking-wider">
+                <UserCheck size={15} className="text-gold-400 stroke-[2.5]" />
                 <span className="font-black">Training to Talent Whitelisting Guarantee</span>
               </div>
               <p className="text-[10.5px] text-zinc-200 leading-relaxed font-sans">
@@ -1072,14 +1072,14 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               </p>
               
               <div className="grid grid-cols-3 gap-2 pt-1 text-center font-mono border-t border-zinc-800/80">
-                <div className="text-[9px] text-zinc-300">
-                  <span className="text-gold-400 font-bold block text-xs">100%</span> Practical Labs
+                <div className="text-[9px] text-zinc-300 font-bold">
+                  <span className="text-gold-400 font-black block text-xs">100%</span> Practical Labs
                 </div>
-                <div className="text-[9px] text-zinc-300 border-x border-zinc-800">
-                  <span className="text-gold-400 font-bold block text-xs">Verified</span> Cryptographic Certs
+                <div className="text-[9px] text-zinc-300 font-bold border-x border-zinc-800">
+                  <span className="text-gold-400 font-black block text-xs">Verified</span> Cryptographic Certs
                 </div>
-                <div className="text-[9px] text-zinc-300">
-                  <span className="text-gold-400 font-bold block text-xs">Direct</span> Hiring Whitelist
+                <div className="text-[9px] text-zinc-300 font-bold">
+                  <span className="text-gold-400 font-black block text-xs">Direct</span> Hiring Whitelist
                 </div>
               </div>
             </div>
@@ -1087,15 +1087,15 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             {/* 6. Footer: Website, Phone & Email */}
             <div className="relative z-10 pt-2 border-t border-zinc-850 flex items-center justify-between text-xs font-mono">
               <div className="flex items-center gap-1.5">
-                <Globe size={13} className="text-gold-400" />
-                <span className="font-black text-white tracking-wide">koglatech.com/academy</span>
+                <Globe size={14} className="text-gold-400 stroke-[2.5]" />
+                <span className="font-black text-white tracking-wide text-[12.5px]">koglatech.com/academy</span>
               </div>
-              <div className="flex items-center gap-3 text-zinc-300 text-[10.5px]">
-                <span className="flex items-center gap-1 text-white font-bold">
-                  <Phone size={11} className="text-amber-400" /> {displayPhone}
+              <div className="flex items-center gap-2 text-zinc-300 text-[10.5px]">
+                <span className="flex items-center gap-1.5 text-white font-black bg-zinc-900 border border-gold-500/30 px-2 py-0.5 rounded-md">
+                  <Phone size={11} className="text-amber-400 stroke-[2.5]" /> {displayPhone}
                 </span>
-                <span className="flex items-center gap-1 text-zinc-300">
-                  <Mail size={11} className="text-gold-400" /> {displayEmail}
+                <span className="flex items-center gap-1.5 text-gold-200 font-extrabold bg-zinc-900 border border-gold-500/30 px-2 py-0.5 rounded-md">
+                  <Mail size={11} className="text-gold-400 stroke-[2.5]" /> {displayEmail}
                 </span>
               </div>
             </div>
@@ -1155,15 +1155,15 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-2.5 space-y-1 text-[9.5px] font-mono">
                 <div className="grid grid-cols-2 gap-1">
                   {officialAllCourses.map((course, idx) => (
-                    <div key={idx} className="bg-black/60 p-1.5 rounded-lg border border-zinc-800/80 flex items-center justify-between gap-1">
-                      <div className="truncate font-sans font-black text-white text-[9.5px]">
+                    <div key={idx} className="bg-black/80 p-1.5 rounded-lg border border-zinc-800 hover:border-gold-500/40 flex items-center justify-between gap-1 shadow-sm">
+                      <div className="truncate font-sans font-black text-white text-[10px] tracking-tight">
                         {course.shortTitle}
                       </div>
-                      <div className="text-right leading-none shrink-0">
-                        <div className="text-[9px] font-black text-amber-300">
+                      <div className="text-right leading-none shrink-0 font-mono">
+                        <div className="text-[9.5px] font-black text-amber-300">
                           {course.physicalFormatted}
                         </div>
-                        <div className="text-[7.5px] text-zinc-300 font-semibold">
+                        <div className="text-[8px] text-zinc-100 font-bold">
                           {course.onlineFormatted}
                         </div>
                       </div>
@@ -1194,9 +1194,13 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               <div className="bg-gradient-to-r from-gold-500 via-amber-400 to-yellow-500 text-black p-2 rounded-xl text-center font-display font-black text-xs uppercase tracking-wider shadow-lg">
                 ENROLL NOW: KOGLATECH.COM/ACADEMY
               </div>
-              <div className="flex items-center justify-between text-[8.5px] font-mono text-zinc-300 px-1">
-                <span className="text-white font-bold flex items-center gap-1"><Phone size={9} className="text-amber-400" /> {displayPhone}</span>
-                <span className="flex items-center gap-1"><Mail size={9} className="text-gold-400" /> {displayEmail}</span>
+              <div className="flex items-center justify-between text-[9px] font-mono text-zinc-300 px-1">
+                <span className="text-white font-black flex items-center gap-1.5 bg-black/60 px-2 py-0.5 rounded border border-gold-500/25">
+                  <Phone size={9.5} className="text-amber-400 stroke-[2.5]" /> {displayPhone}
+                </span>
+                <span className="text-gold-200 font-extrabold flex items-center gap-1.5 bg-black/60 px-2 py-0.5 rounded border border-gold-500/25">
+                  <Mail size={9.5} className="text-gold-400 stroke-[2.5]" /> {displayEmail}
+                </span>
               </div>
             </div>
           </div>
