@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { toPng, toJpeg, toBlob } from 'html-to-image';
 import { 
   Sparkles, 
   Layers, 
@@ -35,7 +36,12 @@ import {
   Phone,
   Mail,
   Laptop,
-  MapPin
+  MapPin,
+  Image as ImageIcon,
+  Loader2,
+  FileImage,
+  Share2,
+  CheckCheck
 } from 'lucide-react';
 import { useSiteConfig } from '../context/SiteConfigContext';
 import { useAuth } from '../context/AuthContext';
@@ -48,7 +54,7 @@ export default function DesignStudio() {
 
   // Admin access verification check
   const isSuperAdmin = user?.email && isSystemAdminEmail(user.email);
-  const isRoleAdmin = profile?.role === 'admin' || user?.role === 'admin';
+  const isRoleAdmin = profile?.role === 'admin' || (user as any)?.role === 'admin';
   const hasLocalAdmin = typeof window !== 'undefined' && localStorage.getItem('isKoglaAdmin') === 'true';
   const isAuthorizedAdmin = isSuperAdmin || isRoleAdmin || hasLocalAdmin;
 
@@ -61,7 +67,122 @@ export default function DesignStudio() {
   const [selectedOption, setSelectedOption] = useState<'option1' | 'option2' | 'option3'>('option3');
   const [isScreenshotMode, setIsScreenshotMode] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
+  const [copiedImage, setCopiedImage] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [downloadQuality, setDownloadQuality] = useState<'4k' | '2k' | 'jpg'>('4k');
+  const [showFormatMenu, setShowFormatMenu] = useState(false);
   const flyerRef = useRef<HTMLDivElement>(null);
+
+  // High-Resolution Image Export Engine
+  const handleDownloadPhoto = async (format: 'png' | 'jpeg' = 'png', scaleFactor = 3.5) => {
+    if (!flyerRef.current || isDownloading) return;
+    setIsDownloading(true);
+    
+    try {
+      // Ensure all custom fonts and assets are fully loaded and rendered
+      if (document.fonts) {
+        await document.fonts.ready;
+      }
+      
+      // Small pause to allow styles and glow effects to settle
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const node = flyerRef.current;
+      
+      const renderOptions = {
+        quality: 1.0,
+        pixelRatio: scaleFactor,
+        cacheBust: true,
+        backgroundColor: '#050505',
+        style: {
+          transform: 'none',
+          margin: '0',
+        },
+      };
+
+      let dataUrl = '';
+      if (format === 'png') {
+        dataUrl = await toPng(node, renderOptions);
+      } else {
+        dataUrl = await toJpeg(node, { ...renderOptions, quality: 0.98 });
+      }
+
+      // Generate clean filename
+      const optionLabel = selectedOption === 'option3' ? '1x1-square-pricing' : selectedOption === 'option1' ? '4x5-editorial' : '9x16-vertical';
+      const cleanCohort = cohortName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const filename = `kogla-tech-${optionLabel}-${cleanCohort}-ultrahd.${format === 'jpeg' ? 'jpg' : 'png'}`;
+
+      const downloadLink = document.createElement('a');
+      downloadLink.download = filename;
+      downloadLink.href = dataUrl;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3500);
+    } catch (primaryError) {
+      console.warn('html-to-image render notice, engaging ultra-res html2canvas fallback...', primaryError);
+      try {
+        const html2canvas = (await import('html2canvas')).default;
+        const canvas = await html2canvas(flyerRef.current, {
+          scale: 3.5,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#050505',
+          logging: false
+        });
+        
+        const dataUrl = canvas.toDataURL(format === 'jpeg' ? 'image/jpeg' : 'image/png', 1.0);
+        const filename = `kogla-tech-${selectedOption}-ultrahd.${format === 'jpeg' ? 'jpg' : 'png'}`;
+        const downloadLink = document.createElement('a');
+        downloadLink.download = filename;
+        downloadLink.href = dataUrl;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        setDownloadSuccess(true);
+        setTimeout(() => setDownloadSuccess(false), 3500);
+      } catch (fallbackError) {
+        console.error('All image export engines failed:', fallbackError);
+        alert('Could not render image. Please try Screenshot Mode to capture.');
+      }
+    } finally {
+      setIsDownloading(false);
+      setShowFormatMenu(false);
+    }
+  };
+
+  // Copy Image directly to clipboard for immediate paste
+  const handleCopyImageToClipboard = async () => {
+    if (!flyerRef.current || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      if (document.fonts) {
+        await document.fonts.ready;
+      }
+      const blob = await toBlob(flyerRef.current, {
+        pixelRatio: 3,
+        backgroundColor: '#050505',
+        cacheBust: true
+      });
+      if (blob && navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ]);
+        setCopiedImage(true);
+        setTimeout(() => setCopiedImage(false), 3000);
+      }
+    } catch (err) {
+      console.error('Copy to clipboard failed:', err);
+      // Fallback download if clipboard is restricted
+      handleDownloadPhoto('png', 3.5);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // Official tracks with full Physical and Online Pricing breakdown
   const officialAllCourses = [
@@ -308,6 +429,102 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
+              {/* PRIMARY ACTION: Download Photo Ultra-HD with Format Dropdown */}
+              <div className="relative">
+                <div className="flex items-center rounded-lg shadow-lg shadow-gold-500/15 overflow-hidden border border-gold-500/60">
+                  <button
+                    type="button"
+                    disabled={isDownloading}
+                    onClick={() => handleDownloadPhoto('png', 3.5)}
+                    className="px-4 py-2.5 bg-gradient-to-r from-gold-500 via-amber-400 to-yellow-500 hover:from-gold-400 hover:to-amber-300 text-black font-display text-xs uppercase font-black tracking-wider flex items-center gap-2 transition-all cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                  >
+                    {isDownloading ? (
+                      <Loader2 size={15} className="animate-spin text-black" />
+                    ) : downloadSuccess ? (
+                      <CheckCheck size={15} className="text-black" />
+                    ) : (
+                      <Download size={15} className="text-black" />
+                    )}
+                    <span>{isDownloading ? 'Rendering Ultra-HD...' : downloadSuccess ? 'Photo Downloaded!' : 'Download Ultra-HD Photo'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isDownloading}
+                    onClick={() => setShowFormatMenu(!showFormatMenu)}
+                    className="px-2.5 py-2.5 bg-amber-400 hover:bg-gold-300 text-black border-l border-amber-600/30 transition-all cursor-pointer"
+                    title="Choose Format & Quality"
+                  >
+                    <span className="text-[10px] font-mono font-black">▼</span>
+                  </button>
+                </div>
+
+                {/* Format Dropdown Menu */}
+                {showFormatMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-950 border-2 border-gold-500/60 rounded-xl p-2 shadow-2xl z-50 space-y-1 font-mono text-xs animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-2.5 py-1 text-[10px] text-gold-400 font-bold uppercase tracking-wider border-b border-zinc-850">
+                      Select Image Quality & Format
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPhoto('png', 4.0)}
+                      className="w-full px-2.5 py-2 rounded-lg text-left hover:bg-gold-500/10 hover:text-gold-300 flex items-center justify-between text-zinc-200 transition-all cursor-pointer"
+                    >
+                      <div>
+                        <div className="font-bold flex items-center gap-1.5">
+                          <Sparkles size={13} className="text-gold-400" /> Ultra-HD PNG (4K Maximum)
+                        </div>
+                        <div className="text-[9.5px] text-zinc-400">Razor sharp text, lossless & crystal clear</div>
+                      </div>
+                      <span className="text-[9px] px-1.5 py-0.5 bg-gold-500/20 text-gold-300 rounded font-bold">4.0x</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPhoto('png', 2.5)}
+                      className="w-full px-2.5 py-2 rounded-lg text-left hover:bg-zinc-800 flex items-center justify-between text-zinc-200 transition-all cursor-pointer"
+                    >
+                      <div>
+                        <div className="font-bold flex items-center gap-1.5">
+                          <FileImage size={13} className="text-blue-400" /> High-Res PNG (Standard HD)
+                        </div>
+                        <div className="text-[9.5px] text-zinc-400">Optimal balance of clarity and file size</div>
+                      </div>
+                      <span className="text-[9px] px-1.5 py-0.5 bg-zinc-800 text-zinc-300 rounded font-bold">2.5x</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPhoto('jpeg', 3.0)}
+                      className="w-full px-2.5 py-2 rounded-lg text-left hover:bg-zinc-800 flex items-center justify-between text-zinc-200 transition-all cursor-pointer"
+                    >
+                      <div>
+                        <div className="font-bold flex items-center gap-1.5">
+                          <ImageIcon size={13} className="text-amber-400" /> High-Quality JPG (98%)
+                        </div>
+                        <div className="text-[9.5px] text-zinc-400">Perfect for Instagram & WhatsApp feeds</div>
+                      </div>
+                      <span className="text-[9px] px-1.5 py-0.5 bg-zinc-800 text-zinc-300 rounded font-bold">JPG</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyImageToClipboard}
+                      className="w-full px-2.5 py-2 rounded-lg text-left hover:bg-zinc-800 flex items-center justify-between text-zinc-200 transition-all cursor-pointer border-t border-zinc-850 pt-1.5"
+                    >
+                      <div>
+                        <div className="font-bold flex items-center gap-1.5">
+                          <Copy size={13} className="text-emerald-400" /> Copy Photo to Clipboard
+                        </div>
+                        <div className="text-[9.5px] text-zinc-400">Directly paste into Slack, Canva or Docs</div>
+                      </div>
+                      <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-bold">Copy</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={handleCopyCaption}
@@ -320,9 +537,10 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               <button
                 type="button"
                 onClick={() => setIsScreenshotMode(true)}
-                className="px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-black font-display text-xs uppercase font-bold tracking-wider rounded-lg flex items-center gap-2 shadow-lg shadow-gold-500/10 transition-all cursor-pointer"
+                className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-750 text-zinc-300 hover:text-white font-mono text-xs uppercase font-bold rounded-lg flex items-center gap-2 transition-all cursor-pointer"
+                title="View full screen without surrounding UI"
               >
-                <Maximize2 size={15} /> Clean Screenshot Mode
+                <Maximize2 size={14} /> Full View
               </button>
             </div>
           </div>
@@ -413,24 +631,79 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
         </div>
       )}
 
-      {/* Screenshot Mode Floating Exit Pill */}
+      {/* Screenshot Mode Floating Action Bar */}
       {isScreenshotMode && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-zinc-900/95 backdrop-blur-md border border-gold-500/40 px-4 py-2 rounded-full shadow-2xl">
-          <span className="text-xs font-mono text-gold-400 font-bold">Screenshot Mode Active</span>
-          <span className="text-[11px] text-zinc-400 font-mono">Press Esc or</span>
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-zinc-950/95 backdrop-blur-md border border-gold-500/50 p-1.5 px-3 rounded-full shadow-2xl">
+          <span className="text-xs font-mono text-gold-400 font-bold flex items-center gap-1.5">
+            <Sparkles size={12} /> Full View
+          </span>
+          <div className="h-4 w-px bg-zinc-800" />
+          <button
+            type="button"
+            disabled={isDownloading}
+            onClick={() => handleDownloadPhoto('png', 4.0)}
+            className="px-3 py-1 bg-gold-500 hover:bg-gold-400 text-black font-display font-black text-xs uppercase tracking-wider rounded-full flex items-center gap-1.5 transition-all shadow-md cursor-pointer disabled:opacity-75"
+          >
+            {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+            <span>Download Photo</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsScreenshotMode(false)}
-            className="p-1 bg-gold-500 hover:bg-gold-400 text-black rounded-full transition-all cursor-pointer"
-            title="Exit Screenshot Mode"
+            className="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-full transition-all cursor-pointer"
+            title="Exit Full View"
           >
             <Minimize2 size={13} />
           </button>
         </div>
       )}
 
+      {/* Quick Download & Format Toolbar Above Canvas (Visible in standard mode) */}
+      {!isScreenshotMode && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-4 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div className="flex items-center gap-2 text-zinc-400 bg-zinc-950/80 border border-zinc-850 px-3 py-1.5 rounded-lg">
+            <Sparkles size={13} className="text-gold-400" />
+            <span className="text-zinc-200 font-bold">Ultra-HD Clarity Active:</span>
+            <span className="text-gold-400">3.5x - 4.0x Vector Rasterization (2,000+ px)</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={() => handleDownloadPhoto('png', 4.0)}
+              className="px-3 py-1.5 bg-gold-500/15 hover:bg-gold-500/25 border border-gold-500/50 text-gold-300 hover:text-gold-200 font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-75"
+            >
+              {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+              <span>Download Ultra-HD PNG</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={() => handleDownloadPhoto('jpeg', 3.0)}
+              className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-750 text-zinc-300 hover:text-white font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-75"
+            >
+              <ImageIcon size={13} />
+              <span>Download JPG</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={handleCopyImageToClipboard}
+              className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-750 text-zinc-300 hover:text-white font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-75"
+              title="Copy photo directly to clipboard"
+            >
+              {copiedImage ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+              <span>{copiedImage ? 'Image Copied!' : 'Copy Image'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* FLYER CANVAS DISPLAY */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex justify-center items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-center items-center">
         
         {/* ================= OPTION 3: 1:1 SQUARE DARK LUXURY DUAL-PILLAR (WITH FULL PRICING) ================= */}
         {selectedOption === 'option3' && (
