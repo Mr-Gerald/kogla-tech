@@ -732,231 +732,172 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
       {/* FLYER CANVAS DISPLAY */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-center items-center">
         
-        {/* ================= OPTION 3: 1:1 SQUARE DARK LUXURY DUAL-PILLAR (WITH FULL PRICING) ================= */}
+        {/* ================= OPTION 3: 1:1 SQUARE CLEAN HUMAN GRAPHIC DESIGNER FLYER ================= */}
         {selectedOption === 'option3' && (
           <div 
             ref={flyerRef}
-            className="w-full max-w-[520px] aspect-square bg-[#050505] border-2 border-gold-500/50 rounded-3xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden text-white select-none"
+            className="w-full max-w-[520px] aspect-square bg-[#0b0c10] border border-amber-500/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden text-white select-none"
           >
-            {/* Background Texture & Glow */}
-            <div className="absolute inset-0 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:18px_18px] opacity-10 pointer-events-none" />
-            <div className="absolute -top-10 -right-10 w-48 h-48 bg-gold-500/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-amber-600/15 rounded-full blur-3xl pointer-events-none" />
-
-            {/* 1. Top Header: Main Logo, Identity & Cohort */}
-            <div className="relative z-10 flex items-center justify-between border-b border-zinc-850/90 pb-2.5">
+            {/* 1. Top Header: Brand Logo & Cohort Badge */}
+            <div className="relative z-10 flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
               <div className="flex items-center gap-2.5">
                 <img 
                   src={logoSrc} 
                   alt={config.companyName || 'Kogla Tech'} 
-                  className="h-8 max-w-[110px] object-contain rounded-sm border border-gold-500/40 bg-black/80 p-0.5"
+                  className="h-8 max-w-[110px] object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800"
                 />
                 <div>
-                  <div className="font-display font-black text-sm tracking-wider uppercase text-white leading-tight">
+                  <div className="font-display font-black text-sm tracking-wide uppercase text-white leading-tight">
                     KOGLA TECH
                   </div>
-                  <div className="text-[8px] font-mono text-gold-400 tracking-widest uppercase leading-tight">
+                  <div className="text-[8px] font-mono text-amber-400 tracking-wider uppercase leading-tight font-semibold">
                     PRACTICAL ACADEMY & IT SOLUTIONS
                   </div>
                 </div>
               </div>
 
               <div className="text-right">
-                <span className="px-2 py-0.5 bg-gold-500/20 border border-gold-500/50 text-gold-300 text-[9px] font-mono font-bold rounded uppercase inline-block">
-                  ✦ {cohortName}
+                <span className="px-2.5 py-1 bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[8.5px] font-mono font-bold rounded uppercase inline-block tracking-wider">
+                  {cohortName}
                 </span>
                 <div className="text-[8px] font-mono text-zinc-400 mt-0.5">ADMISSIONS • {cohortDate}</div>
               </div>
             </div>
 
-            {/* 2. Pricing Clarification & Legend Bar (Physical on-site vs Online remote) */}
-            <div className="relative z-10 flex items-center justify-between bg-zinc-950/95 border border-gold-500/40 rounded-lg px-2.5 py-1 text-[8.5px] font-mono shadow-sm">
-              <div className="flex items-center gap-1.5 text-gold-400 font-black uppercase tracking-wider">
-                <Sparkles size={11} className="text-gold-400 shrink-0" />
-                <span className="font-extrabold">11 CAREER TRACKS • TUITION</span>
+            {/* 2. Program Subhead & Tuition Legend Bar */}
+            <div className="relative z-10 flex items-center justify-between bg-zinc-900/90 border border-zinc-800/90 rounded-lg px-2.5 py-1 text-[8.5px] font-mono">
+              <div className="flex items-center gap-1.5 text-amber-400 font-bold uppercase tracking-wider">
+                <Sparkles size={11} className="text-amber-400 shrink-0" />
+                <span>11 CAREER TRACKS & TUITION</span>
               </div>
               
-              <div className="flex items-center gap-2 font-mono">
-                {/* Physical Legend */}
-                <div className="flex items-center gap-1 text-amber-300 font-bold">
-                  <span className="px-1.5 py-0.5 bg-amber-500/25 border border-amber-500/50 rounded text-[7.5px] uppercase font-black">
-                    🏢 PHYSICAL (Above)
-                  </span>
-                </div>
-                <span className="text-zinc-600">/</span>
-                {/* Online Legend */}
-                <div className="flex items-center gap-1 text-zinc-200 font-bold">
-                  <span className="px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-[7.5px] uppercase font-black">
-                    🌐 ONLINE (Below)
-                  </span>
-                </div>
+              <div className="flex items-center gap-2 font-mono text-[8px]">
+                <span className="text-amber-300 font-bold">PHY: Physical On-Site</span>
+                <span className="text-zinc-600">|</span>
+                <span className="text-zinc-300 font-bold">ONL: Online Remote</span>
               </div>
             </div>
 
-            {/* 3. 11 Tracks Grid with Physical (Above) and Online (Below) Prices */}
+            {/* 3. 11 Career Tracks Clean Directory (2-Column Grid) */}
             <div className="relative z-10 grid grid-cols-2 gap-1.5 my-auto">
               
               {/* Column 1: First 6 Tracks */}
               <div className="space-y-1.5">
-                {officialAllCourses.slice(0, 6).map((course, idx) => {
-                  const Icon = course.icon;
-                  return (
-                    <div 
-                      key={idx}
-                      className="bg-zinc-950/95 border border-zinc-800 hover:border-gold-500/50 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all shadow-sm"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
-                          <Icon size={12} className="stroke-[2.5]" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-[10.5px] font-black text-white truncate leading-tight font-sans tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                            {course.shortTitle}
-                          </div>
-                          <div className="text-[7.5px] text-zinc-200 font-mono font-bold truncate leading-none">
-                            {course.tag}
-                          </div>
-                        </div>
+                {officialAllCourses.slice(0, 6).map((course, idx) => (
+                  <div 
+                    key={idx}
+                    className="bg-[#121319] border border-zinc-850 hover:border-amber-500/40 px-2 py-1 rounded-md flex items-center justify-between gap-1.5 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-bold text-white truncate leading-tight font-sans tracking-tight">
+                        {course.shortTitle}
                       </div>
-
-                      {/* Stacked Pricing: Physical STRICTLY ABOVE Online */}
-                      <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
-                        {/* Physical Price (Top) */}
-                        <div className="text-[10px] font-black text-amber-300 flex items-center gap-1">
-                          <span className="text-[7px] text-amber-400 font-black px-0.5 py-0.2 bg-amber-500/25 rounded">
-                            PHY
-                          </span>
-                          <span>{course.physicalFormatted}</span>
-                        </div>
-                        {/* Online Price (Bottom) */}
-                        <div className="text-[8.5px] font-black text-zinc-100 flex items-center gap-1">
-                          <span className="text-[7px] text-zinc-300 font-bold px-0.5 py-0.2 bg-zinc-800 rounded">
-                            ONL
-                          </span>
-                          <span>{course.onlineFormatted}</span>
-                        </div>
+                      <div className="text-[7.5px] text-amber-400/90 font-mono font-medium truncate leading-none">
+                        {course.tag}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
 
-              {/* Column 2: Remaining 5 Tracks + Whitelist Badge */}
-              <div className="space-y-1.5">
-                {officialAllCourses.slice(6, 11).map((course, idx) => {
-                  const Icon = course.icon;
-                  return (
-                    <div 
-                      key={idx}
-                      className="bg-zinc-950/95 border border-zinc-800 hover:border-gold-500/50 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all shadow-sm"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
-                          <Icon size={12} className="stroke-[2.5]" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-[10.5px] font-black text-white truncate leading-tight font-sans tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                            {course.shortTitle}
-                          </div>
-                          <div className="text-[7.5px] text-zinc-200 font-mono font-bold truncate leading-none">
-                            {course.tag}
-                          </div>
-                        </div>
+                    {/* Stacked Pricing: Physical ABOVE Online */}
+                    <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
+                      <div className="text-[9.5px] font-bold text-amber-300 flex items-center gap-0.5">
+                        <span className="text-[6.5px] text-amber-400 font-bold px-0.5 py-0.2 bg-amber-500/20 rounded">PHY</span>
+                        <span>{course.physicalFormatted}</span>
                       </div>
-
-                      {/* Stacked Pricing: Physical STRICTLY ABOVE Online */}
-                      <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
-                        {/* Physical Price (Top) */}
-                        <div className="text-[10px] font-black text-amber-300 flex items-center gap-1">
-                          <span className="text-[7px] text-amber-400 font-black px-0.5 py-0.2 bg-amber-500/25 rounded">
-                            PHY
-                          </span>
-                          <span>{course.physicalFormatted}</span>
-                        </div>
-                        {/* Online Price (Bottom) */}
-                        <div className="text-[8.5px] font-black text-zinc-100 flex items-center gap-1">
-                          <span className="text-[7px] text-zinc-300 font-bold px-0.5 py-0.2 bg-zinc-800 rounded">
-                            ONL
-                          </span>
-                          <span>{course.onlineFormatted}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* 6th Slot in Col 2: Whitelisting & Quality Guarantee Box */}
-                <div className="bg-gradient-to-r from-gold-500/20 via-zinc-900 to-amber-500/15 border border-gold-500/50 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <div className="p-1 rounded bg-gold-500/25 text-gold-400 shrink-0">
-                      <Award size={12} className="stroke-[2.5]" />
-                    </div>
-                    <div className="min-w-0 leading-tight">
-                      <div className="text-[9.5px] font-black font-display text-gold-300 uppercase truncate">
-                        Talent Whitelisting
-                      </div>
-                      <div className="text-[7.5px] text-zinc-200 font-mono font-bold truncate">
-                        Live Labs & Hiring Pool
+                      <div className="text-[8.5px] font-medium text-zinc-300 flex items-center gap-0.5">
+                        <span className="text-[6.5px] text-zinc-400 font-bold px-0.5 py-0.2 bg-zinc-800 rounded">ONL</span>
+                        <span>{course.onlineFormatted}</span>
                       </div>
                     </div>
                   </div>
-                  <span className="text-[7.5px] font-mono px-1.5 py-0.5 bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 rounded uppercase font-black shrink-0">
-                    Direct
+                ))}
+              </div>
+
+              {/* Column 2: Remaining 5 Tracks + Whitelist Slot */}
+              <div className="space-y-1.5">
+                {officialAllCourses.slice(6, 11).map((course, idx) => (
+                  <div 
+                    key={idx}
+                    className="bg-[#121319] border border-zinc-850 hover:border-amber-500/40 px-2 py-1 rounded-md flex items-center justify-between gap-1.5 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-bold text-white truncate leading-tight font-sans tracking-tight">
+                        {course.shortTitle}
+                      </div>
+                      <div className="text-[7.5px] text-amber-400/90 font-mono font-medium truncate leading-none">
+                        {course.tag}
+                      </div>
+                    </div>
+
+                    {/* Stacked Pricing: Physical ABOVE Online */}
+                    <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
+                      <div className="text-[9.5px] font-bold text-amber-300 flex items-center gap-0.5">
+                        <span className="text-[6.5px] text-amber-400 font-bold px-0.5 py-0.2 bg-amber-500/20 rounded">PHY</span>
+                        <span>{course.physicalFormatted}</span>
+                      </div>
+                      <div className="text-[8.5px] font-medium text-zinc-300 flex items-center gap-0.5">
+                        <span className="text-[6.5px] text-zinc-400 font-bold px-0.5 py-0.2 bg-zinc-800 rounded">ONL</span>
+                        <span>{course.onlineFormatted}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* 6th Slot in Col 2: Whitelisting Guarantee Box */}
+                <div className="bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded-md flex items-center justify-between gap-1.5">
+                  <div className="min-w-0 leading-tight">
+                    <div className="text-[9px] font-bold font-display text-amber-300 uppercase truncate">
+                      Talent Whitelisting
+                    </div>
+                    <div className="text-[7.5px] text-zinc-300 font-mono truncate">
+                      Live Enterprise Labs & Hiring Network
+                    </div>
+                  </div>
+                  <span className="text-[7px] font-mono px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded uppercase font-bold shrink-0">
+                    Included
                   </span>
                 </div>
               </div>
 
             </div>
 
-            {/* 4. Bottom Strip: Enterprise IT, Contact (Number & Email) & Registration */}
-            <div className="relative z-10 space-y-1 pt-0.5">
-              {/* Enterprise IT Solutions Sub-Bar */}
-              <div className="bg-zinc-950/90 border border-zinc-850 px-2 py-0.5 rounded-md flex items-center justify-between text-[7.5px] font-mono">
-                <div className="flex items-center gap-1 text-gold-400 font-extrabold uppercase truncate">
-                  <Server size={9} className="shrink-0" />
-                  <span>IT Solutions:</span>
-                  <span className="text-zinc-200 font-bold normal-case truncate">
-                    Custom Web/Apps • Pentesting • Cloud & AI Systems
-                  </span>
-                </div>
-                <span className="text-[7px] text-emerald-400 font-extrabold uppercase shrink-0 pl-1">
-                  Enterprise Ready
-                </span>
+            {/* 4. Footer Section: IT Solutions & Official Contact Details */}
+            <div className="relative z-10 space-y-1.5 pt-1 border-t border-zinc-800/80">
+              {/* Enterprise IT Sub-Bar */}
+              <div className="text-[7.5px] font-mono text-zinc-400 flex items-center justify-between">
+                <span className="text-amber-400 font-bold">IT SERVICES:</span>
+                <span>Custom Software • Cloud & AI • Pentesting & Audits</span>
+                <span className="text-emerald-400 font-semibold">Enterprise Ready</span>
               </div>
 
-              {/* Master Registration, Phone, Email & Certification Bar */}
-              <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-gold-500/60 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2 shadow-lg">
-                {/* Left: Apply Link */}
+              {/* Master Registration, Phone & Email Bar */}
+              <div className="bg-zinc-900 border border-amber-500/40 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                {/* Apply Website */}
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
-                    <Globe size={13} className="stroke-[2.5]" />
-                  </div>
+                  <Globe size={13} className="text-amber-400 shrink-0" />
                   <div className="min-w-0">
-                    <div className="text-[7px] font-mono text-zinc-300 font-bold uppercase leading-none">Enroll / Apply:</div>
-                    <div className="text-[11.5px] font-black font-mono text-gold-400 tracking-wide leading-tight truncate">
+                    <div className="text-[7px] font-mono text-zinc-400 uppercase leading-none">Apply Online:</div>
+                    <div className="text-[11px] font-bold font-mono text-amber-300 tracking-wide leading-tight truncate">
                       koglatech.com/academy
                     </div>
                   </div>
                 </div>
 
-                {/* Center: Phone Number & Company Email (High Boldness) */}
-                <div className="flex flex-col items-center justify-center font-mono text-[8px] bg-black/60 border border-gold-500/30 rounded-lg px-2.5 py-0.5 leading-tight shrink-0 shadow-inner">
-                  <div className="text-white font-black flex items-center gap-1.5 tracking-tight">
-                    <Phone size={9.5} className="text-amber-400 shrink-0 stroke-[2.5]" />
-                    <span className="font-black text-white text-[8.5px]">{displayPhone}</span>
+                {/* Phone & Email */}
+                <div className="flex flex-col items-center justify-center font-mono text-[8px] border-x border-zinc-800 px-2.5 leading-tight shrink-0">
+                  <div className="text-white font-bold flex items-center gap-1">
+                    <Phone size={9} className="text-amber-400 shrink-0" />
+                    <span>{displayPhone}</span>
                   </div>
-                  <div className="text-zinc-100 font-bold flex items-center gap-1.5 mt-0.5">
-                    <Mail size={9.5} className="text-gold-400 shrink-0 stroke-[2.5]" />
-                    <span className="text-[8px] font-extrabold text-gold-200/90">{displayEmail}</span>
+                  <div className="text-zinc-300 font-medium flex items-center gap-1 mt-0.5">
+                    <Mail size={9} className="text-amber-400 shrink-0" />
+                    <span>{displayEmail}</span>
                   </div>
                 </div>
 
-                {/* Right: Badge */}
+                {/* Practical Labs Note */}
                 <div className="text-right font-mono text-[7.5px] text-zinc-300 leading-tight shrink-0">
-                  <div className="text-white font-black flex items-center gap-1 justify-end">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"></span> 100% Practical Labs
-                  </div>
-                  <div className="text-gold-300 font-bold text-[7.5px]">Verified Certs • Whitelist</div>
+                  <div className="text-white font-bold">100% Practical Labs</div>
+                  <div className="text-amber-300/90 text-[7px]">Verified Cryptographic Certs</div>
                 </div>
               </div>
             </div>
@@ -968,202 +909,189 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
         {selectedOption === 'option1' && (
           <div 
             ref={flyerRef}
-            className="w-full max-w-[540px] bg-gradient-to-b from-[#09090b] via-[#050505] to-black border-2 border-gold-500/50 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden text-white select-none space-y-3.5"
+            className="w-full max-w-[540px] bg-[#0b0c10] border border-amber-500/40 rounded-2xl p-6 sm:p-7 shadow-2xl relative overflow-hidden text-white select-none space-y-3.5"
           >
-            {/* Top Atmospheric Glow */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-72 h-72 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
-            
-            {/* 1. Header: Main Admin Logo & Identity */}
-            <div className="relative z-10 flex items-center justify-between border-b border-zinc-850 pb-3">
+            {/* 1. Header: Brand Logo & Identity */}
+            <div className="relative z-10 flex items-center justify-between border-b border-zinc-800 pb-3">
               <div className="flex items-center gap-3">
                 <img 
                   src={logoSrc} 
                   alt={config.companyName || 'Kogla Tech'} 
-                  className="h-10 max-w-[140px] object-contain rounded-sm border border-gold-500/40 bg-black/80 p-1"
+                  className="h-9 max-w-[130px] object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800"
                 />
                 <div>
                   <div className="font-display font-black text-base tracking-wider uppercase text-white leading-tight">
                     KOGLA TECH
                   </div>
-                  <div className="text-[9.5px] font-mono text-gold-400 tracking-widest uppercase">
+                  <div className="text-[9px] font-mono text-amber-400 tracking-widest uppercase font-semibold">
                     PRACTICAL ACADEMY & IT SOLUTIONS
                   </div>
                 </div>
               </div>
 
               <div className="text-right font-mono">
-                <span className="px-2.5 py-1 bg-gold-500/20 border border-gold-500/50 text-gold-400 text-[10px] font-bold rounded-full uppercase inline-block">
-                  ✦ {cohortName}
+                <span className="px-2.5 py-1 bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[9.5px] font-bold rounded uppercase inline-block">
+                  {cohortName}
                 </span>
-                <div className="text-[9px] text-zinc-400 mt-1">ADMISSIONS OPEN • {cohortDate}</div>
+                <div className="text-[8.5px] text-zinc-400 mt-1">ADMISSIONS OPEN • {cohortDate}</div>
               </div>
             </div>
 
-            {/* 2. Bold Headline */}
-            <div className="relative z-10 space-y-0.5">
-              <h2 className="text-xl sm:text-[24px] font-black font-display uppercase tracking-tight leading-[1.15] text-white">
-                LEARN PRACTICAL TECH. <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-amber-300 to-yellow-500">GET WHITELISTED</span> FOR REAL JOBS.
+            {/* 2. Headline & Subtitle */}
+            <div className="relative z-10 space-y-1">
+              <h2 className="text-xl sm:text-[22px] font-bold font-display uppercase tracking-tight leading-snug text-white">
+                PRACTICAL TECH TRAINING. <span className="text-amber-400">DIRECT TALENT WHITELISTING.</span>
               </h2>
-              <p className="text-xs text-zinc-300 font-sans leading-snug">
-                Industry-led training with live client project simulations, senior mentorship, and physical & online options.
+              <div className="h-0.5 w-12 bg-amber-400 my-1.5" />
+              <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                Industry-led practical training with live enterprise project simulations, senior mentorship, and physical or online attendance options.
               </p>
             </div>
 
             {/* 3. Pricing Legend Bar */}
-            <div className="relative z-10 flex items-center justify-between bg-zinc-950 border border-gold-500/30 rounded-lg px-3 py-1.5 text-[9.5px] font-mono">
-              <span className="text-gold-400 font-bold uppercase flex items-center gap-1.5">
-                <Terminal size={12} /> 11 Specialized Career Tracks:
+            <div className="relative z-10 flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-[9px] font-mono">
+              <span className="text-amber-400 font-bold uppercase flex items-center gap-1.5">
+                <Terminal size={12} /> 11 Specialized Career Tracks & Fees:
               </span>
-              <div className="flex items-center gap-2">
-                <span className="text-amber-300 font-bold">🏢 PHYSICAL (Above)</span>
-                <span className="text-zinc-600">|</span>
-                <span className="text-zinc-300 font-bold">🌐 ONLINE (Below)</span>
+              <div className="flex items-center gap-2 text-zinc-300">
+                <span className="text-amber-300 font-bold">PHY: Physical On-Site</span>
+                <span>|</span>
+                <span className="text-zinc-300 font-bold">ONL: Online Remote</span>
               </div>
             </div>
 
-            {/* 4. All 11 Course Offerings Grid with Physical & Online Prices */}
+            {/* 4. Course Catalog Grid */}
             <div className="relative z-10 space-y-1.5">
-              <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
-                {officialAllCourses.map((course, idx) => {
-                  const Icon = course.icon;
-                  return (
-                    <div 
-                      key={idx}
-                      className="bg-zinc-950/95 border border-zinc-800 hover:border-gold-500/50 p-2 rounded-xl flex items-center justify-between gap-1.5 shadow-sm"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
-                          <Icon size={13} className="stroke-[2.5]" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="font-black text-white text-[11.5px] block truncate tracking-tight font-sans drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                            {course.shortTitle}
-                          </span>
-                          <span className="text-[8px] text-zinc-200 truncate block font-bold">
-                            {course.tag}
-                          </span>
-                        </div>
-                      </div>
+              <div className="grid grid-cols-2 gap-1.5 text-[10.5px] font-mono">
+                {officialAllCourses.map((course, idx) => (
+                  <div 
+                    key={idx}
+                    className="bg-[#121319] border border-zinc-850 hover:border-amber-500/40 p-2 rounded-lg flex items-center justify-between gap-1.5"
+                  >
+                    <div className="min-w-0">
+                      <span className="font-bold text-white text-[11px] block truncate tracking-tight font-sans">
+                        {course.shortTitle}
+                      </span>
+                      <span className="text-[8px] text-amber-400/90 truncate block font-medium">
+                        {course.tag}
+                      </span>
+                    </div>
 
-                      {/* Stacked Prices: Physical (Above) / Online (Below) */}
-                      <div className="shrink-0 text-right leading-tight font-mono">
-                        <div className="text-[10.5px] font-black text-amber-300">
-                          <span className="text-[7.5px] text-amber-400 font-black mr-1">PHY</span>{course.physicalFormatted}
-                        </div>
-                        <div className="text-[9px] font-black text-zinc-100">
-                          <span className="text-[7.5px] text-zinc-400 font-bold mr-1">ONL</span>{course.onlineFormatted}
-                        </div>
+                    {/* Stacked Prices */}
+                    <div className="shrink-0 text-right leading-tight font-mono">
+                      <div className="text-[10px] font-bold text-amber-300">
+                        <span className="text-[7.5px] text-amber-400 mr-1 font-bold">PHY</span>{course.physicalFormatted}
+                      </div>
+                      <div className="text-[8.5px] font-medium text-zinc-300">
+                        <span className="text-[7.5px] text-zinc-400 mr-1 font-bold">ONL</span>{course.onlineFormatted}
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* 5. Talent Whitelisting Box */}
-            <div className="relative z-10 bg-gradient-to-r from-gold-500/15 via-zinc-900 to-gold-500/15 border border-gold-500/50 rounded-2xl p-3 space-y-1.5">
-              <div className="flex items-center gap-2 text-gold-300 text-xs font-black font-display uppercase tracking-wider">
-                <UserCheck size={15} className="text-gold-400 stroke-[2.5]" />
-                <span className="font-black">Training to Talent Whitelisting Guarantee</span>
+            {/* 5. Talent Whitelisting Guarantee Box */}
+            <div className="relative z-10 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-amber-300 text-xs font-bold font-display uppercase tracking-wider">
+                <UserCheck size={15} className="text-amber-400" />
+                <span>Training to Talent Whitelisting Guarantee</span>
               </div>
               <p className="text-[10.5px] text-zinc-200 leading-relaxed font-sans">
                 Every cohort participant works on <strong>live enterprise client environments</strong>. High-performing graduates are directly <strong>whitelisted into our talent network</strong> for client contracts and hiring.
               </p>
               
-              <div className="grid grid-cols-3 gap-2 pt-1 text-center font-mono border-t border-zinc-800/80">
-                <div className="text-[9px] text-zinc-300 font-bold">
-                  <span className="text-gold-400 font-black block text-xs">100%</span> Practical Labs
+              <div className="grid grid-cols-3 gap-2 pt-1 text-center font-mono border-t border-zinc-800">
+                <div className="text-[9px] text-zinc-300 font-medium">
+                  <span className="text-amber-400 font-bold block text-xs">100%</span> Practical Labs
                 </div>
-                <div className="text-[9px] text-zinc-300 font-bold border-x border-zinc-800">
-                  <span className="text-gold-400 font-black block text-xs">Verified</span> Cryptographic Certs
+                <div className="text-[9px] text-zinc-300 font-medium border-x border-zinc-800">
+                  <span className="text-amber-400 font-bold block text-xs">Verified</span> Cryptographic Certs
                 </div>
-                <div className="text-[9px] text-zinc-300 font-bold">
-                  <span className="text-gold-400 font-black block text-xs">Direct</span> Hiring Whitelist
+                <div className="text-[9px] text-zinc-300 font-medium">
+                  <span className="text-amber-400 font-bold block text-xs">Direct</span> Hiring Whitelist
                 </div>
               </div>
             </div>
 
             {/* 6. Footer: Website, Phone & Email */}
-            <div className="relative z-10 pt-2 border-t border-zinc-850 flex items-center justify-between text-xs font-mono">
+            <div className="relative z-10 pt-2 border-t border-zinc-800 flex items-center justify-between text-xs font-mono">
               <div className="flex items-center gap-1.5">
-                <Globe size={14} className="text-gold-400 stroke-[2.5]" />
-                <span className="font-black text-white tracking-wide text-[12.5px]">koglatech.com/academy</span>
+                <Globe size={14} className="text-amber-400" />
+                <span className="font-bold text-amber-300 tracking-wide text-xs">koglatech.com/academy</span>
               </div>
-              <div className="flex items-center gap-2 text-zinc-300 text-[10.5px]">
-                <span className="flex items-center gap-1.5 text-white font-black bg-zinc-900 border border-gold-500/30 px-2 py-0.5 rounded-md">
-                  <Phone size={11} className="text-amber-400 stroke-[2.5]" /> {displayPhone}
+              <div className="flex items-center gap-3 text-zinc-300 text-[10.5px]">
+                <span className="flex items-center gap-1 text-white font-bold">
+                  <Phone size={11} className="text-amber-400" /> {displayPhone}
                 </span>
-                <span className="flex items-center gap-1.5 text-gold-200 font-extrabold bg-zinc-900 border border-gold-500/30 px-2 py-0.5 rounded-md">
-                  <Mail size={11} className="text-gold-400 stroke-[2.5]" /> {displayEmail}
+                <span className="flex items-center gap-1 text-zinc-300">
+                  <Mail size={11} className="text-amber-400" /> {displayEmail}
                 </span>
               </div>
             </div>
           </div>
         )}
 
-        {/* ================= OPTION 2: 9:16 VERTICAL CREATOR VIDEO SCREEN ================= */}
+        {/* ================= OPTION 2: 9:16 VERTICAL STORY FLYER ================= */}
         {selectedOption === 'option2' && (
           <div 
             ref={flyerRef}
-            className="w-full max-w-[430px] aspect-[9/16] bg-gradient-to-b from-zinc-950 via-[#070709] to-black border-2 border-gold-500/50 rounded-3xl p-5 sm:p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden text-white select-none"
+            className="w-full max-w-[430px] aspect-[9/16] bg-[#0b0c10] border border-amber-500/40 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden text-white select-none"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-10 left-0 w-64 h-64 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
-
             {/* Header: Main Logo & Cohort Banner */}
             <div className="relative z-10 space-y-2">
-              <div className="flex items-center justify-between border-b border-zinc-850 pb-2">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                 <div className="flex items-center gap-2">
                   <img 
                     src={logoSrc} 
                     alt={config.companyName || 'Kogla Tech'} 
-                    className="h-8 max-w-[120px] object-contain rounded-sm border border-gold-500/40 bg-black/80 p-0.5"
+                    className="h-8 max-w-[120px] object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800"
                   />
                   <div>
-                    <div className="font-display font-black text-xs tracking-wider uppercase text-white leading-tight">
+                    <div className="font-display font-bold text-xs tracking-wider uppercase text-white leading-tight">
                       KOGLA TECH
                     </div>
-                    <div className="text-[8px] font-mono text-gold-400 tracking-widest uppercase">
+                    <div className="text-[8px] font-mono text-amber-400 tracking-widest uppercase">
                       ACADEMY & IT SOLUTIONS
                     </div>
                   </div>
                 </div>
 
-                <div className="px-2 py-0.5 bg-gold-500/15 border border-gold-500/40 rounded-full text-[9px] font-mono text-gold-300 font-bold uppercase">
+                <div className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/30 rounded text-[9px] font-mono text-amber-300 font-bold uppercase">
                   {cohortName}
                 </div>
               </div>
 
               <div>
-                <h2 className="text-xl font-black font-display uppercase tracking-tight leading-tight text-white">
-                  LEARN TECH & GET <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-amber-300 to-yellow-500">WHITELISTED</span> FOR JOBS
+                <h2 className="text-lg font-bold font-display uppercase tracking-tight leading-tight text-white">
+                  LEARN TECH & GET <span className="text-amber-400">WHITELISTED</span> FOR JOBS
                 </h2>
-                <p className="text-[11px] text-zinc-300 font-sans">
+                <div className="h-0.5 w-10 bg-amber-400 my-1" />
+                <p className="text-[10.5px] text-zinc-300 font-sans">
                   Intensive project-based training with verified cryptographic certificates & direct talent whitelisting.
                 </p>
               </div>
             </div>
 
-            {/* Middle Section: All 11 Courses Showcase with Physical (Above) & Online (Below) Pricing */}
+            {/* Middle Section: All 11 Courses Showcase */}
             <div className="relative z-10 space-y-1.5 my-auto py-1">
-              <div className="flex items-center justify-between text-[11px] font-display font-extrabold text-gold-400 uppercase">
-                <span>✦ 11 Tracks • Tuition Breakdown</span>
-                <span className="text-[8.5px] font-mono text-amber-300 font-bold">PHY (Above) / ONL (Below)</span>
+              <div className="flex items-center justify-between text-[10.5px] font-display font-bold text-amber-400 uppercase">
+                <span>11 Tracks & Tuition Fees</span>
+                <span className="text-[8px] font-mono text-amber-300 font-medium">PHY (On-Site) / ONL (Remote)</span>
               </div>
 
-              <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-2.5 space-y-1 text-[9.5px] font-mono">
+              <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-2.5 space-y-1 text-[9.5px] font-mono">
                 <div className="grid grid-cols-2 gap-1">
                   {officialAllCourses.map((course, idx) => (
-                    <div key={idx} className="bg-black/80 p-1.5 rounded-lg border border-zinc-800 hover:border-gold-500/40 flex items-center justify-between gap-1 shadow-sm">
-                      <div className="truncate font-sans font-black text-white text-[10px] tracking-tight">
+                    <div key={idx} className="bg-[#121319] p-1.5 rounded border border-zinc-800 flex items-center justify-between gap-1">
+                      <div className="truncate font-sans font-bold text-white text-[9.5px]">
                         {course.shortTitle}
                       </div>
                       <div className="text-right leading-none shrink-0 font-mono">
-                        <div className="text-[9.5px] font-black text-amber-300">
+                        <div className="text-[9px] font-bold text-amber-300">
                           {course.physicalFormatted}
                         </div>
-                        <div className="text-[8px] text-zinc-100 font-bold">
+                        <div className="text-[7.5px] text-zinc-300">
                           {course.onlineFormatted}
                         </div>
                       </div>
@@ -1173,34 +1101,30 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               </div>
 
               {/* Whitelist Quality Box */}
-              <div className="bg-gold-500/10 border border-gold-500/30 rounded-xl p-2 text-xs text-zinc-200 space-y-0.5">
-                <div className="font-bold text-gold-400 font-display text-[10px] uppercase flex items-center gap-1">
-                  <Award size={11} className="stroke-[2.5]" /> Training to Talent Whitelist
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-xs text-zinc-200 space-y-0.5">
+                <div className="font-bold text-amber-400 font-display text-[9.5px] uppercase flex items-center gap-1">
+                  <Award size={11} /> Training to Talent Whitelist
                 </div>
-                <p className="text-[9px] leading-tight text-zinc-300">
+                <p className="text-[8.5px] leading-tight text-zinc-300">
                   Graduate directly onto our talent whitelist for client contracts, remote roles, and hiring partnerships.
                 </p>
               </div>
 
               {/* Enterprise IT Solutions */}
-              <div className="bg-zinc-950 border border-zinc-850 rounded-xl p-2 text-[9px] font-mono text-zinc-300">
-                <span className="text-gold-400 font-bold uppercase block text-[8.5px]">💼 Enterprise IT Solutions:</span>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-[8.5px] font-mono text-zinc-300">
+                <span className="text-amber-400 font-bold uppercase block text-[8px]">💼 Enterprise IT Services:</span>
                 Custom Software • Security Audits • Cloud Architecture • AI Systems
               </div>
             </div>
 
             {/* Footer: Web URL, Phone, Email and Registration Info */}
-            <div className="relative z-10 pt-2 border-t border-zinc-850 space-y-1.5">
-              <div className="bg-gradient-to-r from-gold-500 via-amber-400 to-yellow-500 text-black p-2 rounded-xl text-center font-display font-black text-xs uppercase tracking-wider shadow-lg">
+            <div className="relative z-10 pt-2 border-t border-zinc-800 space-y-1.5">
+              <div className="bg-amber-500 text-black p-2 rounded-lg text-center font-display font-black text-xs uppercase tracking-wider">
                 ENROLL NOW: KOGLATECH.COM/ACADEMY
               </div>
-              <div className="flex items-center justify-between text-[9px] font-mono text-zinc-300 px-1">
-                <span className="text-white font-black flex items-center gap-1.5 bg-black/60 px-2 py-0.5 rounded border border-gold-500/25">
-                  <Phone size={9.5} className="text-amber-400 stroke-[2.5]" /> {displayPhone}
-                </span>
-                <span className="text-gold-200 font-extrabold flex items-center gap-1.5 bg-black/60 px-2 py-0.5 rounded border border-gold-500/25">
-                  <Mail size={9.5} className="text-gold-400 stroke-[2.5]" /> {displayEmail}
-                </span>
+              <div className="flex items-center justify-between text-[8.5px] font-mono text-zinc-300 px-1">
+                <span className="text-white font-bold flex items-center gap-1"><Phone size={9} className="text-amber-400" /> {displayPhone}</span>
+                <span className="flex items-center gap-1"><Mail size={9} className="text-amber-400" /> {displayEmail}</span>
               </div>
             </div>
           </div>
