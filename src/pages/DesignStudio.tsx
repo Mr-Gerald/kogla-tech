@@ -33,11 +33,14 @@ import {
   UserCheck,
   Zap,
   Phone,
-  Mail
+  Mail,
+  Laptop,
+  MapPin
 } from 'lucide-react';
 import { useSiteConfig } from '../context/SiteConfigContext';
 import { useAuth } from '../context/AuthContext';
 import { isSystemAdminEmail } from '../lib/authUtils';
+import { getAllCourses, formatNaira } from '../data/coursesPricing';
 
 export default function DesignStudio() {
   const { config } = useSiteConfig();
@@ -54,47 +57,182 @@ export default function DesignStudio() {
   const [cohortDate, setCohortDate] = useState('September 2026');
   const [customSubtitle, setCustomSubtitle] = useState('From Zero to Industry-Ready & Talent Whitelisted');
   
-  // View & Option States
-  const [selectedOption, setSelectedOption] = useState<'option1' | 'option2' | 'option3'>('option1');
+  // View & Option States (Defaulted to Option 3 as requested)
+  const [selectedOption, setSelectedOption] = useState<'option1' | 'option2' | 'option3'>('option3');
   const [isScreenshotMode, setIsScreenshotMode] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
   const flyerRef = useRef<HTMLDivElement>(null);
 
+  // Official tracks with full Physical and Online Pricing breakdown
   const officialAllCourses = [
-    { title: 'Full-Stack Web Development', icon: Code2, tag: 'React 19 • Node.js' },
-    { title: 'Mobile App Engineering', icon: Smartphone, tag: 'Flutter • React Native' },
-    { title: 'Advanced Cybersecurity & Defense', icon: Shield, tag: 'Ethical Hacking • SOC' },
-    { title: 'Cloud Architecture & DevOps', icon: Cloud, tag: 'AWS • Kubernetes • Docker' },
-    { title: 'AI Automations & Systems', icon: Bot, tag: 'LLMs • Make.com • CRMs' },
-    { title: 'Data Analysis & BI', icon: BarChart3, tag: 'PowerBI • SQL • Python' },
-    { title: 'UI/UX Product Architecture', icon: Layers, tag: 'Figma • Design Systems' },
-    { title: 'Graphic Design & Brand Identity', icon: PenTool, tag: 'Illustrator • Photoshop' },
-    { title: 'Product Management & Growth', icon: Briefcase, tag: 'Roadmaps • Scrum' },
-    { title: 'Digital Marketing & Performance', icon: TrendingUp, tag: 'Meta Ads • Google SEO' },
-    { title: 'Real Estate & PropTech Systems', icon: Building2, tag: 'Feasibility • Syndication' },
+    { 
+      slug: 'web-development',
+      title: 'Full-Stack Web Development', 
+      shortTitle: 'Full-Stack Web Dev',
+      icon: Code2, 
+      tag: 'React 19 • Node.js • Next.js',
+      physicalPrice: 450000,
+      onlinePrice: 350000,
+      physicalFormatted: '₦450K',
+      onlineFormatted: '₦350K',
+      physicalFull: '₦450,000',
+      onlineFull: '₦350,000'
+    },
+    { 
+      slug: 'mobile-app-development',
+      title: 'Mobile App Engineering', 
+      shortTitle: 'Mobile App Engineering',
+      icon: Smartphone, 
+      tag: 'Flutter • React Native • iOS',
+      physicalPrice: 600000,
+      onlinePrice: 500000,
+      physicalFormatted: '₦600K',
+      onlineFormatted: '₦500K',
+      physicalFull: '₦600,000',
+      onlineFull: '₦500,000'
+    },
+    { 
+      slug: 'cybersecurity',
+      title: 'Advanced Cybersecurity & Defense', 
+      shortTitle: 'Cybersecurity & SOC',
+      icon: Shield, 
+      tag: 'Ethical Hacking • SOC • Pentest',
+      physicalPrice: 550000,
+      onlinePrice: 450000,
+      physicalFormatted: '₦550K',
+      onlineFormatted: '₦450K',
+      physicalFull: '₦550,000',
+      onlineFull: '₦450,000'
+    },
+    { 
+      slug: 'cloud-architecture',
+      title: 'Cloud Architecture & DevOps', 
+      shortTitle: 'Cloud Architecture & DevOps',
+      icon: Cloud, 
+      tag: 'AWS • Kubernetes • Docker',
+      physicalPrice: 550000,
+      onlinePrice: 450000,
+      physicalFormatted: '₦550K',
+      onlineFormatted: '₦450K',
+      physicalFull: '₦550,000',
+      onlineFull: '₦450,000'
+    },
+    { 
+      slug: 'sales-funnels-ai-automation',
+      title: 'AI Automations & Systems', 
+      shortTitle: 'AI Automations & Systems',
+      icon: Bot, 
+      tag: 'LLMs • Make.com • CRMs • Bots',
+      physicalPrice: 350000,
+      onlinePrice: 250000,
+      physicalFormatted: '₦350K',
+      onlineFormatted: '₦250K',
+      physicalFull: '₦350,000',
+      onlineFull: '₦250,000'
+    },
+    { 
+      slug: 'data-analysis',
+      title: 'Data Analysis & BI', 
+      shortTitle: 'Data Analysis & BI',
+      icon: BarChart3, 
+      tag: 'PowerBI • SQL • Python',
+      physicalPrice: 350000,
+      onlinePrice: 250000,
+      physicalFormatted: '₦350K',
+      onlineFormatted: '₦250K',
+      physicalFull: '₦350,000',
+      onlineFull: '₦250,000'
+    },
+    { 
+      slug: 'ui-ux-design',
+      title: 'UI/UX Product Architecture', 
+      shortTitle: 'UI/UX Product Design',
+      icon: Layers, 
+      tag: 'Figma • Design Systems • Wireframes',
+      physicalPrice: 350000,
+      onlinePrice: 250000,
+      physicalFormatted: '₦350K',
+      onlineFormatted: '₦250K',
+      physicalFull: '₦350,000',
+      onlineFull: '₦250,000'
+    },
+    { 
+      slug: 'graphic-design',
+      title: 'Graphic Design & Brand Identity', 
+      shortTitle: 'Graphic & Brand Identity',
+      icon: PenTool, 
+      tag: 'Illustrator • Photoshop • Print',
+      physicalPrice: 350000,
+      onlinePrice: 250000,
+      physicalFormatted: '₦350K',
+      onlineFormatted: '₦250K',
+      physicalFull: '₦350,000',
+      onlineFull: '₦250,000'
+    },
+    { 
+      slug: 'product-management',
+      title: 'Product Management & Growth', 
+      shortTitle: 'Product Management (PM)',
+      icon: Briefcase, 
+      tag: 'PRDs • Roadmaps • Agile Scrum',
+      physicalPrice: 400000,
+      onlinePrice: 300000,
+      physicalFormatted: '₦400K',
+      onlineFormatted: '₦300K',
+      physicalFull: '₦400,000',
+      onlineFull: '₦300,000'
+    },
+    { 
+      slug: 'digital-marketing',
+      title: 'Digital Marketing & Performance', 
+      shortTitle: 'Digital Marketing & Ads',
+      icon: TrendingUp, 
+      tag: 'Meta Ads • Google SEO • Funnels',
+      physicalPrice: 350000,
+      onlinePrice: 250000,
+      physicalFormatted: '₦350K',
+      onlineFormatted: '₦250K',
+      physicalFull: '₦350,000',
+      onlineFull: '₦250,000'
+    },
+    { 
+      slug: 'real-estate-development',
+      title: 'Real Estate & PropTech Systems', 
+      shortTitle: 'Real Estate & PropTech',
+      icon: Building2, 
+      tag: 'Feasibility • Land Title • PropTech',
+      physicalPrice: 350000,
+      onlinePrice: 250000,
+      physicalFormatted: '₦350K',
+      onlineFormatted: '₦250K',
+      physicalFull: '₦350,000',
+      onlineFull: '₦250,000'
+    },
   ];
 
   const promotionalScript = `🚀 LAUNCH YOUR TECH CAREER WITH KOGLA TECH
 ✦ Admissions Open for ${cohortName} (${cohortDate})
 
-🎓 11 Industry-Ready Tracks:
-1. Full-Stack Web Development
-2. Mobile App Engineering (iOS & Android)
-3. Advanced Cybersecurity & Ethical Hacking
-4. Cloud Architecture & DevOps Engineering
-5. AI Automations, LLMs & Systems
-6. Data Analysis & Business Intelligence
-7. UI/UX Design & Product Architecture
-8. Graphic Design & Visual Brand Identity
-9. Product Management & Growth Strategy
-10. Digital Marketing & Performance Ads
-11. Real Estate Development & PropTech
+🎓 11 Industry-Ready Tracks — Physical & Online Tuition:
+(Physical on-site training includes dedicated lab workstations, physical hardware, & direct in-person mentorship)
+
+1. Full-Stack Web Development: Physical: ₦450,000 | Online: ₦350,000
+2. Mobile App Engineering (iOS & Android): Physical: ₦600,000 | Online: ₦500,000
+3. Advanced Cybersecurity & Ethical Hacking: Physical: ₦550,000 | Online: ₦450,000
+4. Cloud Architecture & DevOps (AWS/K8s): Physical: ₦550,000 | Online: ₦450,000
+5. AI Automations & Systems: Physical: ₦350,000 | Online: ₦250,000
+6. Data Analysis & Business Intelligence: Physical: ₦350,000 | Online: ₦250,000
+7. UI/UX Design & Product Architecture: Physical: ₦350,000 | Online: ₦250,000
+8. Graphic Design & Brand Identity: Physical: ₦350,000 | Online: ₦250,000
+9. Product Management & Growth Strategy: Physical: ₦400,000 | Online: ₦300,000
+10. Digital Marketing & Performance Ads: Physical: ₦350,000 | Online: ₦250,000
+11. Real Estate Development & PropTech: Physical: ₦350,000 | Online: ₦250,000
 
 ⭐ Why Kogla Tech?
-✔ 100% Practical Client Simulations & Live Labs
-✔ Direct Talent Whitelisting for Hiring & Internships
+✔ 100% Practical Client Simulations & Live Production Labs
+✔ Direct Talent Whitelisting for Hiring, Contracts & Internships
 ✔ Cryptographically Verifiable Certifications
-✔ Live Senior Industry Mentorship
+✔ Senior 1-on-1 Mentorship & Codebase Audits
 
 💼 Enterprise IT Solutions:
 We also engineer custom web/mobile software, AI integrations, security audits, and cloud infrastructures for businesses worldwide.
@@ -162,10 +300,10 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                 <Sparkles size={14} /> Official Marketing & Screen Flyer Studio
               </div>
               <h1 className="text-2xl sm:text-4xl font-black font-display text-white uppercase tracking-tight">
-                Kogla Promotional Flyers (11 Tracks & IT Solutions)
+                Kogla Promotional Flyers (11 Tracks & Physical/Online Tuition)
               </h1>
               <p className="text-zinc-400 text-xs sm:text-sm mt-1 max-w-3xl font-sans">
-                Professional, high-converting graphics designed for creators to put on screen during video ads, reels, and feeds. Highlights all 11 course tracks, talent whitelisting pipeline, and enterprise IT services.
+                Professional, high-converting graphics designed for creators to put on screen during video ads, reels, and feeds. Clarifies both Physical on-site tuition (stacked on top) and Online virtual tuition across all 11 tracks.
               </p>
             </div>
 
@@ -195,6 +333,23 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             <div className="lg:col-span-8 flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
+                onClick={() => setSelectedOption('option3')}
+                className={`flex-1 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  selectedOption === 'option3' 
+                    ? 'bg-gold-500/10 border-gold-500/60 shadow-lg shadow-gold-500/5' 
+                    : 'bg-zinc-950 border-zinc-850 hover:border-zinc-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-mono font-bold text-gold-400 uppercase">Option 3 (Selected)</span>
+                  <span className="text-[10px] px-2 py-0.5 bg-zinc-900 text-zinc-300 font-mono rounded">1:1 Square Feed</span>
+                </div>
+                <h4 className="font-bold text-sm text-white font-display">Dark Luxury Dual-Pillar with Pricing</h4>
+                <p className="text-[11px] text-zinc-400 mt-0.5">High-impact square design with clear Physical & Online prices for all 11 tracks.</p>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setSelectedOption('option1')}
                 className={`flex-1 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                   selectedOption === 'option1' 
@@ -207,7 +362,7 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                   <span className="text-[10px] px-2 py-0.5 bg-zinc-900 text-zinc-300 font-mono rounded">4:5 Social Poster</span>
                 </div>
                 <h4 className="font-bold text-sm text-white font-display">Executive Editorial Master Flyer</h4>
-                <p className="text-[11px] text-zinc-400 mt-0.5">All 11 tracks + Talent Whitelisting guarantee + Enterprise IT solutions.</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5">Full 11 tracks with Physical & Online pricing + Whitelisting guarantee.</p>
               </button>
 
               <button
@@ -225,23 +380,6 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                 </div>
                 <h4 className="font-bold text-sm text-white font-display">Vertical Creator Video Screen</h4>
                 <p className="text-[11px] text-zinc-400 mt-0.5">Streamlined vertical layout optimized for Reels, TikToks & video displays.</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedOption('option3')}
-                className={`flex-1 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  selectedOption === 'option3' 
-                    ? 'bg-gold-500/10 border-gold-500/60 shadow-lg shadow-gold-500/5' 
-                    : 'bg-zinc-950 border-zinc-850 hover:border-zinc-700'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-mono font-bold text-gold-400 uppercase">Option 3</span>
-                  <span className="text-[10px] px-2 py-0.5 bg-zinc-900 text-zinc-300 font-mono rounded">1:1 Square Feed</span>
-                </div>
-                <h4 className="font-bold text-sm text-white font-display">Dark Luxury Dual-Pillar</h4>
-                <p className="text-[11px] text-zinc-400 mt-0.5">High-impact square design with obsidian badges & tech architecture.</p>
               </button>
             </div>
 
@@ -294,11 +432,229 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
       {/* FLYER CANVAS DISPLAY */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex justify-center items-center">
         
+        {/* ================= OPTION 3: 1:1 SQUARE DARK LUXURY DUAL-PILLAR (WITH FULL PRICING) ================= */}
+        {selectedOption === 'option3' && (
+          <div 
+            ref={flyerRef}
+            className="w-full max-w-[520px] aspect-square bg-[#050505] border-2 border-gold-500/50 rounded-3xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden text-white select-none"
+          >
+            {/* Background Texture & Glow */}
+            <div className="absolute inset-0 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:18px_18px] opacity-10 pointer-events-none" />
+            <div className="absolute -top-10 -right-10 w-48 h-48 bg-gold-500/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-amber-600/15 rounded-full blur-3xl pointer-events-none" />
+
+            {/* 1. Top Header: Main Logo, Identity & Cohort */}
+            <div className="relative z-10 flex items-center justify-between border-b border-zinc-850/90 pb-2.5">
+              <div className="flex items-center gap-2.5">
+                <img 
+                  src={logoSrc} 
+                  alt={config.companyName || 'Kogla Tech'} 
+                  className="h-8 max-w-[110px] object-contain rounded-sm border border-gold-500/40 bg-black/80 p-0.5"
+                />
+                <div>
+                  <div className="font-display font-black text-sm tracking-wider uppercase text-white leading-tight">
+                    KOGLA TECH
+                  </div>
+                  <div className="text-[8px] font-mono text-gold-400 tracking-widest uppercase leading-tight">
+                    PRACTICAL ACADEMY & IT SOLUTIONS
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="px-2 py-0.5 bg-gold-500/20 border border-gold-500/50 text-gold-300 text-[9px] font-mono font-bold rounded uppercase inline-block">
+                  ✦ {cohortName}
+                </span>
+                <div className="text-[8px] font-mono text-zinc-400 mt-0.5">ADMISSIONS • {cohortDate}</div>
+              </div>
+            </div>
+
+            {/* 2. Pricing Clarification & Legend Bar (Physical on-site vs Online remote) */}
+            <div className="relative z-10 flex items-center justify-between bg-zinc-950/95 border border-gold-500/35 rounded-lg px-2.5 py-1 text-[8.5px] font-mono shadow-sm">
+              <div className="flex items-center gap-1.5 text-gold-400 font-bold uppercase tracking-wider">
+                <Sparkles size={11} className="text-gold-400 shrink-0" />
+                <span>11 Career Tracks • Tuition</span>
+              </div>
+              
+              <div className="flex items-center gap-2 font-mono">
+                {/* Physical Legend */}
+                <div className="flex items-center gap-1 text-amber-300 font-bold">
+                  <span className="px-1 py-0.2 bg-amber-500/20 border border-amber-500/40 rounded text-[7.5px] uppercase">
+                    🏢 PHYSICAL (Above)
+                  </span>
+                </div>
+                <span className="text-zinc-600">/</span>
+                {/* Online Legend */}
+                <div className="flex items-center gap-1 text-zinc-300 font-bold">
+                  <span className="px-1 py-0.2 bg-zinc-800 border border-zinc-700 rounded text-[7.5px] uppercase">
+                    🌐 ONLINE (Below)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. 11 Tracks Grid with Physical (Above) and Online (Below) Prices */}
+            <div className="relative z-10 grid grid-cols-2 gap-1.5 my-auto">
+              
+              {/* Column 1: First 6 Tracks */}
+              <div className="space-y-1.5">
+                {officialAllCourses.slice(0, 6).map((course, idx) => {
+                  const Icon = course.icon;
+                  return (
+                    <div 
+                      key={idx}
+                      className="bg-zinc-950/90 border border-zinc-850/90 hover:border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="p-1 rounded bg-gold-500/10 text-gold-400 shrink-0">
+                          <Icon size={10} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[9.5px] font-bold text-zinc-100 truncate leading-tight font-sans">
+                            {course.shortTitle}
+                          </div>
+                          <div className="text-[7.5px] text-zinc-400 font-mono truncate leading-none">
+                            {course.tag}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stacked Pricing: Physical STRICTLY ABOVE Online */}
+                      <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
+                        {/* Physical Price (Top) */}
+                        <div className="text-[9px] font-bold text-amber-300 flex items-center gap-1">
+                          <span className="text-[7px] text-amber-400/90 font-semibold px-0.5 py-0.2 bg-amber-500/15 rounded">
+                            PHY
+                          </span>
+                          <span>{course.physicalFormatted}</span>
+                        </div>
+                        {/* Online Price (Bottom) */}
+                        <div className="text-[8px] font-medium text-zinc-300 flex items-center gap-1">
+                          <span className="text-[7px] text-zinc-400 font-semibold px-0.5 py-0.2 bg-zinc-800 rounded">
+                            ONL
+                          </span>
+                          <span>{course.onlineFormatted}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Column 2: Remaining 5 Tracks + Whitelist Badge */}
+              <div className="space-y-1.5">
+                {officialAllCourses.slice(6, 11).map((course, idx) => {
+                  const Icon = course.icon;
+                  return (
+                    <div 
+                      key={idx}
+                      className="bg-zinc-950/90 border border-zinc-850/90 hover:border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5 transition-all"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="p-1 rounded bg-gold-500/10 text-gold-400 shrink-0">
+                          <Icon size={10} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[9.5px] font-bold text-zinc-100 truncate leading-tight font-sans">
+                            {course.shortTitle}
+                          </div>
+                          <div className="text-[7.5px] text-zinc-400 font-mono truncate leading-none">
+                            {course.tag}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stacked Pricing: Physical STRICTLY ABOVE Online */}
+                      <div className="shrink-0 text-right font-mono flex flex-col items-end leading-none space-y-0.5">
+                        {/* Physical Price (Top) */}
+                        <div className="text-[9px] font-bold text-amber-300 flex items-center gap-1">
+                          <span className="text-[7px] text-amber-400/90 font-semibold px-0.5 py-0.2 bg-amber-500/15 rounded">
+                            PHY
+                          </span>
+                          <span>{course.physicalFormatted}</span>
+                        </div>
+                        {/* Online Price (Bottom) */}
+                        <div className="text-[8px] font-medium text-zinc-300 flex items-center gap-1">
+                          <span className="text-[7px] text-zinc-400 font-semibold px-0.5 py-0.2 bg-zinc-800 rounded">
+                            ONL
+                          </span>
+                          <span>{course.onlineFormatted}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* 6th Slot in Col 2: Whitelisting & Quality Guarantee Box */}
+                <div className="bg-gradient-to-r from-gold-500/15 via-zinc-900 to-amber-500/10 border border-gold-500/40 px-2 py-1 rounded-lg flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="p-1 rounded bg-gold-500/20 text-gold-400 shrink-0">
+                      <Award size={10} />
+                    </div>
+                    <div className="min-w-0 leading-tight">
+                      <div className="text-[8.5px] font-bold font-display text-gold-400 uppercase truncate">
+                        Talent Whitelisting
+                      </div>
+                      <div className="text-[7.5px] text-zinc-300 font-mono truncate">
+                        Live Labs & Hiring Pool
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[7px] font-mono px-1 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded uppercase font-bold shrink-0">
+                    Direct
+                  </span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* 4. Bottom Strip: Enterprise IT & Enrollment URL */}
+            <div className="relative z-10 space-y-1.5 pt-1">
+              {/* Enterprise IT Solutions Sub-Bar */}
+              <div className="bg-zinc-950/90 border border-zinc-850 px-2 py-1 rounded-lg flex items-center justify-between text-[8px] font-mono">
+                <div className="flex items-center gap-1 text-gold-400 font-bold uppercase truncate">
+                  <Server size={10} className="shrink-0" />
+                  <span>IT Solutions:</span>
+                  <span className="text-zinc-300 font-normal normal-case truncate">
+                    Custom Web/Apps • Pentesting • Cloud & AI Systems
+                  </span>
+                </div>
+                <span className="text-[7.5px] text-emerald-400 font-bold uppercase shrink-0 pl-1">
+                  Enterprise
+                </span>
+              </div>
+
+              {/* Master Registration & Certification Bar */}
+              <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-gold-500/50 rounded-xl px-2.5 py-1.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded bg-gold-500/15 text-gold-400 shrink-0">
+                    <Globe size={12} />
+                  </div>
+                  <div>
+                    <div className="text-[7.5px] font-mono text-zinc-400 uppercase leading-none">Apply & Register:</div>
+                    <div className="text-xs font-black font-mono text-gold-400 tracking-wide leading-tight">
+                      koglatech.com/academy
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right font-mono text-[8px] text-zinc-300 leading-tight">
+                  <div className="text-white font-bold flex items-center gap-1 justify-end">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 100% Practical Labs
+                  </div>
+                  <div className="text-gold-300 font-medium">Verified Cryptographic Certs</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
         {/* ================= OPTION 1: 4:5 EXECUTIVE EDITORIAL MASTER FLYER ================= */}
         {selectedOption === 'option1' && (
           <div 
             ref={flyerRef}
-            className="w-full max-w-[540px] bg-gradient-to-b from-[#09090b] via-[#050505] to-black border-2 border-gold-500/50 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden text-white select-none space-y-4"
+            className="w-full max-w-[540px] bg-gradient-to-b from-[#09090b] via-[#050505] to-black border-2 border-gold-500/50 rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden text-white select-none space-y-3.5"
           >
             {/* Top Atmospheric Glow */}
             <div className="absolute top-0 right-0 w-80 h-80 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -331,24 +687,29 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             </div>
 
             {/* 2. Bold Headline */}
-            <div className="relative z-10 space-y-1">
-              <h2 className="text-2xl sm:text-[26px] font-black font-display uppercase tracking-tight leading-[1.15] text-white">
+            <div className="relative z-10 space-y-0.5">
+              <h2 className="text-xl sm:text-[24px] font-black font-display uppercase tracking-tight leading-[1.15] text-white">
                 LEARN PRACTICAL TECH. <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-amber-300 to-yellow-500">GET WHITELISTED</span> FOR REAL JOBS.
               </h2>
               <p className="text-xs text-zinc-300 font-sans leading-snug">
-                Industry-led training with live client project simulations, senior mentorship, and direct placement whitelist.
+                Industry-led training with live client project simulations, senior mentorship, and physical & online options.
               </p>
             </div>
 
-            {/* 3. All 11 Course Offerings Grid */}
-            <div className="relative z-10 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold font-display text-gold-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Terminal size={13} /> Available Academy Tracks (11 Specialized Disciplines)
-                </span>
-                <span className="text-[9px] font-mono text-zinc-400">Beginner to Advanced</span>
+            {/* 3. Pricing Legend Bar */}
+            <div className="relative z-10 flex items-center justify-between bg-zinc-950 border border-gold-500/30 rounded-lg px-3 py-1.5 text-[9.5px] font-mono">
+              <span className="text-gold-400 font-bold uppercase flex items-center gap-1.5">
+                <Terminal size={12} /> 11 Specialized Career Tracks:
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-300 font-bold">🏢 PHYSICAL (Above)</span>
+                <span className="text-zinc-600">|</span>
+                <span className="text-zinc-300 font-bold">🌐 ONLINE (Below)</span>
               </div>
+            </div>
 
+            {/* 4. All 11 Course Offerings Grid with Physical & Online Prices */}
+            <div className="relative z-10 space-y-1.5">
               <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
                 {officialAllCourses.map((course, idx) => {
                   const Icon = course.icon;
@@ -361,9 +722,24 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
                         <div className="p-1 rounded bg-gold-500/10 text-gold-400 shrink-0">
                           <Icon size={12} />
                         </div>
-                        <span className="font-semibold text-zinc-200 text-[11px] truncate">
-                          {course.title}
-                        </span>
+                        <div className="min-w-0">
+                          <span className="font-semibold text-zinc-200 text-[10.5px] block truncate">
+                            {course.shortTitle}
+                          </span>
+                          <span className="text-[8px] text-zinc-400 truncate block">
+                            {course.tag}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stacked Prices: Physical (Above) / Online (Below) */}
+                      <div className="shrink-0 text-right leading-tight">
+                        <div className="text-[9.5px] font-bold text-amber-300">
+                          <span className="text-[7.5px] text-amber-400/80 mr-1">PHY</span>{course.physicalFormatted}
+                        </div>
+                        <div className="text-[8.5px] font-medium text-zinc-300">
+                          <span className="text-[7.5px] text-zinc-400 mr-1">ONL</span>{course.onlineFormatted}
+                        </div>
                       </div>
                     </div>
                   );
@@ -371,43 +747,26 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
               </div>
             </div>
 
-            {/* 4. Talent Whitelisting & Quality Pillar Box */}
-            <div className="relative z-10 bg-gradient-to-r from-gold-500/10 via-zinc-900 to-gold-500/10 border border-gold-500/40 rounded-2xl p-3.5 space-y-2">
+            {/* 5. Talent Whitelisting Box */}
+            <div className="relative z-10 bg-gradient-to-r from-gold-500/10 via-zinc-900 to-gold-500/10 border border-gold-500/40 rounded-2xl p-3 space-y-1.5">
               <div className="flex items-center gap-2 text-gold-400 text-xs font-bold font-display uppercase tracking-wider">
                 <UserCheck size={14} className="text-gold-400" />
                 <span>Training to Talent Whitelisting Guarantee</span>
               </div>
-              <p className="text-[11px] text-zinc-200 leading-relaxed font-sans">
-                Every cohort participant works on <strong>live enterprise client environments</strong> and production codebase audits. High-performing graduates are directly <strong>whitelisted into our talent network</strong> for client contracts, internships, and corporate recruitment.
+              <p className="text-[10.5px] text-zinc-200 leading-relaxed font-sans">
+                Every cohort participant works on <strong>live enterprise client environments</strong>. High-performing graduates are directly <strong>whitelisted into our talent network</strong> for client contracts and hiring.
               </p>
               
               <div className="grid grid-cols-3 gap-2 pt-1 text-center font-mono border-t border-zinc-800/80">
-                <div className="text-[9.5px] text-zinc-300">
+                <div className="text-[9px] text-zinc-300">
                   <span className="text-gold-400 font-bold block text-xs">100%</span> Practical Labs
                 </div>
-                <div className="text-[9.5px] text-zinc-300 border-x border-zinc-800">
+                <div className="text-[9px] text-zinc-300 border-x border-zinc-800">
                   <span className="text-gold-400 font-bold block text-xs">Verified</span> Cryptographic Certs
                 </div>
-                <div className="text-[9.5px] text-zinc-300">
+                <div className="text-[9px] text-zinc-300">
                   <span className="text-gold-400 font-bold block text-xs">Direct</span> Hiring Whitelist
                 </div>
-              </div>
-            </div>
-
-            {/* 5. Enterprise IT Solutions Row */}
-            <div className="relative z-10 bg-zinc-950/80 border border-zinc-850 rounded-xl p-3 flex items-center justify-between gap-3 text-xs font-mono">
-              <div className="space-y-0.5">
-                <div className="text-[10px] font-bold text-gold-400 uppercase flex items-center gap-1.5">
-                  <Server size={12} /> Enterprise IT Solutions (For Businesses):
-                </div>
-                <div className="text-[10.5px] text-zinc-300">
-                  Custom Software • Web & Mobile Apps • Penetration Testing • Cloud Architecture • AI Systems
-                </div>
-              </div>
-              <div className="shrink-0 text-right">
-                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] font-bold rounded uppercase">
-                  Client Services
-                </span>
               </div>
             </div>
 
@@ -428,215 +787,97 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
         {selectedOption === 'option2' && (
           <div 
             ref={flyerRef}
-            className="w-full max-w-[430px] aspect-[9/16] bg-gradient-to-b from-zinc-950 via-[#070709] to-black border-2 border-gold-500/50 rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-2xl relative overflow-hidden text-white select-none"
+            className="w-full max-w-[430px] aspect-[9/16] bg-gradient-to-b from-zinc-950 via-[#070709] to-black border-2 border-gold-500/50 rounded-3xl p-5 sm:p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden text-white select-none"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute bottom-10 left-0 w-64 h-64 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
 
             {/* Header: Main Logo & Cohort Banner */}
-            <div className="relative z-10 space-y-3">
-              <div className="flex items-center justify-between border-b border-zinc-850 pb-3">
-                <div className="flex items-center gap-2.5">
+            <div className="relative z-10 space-y-2">
+              <div className="flex items-center justify-between border-b border-zinc-850 pb-2">
+                <div className="flex items-center gap-2">
                   <img 
                     src={logoSrc} 
                     alt={config.companyName || 'Kogla Tech'} 
-                    className="h-9 max-w-[130px] object-contain rounded-sm border border-gold-500/40 bg-black/80 p-1"
+                    className="h-8 max-w-[120px] object-contain rounded-sm border border-gold-500/40 bg-black/80 p-0.5"
                   />
                   <div>
-                    <div className="font-display font-black text-sm tracking-wider uppercase text-white leading-tight">
+                    <div className="font-display font-black text-xs tracking-wider uppercase text-white leading-tight">
                       KOGLA TECH
                     </div>
-                    <div className="text-[9px] font-mono text-gold-400 tracking-widest uppercase">
+                    <div className="text-[8px] font-mono text-gold-400 tracking-widest uppercase">
                       ACADEMY & IT SOLUTIONS
                     </div>
                   </div>
                 </div>
 
-                <div className="px-2.5 py-1 bg-gold-500/15 border border-gold-500/40 rounded-full text-[10px] font-mono text-gold-300 font-bold uppercase">
+                <div className="px-2 py-0.5 bg-gold-500/15 border border-gold-500/40 rounded-full text-[9px] font-mono text-gold-300 font-bold uppercase">
                   {cohortName}
                 </div>
               </div>
 
               <div>
-                <h2 className="text-2xl font-black font-display uppercase tracking-tight leading-tight text-white">
+                <h2 className="text-xl font-black font-display uppercase tracking-tight leading-tight text-white">
                   LEARN TECH & GET <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-amber-300 to-yellow-500">WHITELISTED</span> FOR JOBS
                 </h2>
-                <p className="text-xs text-zinc-300 mt-1 font-sans">
-                  Intensive project-based training with verified cryptographic certificates & direct corporate talent whitelisting.
+                <p className="text-[11px] text-zinc-300 font-sans">
+                  Intensive project-based training with verified cryptographic certificates & direct talent whitelisting.
                 </p>
               </div>
             </div>
 
-            {/* Middle Section: All 11 Courses Compact Showcase */}
-            <div className="relative z-10 space-y-2 my-auto py-1">
-              <div className="flex items-center justify-between text-xs font-display font-bold text-gold-400 uppercase">
-                <span>✦ All 11 Training Tracks Available</span>
-                <span className="text-[9px] font-mono text-zinc-400">Live Mentors</span>
+            {/* Middle Section: All 11 Courses Showcase with Physical (Above) & Online (Below) Pricing */}
+            <div className="relative z-10 space-y-1.5 my-auto py-1">
+              <div className="flex items-center justify-between text-[11px] font-display font-bold text-gold-400 uppercase">
+                <span>✦ 11 Tracks • Tuition Breakdown</span>
+                <span className="text-[8.5px] font-mono text-amber-300">PHY (Above) / ONL (Below)</span>
               </div>
 
-              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3 space-y-1.5 text-[10.5px] font-mono">
-                <div className="grid grid-cols-2 gap-1.5">
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> Full-Stack Web Dev
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> Mobile App Eng.
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> Cybersecurity & SOC
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> Cloud & DevOps (AWS)
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> AI & Automations
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> Data Analysis & BI
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> UI/UX Architecture
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> Graphic & Brand Design
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> Product Management
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-200 truncate">
-                    <CheckCircle2 size={11} className="text-gold-400 shrink-0" /> Digital Marketing Ads
-                  </div>
-                </div>
-                <div className="pt-1.5 border-t border-zinc-800 flex items-center justify-between text-[10px] text-gold-400">
-                  <span>+ Real Estate Development & PropTech</span>
-                  <span className="text-zinc-400">{cohortDate}</span>
+              <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-2.5 space-y-1 text-[9.5px] font-mono">
+                <div className="grid grid-cols-2 gap-1">
+                  {officialAllCourses.map((course, idx) => (
+                    <div key={idx} className="bg-black/60 p-1.5 rounded-lg border border-zinc-800/80 flex items-center justify-between gap-1">
+                      <div className="truncate font-sans font-medium text-zinc-200 text-[9px]">
+                        {course.shortTitle}
+                      </div>
+                      <div className="text-right leading-none shrink-0">
+                        <div className="text-[8.5px] font-bold text-amber-300">
+                          {course.physicalFormatted}
+                        </div>
+                        <div className="text-[7.5px] text-zinc-400 font-medium">
+                          {course.onlineFormatted}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               {/* Whitelist Quality Box */}
-              <div className="bg-gold-500/10 border border-gold-500/30 rounded-xl p-2.5 text-xs text-zinc-200 space-y-1">
-                <div className="font-bold text-gold-400 font-display text-[11px] uppercase flex items-center gap-1">
-                  <Award size={12} /> Training to Talent Whitelist
+              <div className="bg-gold-500/10 border border-gold-500/30 rounded-xl p-2 text-xs text-zinc-200 space-y-0.5">
+                <div className="font-bold text-gold-400 font-display text-[10px] uppercase flex items-center gap-1">
+                  <Award size={11} /> Training to Talent Whitelist
                 </div>
-                <p className="text-[10px] leading-tight text-zinc-300">
+                <p className="text-[9px] leading-tight text-zinc-300">
                   Graduate directly onto our talent whitelist for client contracts, remote roles, and hiring partnerships.
                 </p>
               </div>
 
               {/* Enterprise IT Solutions */}
-              <div className="bg-zinc-950 border border-zinc-850 rounded-xl p-2.5 text-[10.5px] font-mono text-zinc-300">
-                <span className="text-gold-400 font-bold uppercase block text-[10px]">💼 Enterprise IT Solutions:</span>
+              <div className="bg-zinc-950 border border-zinc-850 rounded-xl p-2 text-[9px] font-mono text-zinc-300">
+                <span className="text-gold-400 font-bold uppercase block text-[8.5px]">💼 Enterprise IT Solutions:</span>
                 Custom Software • Security Audits • Cloud Architecture • AI Systems
               </div>
             </div>
 
             {/* Footer: Web URL and Registration Info */}
-            <div className="relative z-10 pt-3 border-t border-zinc-850 space-y-2">
-              <div className="bg-gradient-to-r from-gold-500 via-amber-400 to-yellow-500 text-black p-2.5 rounded-xl text-center font-display font-black text-sm uppercase tracking-wider shadow-lg">
+            <div className="relative z-10 pt-2 border-t border-zinc-850 space-y-1.5">
+              <div className="bg-gradient-to-r from-gold-500 via-amber-400 to-yellow-500 text-black p-2 rounded-xl text-center font-display font-black text-xs uppercase tracking-wider shadow-lg">
                 ENROLL NOW: KOGLATECH.COM/ACADEMY
               </div>
-              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 px-1">
+              <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400 px-1">
                 <span>Admissions: {cohortDate}</span>
                 <span>solutions@koglatech.com</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ================= OPTION 3: 1:1 SQUARE DARK LUXURY DUAL-PILLAR ================= */}
-        {selectedOption === 'option3' && (
-          <div 
-            ref={flyerRef}
-            className="w-full max-w-[520px] aspect-square bg-[#050505] border-2 border-gold-500/50 rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-2xl relative overflow-hidden text-white select-none"
-          >
-            <div className="absolute inset-0 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:20px_20px] opacity-10 pointer-events-none" />
-            <div className="absolute -top-10 -right-10 w-48 h-48 bg-gold-500/20 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Header: Main Logo & Title */}
-            <div className="relative z-10 flex items-start justify-between border-b border-zinc-850 pb-3">
-              <div className="flex items-center gap-3">
-                <img 
-                  src={logoSrc} 
-                  alt={config.companyName || 'Kogla Tech'} 
-                  className="h-10 max-w-[130px] object-contain rounded-sm border border-gold-500/40 bg-black/80 p-1"
-                />
-                <div>
-                  <div className="font-display font-black text-base tracking-wider uppercase text-white">
-                    KOGLA TECH
-                  </div>
-                  <div className="text-[9.5px] font-mono text-gold-400 tracking-widest uppercase">
-                    ACADEMY & IT SOLUTIONS
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <span className="px-2.5 py-1 bg-gold-500/20 border border-gold-500/40 text-gold-400 text-[10px] font-mono font-bold rounded uppercase">
-                  {cohortName}
-                </span>
-                <div className="text-[9px] font-mono text-zinc-400 mt-1">{cohortDate}</div>
-              </div>
-            </div>
-
-            {/* Dual Pillars: 11 Courses on Left, IT Solutions & Whitelisting on Right */}
-            <div className="relative z-10 grid grid-cols-2 gap-3 my-auto py-1">
-              
-              {/* Left Column: All 11 Academy Tracks */}
-              <div className="bg-zinc-950/90 border border-zinc-800 rounded-xl p-3 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold font-display text-gold-400 uppercase">
-                  <Code2 size={13} /> 11 Academy Tracks
-                </div>
-                <div className="text-[10px] font-mono space-y-1 text-zinc-300">
-                  <div className="truncate">• Full-Stack Web Dev</div>
-                  <div className="truncate">• Mobile App Engineering</div>
-                  <div className="truncate">• Cybersecurity & SOC</div>
-                  <div className="truncate">• Cloud & DevOps (AWS)</div>
-                  <div className="truncate">• AI & Automations</div>
-                  <div className="truncate">• Data Analysis & BI</div>
-                  <div className="truncate">• UI/UX Product Design</div>
-                  <div className="truncate">• Graphic & Brand Design</div>
-                  <div className="truncate">• Product Management</div>
-                  <div className="truncate">• Digital Marketing Ads</div>
-                  <div className="truncate text-gold-400">• PropTech & Real Estate</div>
-                </div>
-              </div>
-
-              {/* Right Column: Whitelisting & IT Enterprise */}
-              <div className="space-y-2">
-                {/* Box 1: Talent Whitelisting */}
-                <div className="bg-gold-500/10 border border-gold-500/40 rounded-xl p-2.5 space-y-1">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold font-display text-gold-400 uppercase">
-                    <UserCheck size={13} /> Talent Whitelist
-                  </div>
-                  <p className="text-[10px] text-zinc-200 font-sans leading-tight">
-                    Graduate from live labs onto our verified talent whitelist for corporate hiring, contracts, and internships.
-                  </p>
-                </div>
-
-                {/* Box 2: Enterprise IT Solutions */}
-                <div className="bg-zinc-950/90 border border-zinc-800 rounded-xl p-2.5 space-y-1">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold font-display text-gold-400 uppercase">
-                    <Server size={13} /> Enterprise IT Solutions
-                  </div>
-                  <p className="text-[10px] text-zinc-300 font-sans leading-tight">
-                    Custom Web & Mobile Apps, Penetration Testing, Cloud Infrastructure, and Business AI.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Strip */}
-            <div className="relative z-10 bg-zinc-900/90 border border-gold-500/40 rounded-xl p-3 flex items-center justify-between">
-              <div className="space-y-0.5">
-                <div className="text-[9px] font-mono text-zinc-400 uppercase">Admissions & Inquiries:</div>
-                <div className="text-sm font-black font-mono text-gold-400 tracking-wider">
-                  koglatech.com/academy
-                </div>
-              </div>
-
-              <div className="text-right font-mono text-[10px] text-zinc-300">
-                <div className="text-white font-bold">100% Practical Labs</div>
-                <div className="text-emerald-400">Verified Certifications</div>
               </div>
             </div>
           </div>
@@ -654,9 +895,9 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-zinc-300">
               <div className="bg-black/60 p-3.5 rounded-xl border border-zinc-850 space-y-1.5">
-                <span className="text-gold-400 font-bold block uppercase text-[11px]">1. Academy & Whitelisting Pitch:</span>
+                <span className="text-gold-400 font-bold block uppercase text-[11px]">1. Academy & Pricing Structure:</span>
                 <p className="leading-relaxed">
-                  "Kogla Tech offers 11 hands-on tech training tracks. You don't just learn theory; you work on live client simulations and get directly whitelisted into their talent network for internships and corporate hiring."
+                  "Kogla Tech offers 11 hands-on tech training tracks available in both <strong>Physical on-site classes</strong> (with dedicated lab workstations, physical infrastructure & in-person mentorship) and <strong>Online classes</strong> (interactive remote live sessions). Students get directly whitelisted into the Kogla talent network for contracts and jobs."
                 </p>
               </div>
 
