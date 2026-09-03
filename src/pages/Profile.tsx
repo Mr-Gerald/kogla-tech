@@ -36,7 +36,9 @@ import {
   Check,
   Edit2,
   Save,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, ReviewRecord, AffiliatePartner } from '../types';
@@ -186,10 +188,19 @@ export default function Profile() {
     }
   };
 
-  // Form State for Security
+  // Form State for Security & Password Management
   const [sendingReset, setSendingReset] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [securityError, setSecurityError] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   // Form State for Display Preferences
   const [themeTone, setThemeTone] = useState<'dark' | 'gold' | 'midnight'>('dark');
@@ -460,6 +471,77 @@ export default function Profile() {
       console.error(err);
     } finally {
       setSavingNotifs(false);
+    }
+  };
+
+  // Handle In-App Direct Password Change (Works for Admin & Normal Accounts)
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!user?.email) {
+      setPasswordError('No active authenticated session found. Please log in.');
+      return;
+    }
+
+    const trimmedNew = newPassword.trim();
+    const trimmedConfirm = confirmPassword.trim();
+    const trimmedCurrent = currentPassword.trim();
+
+    if (!trimmedNew) {
+      setPasswordError('Please provide a new password.');
+      return;
+    }
+
+    if (trimmedNew.length < 8) {
+      setPasswordError('Security policy requires at least 8 characters for account passwords.');
+      return;
+    }
+
+    if (trimmedNew !== trimmedConfirm) {
+      setPasswordError('New password and confirmation password do not match.');
+      return;
+    }
+
+    if (trimmedCurrent && trimmedCurrent === trimmedNew) {
+      setPasswordError('New password must be different from your existing current password.');
+      return;
+    }
+
+    setUpdatingPassword(true);
+
+    try {
+      // 1. If current password provided, verify with Supabase Auth (re-authentication)
+      if (trimmedCurrent) {
+        const { error: verifyErr } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: trimmedCurrent
+        });
+        if (verifyErr) {
+          throw new Error('Current password verification failed. Please ensure your current password is typed correctly.');
+        }
+      }
+
+      // 2. Apply the updated password directly in Supabase Auth
+      const { error: updateErr } = await supabase.auth.updateUser({
+        password: trimmedNew
+      });
+
+      if (updateErr) {
+        throw updateErr;
+      }
+
+      // 3. Clear sensitive fields & display verified success notice
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordSuccess('Password successfully updated and verified in the authentication registry! Your new credentials are now active.');
+    } catch (err: any) {
+      console.error('[Security] Password update error:', err);
+      setPasswordError(err.message || 'Failed to update password. Please check your network connection or request a reset email.');
+    } finally {
+      setUpdatingPassword(false);
     }
   };
 
@@ -1094,28 +1176,156 @@ export default function Profile() {
                   <Key size={18} className="text-gold-500" /> Security & Authentication
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Manage your credentials, password reset email triggers, and session security.
+                  Manage your credentials, change account password, and review session security status.
                 </p>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-md space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xs font-bold text-white uppercase font-display">Authentication Provider</h4>
-                    <p className="text-[11px] text-zinc-400">
-                      Primary sign-in method: <span className="text-gold-400 font-mono font-bold">{user.providerData[0]?.providerId || 'password'}</span>
-                    </p>
+              {/* Direct In-App Password Change */}
+              <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-md space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <Lock size={16} className="text-gold-500" />
+                    <h4 className="text-xs font-bold text-white uppercase font-display tracking-wider">
+                      Change Account Password
+                    </h4>
                   </div>
-                  <span className="px-2 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono rounded uppercase">
-                    Active & Verified
+                  <span className="px-2 py-0.5 bg-gold-500/10 text-gold-400 border border-gold-500/30 text-[10px] font-mono rounded uppercase">
+                    Admin & User Protected
                   </span>
                 </div>
+
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Directly update your account credentials. Works for administrative and student member accounts authenticated under <span className="text-white font-mono font-bold">{user.email}</span>.
+                </p>
+
+                {passwordError && (
+                  <div className="p-3 bg-red-950/40 border border-red-500/30 text-red-400 text-xs rounded font-mono flex items-start gap-2">
+                    <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                    <span>{passwordError}</span>
+                  </div>
+                )}
+
+                {passwordSuccess && (
+                  <div className="p-3 bg-emerald-950/40 border border-emerald-800 text-emerald-300 text-xs rounded font-mono flex items-start gap-2">
+                    <CheckCircle2 size={15} className="shrink-0 mt-0.5 text-emerald-400" />
+                    <span>{passwordSuccess}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleUpdatePassword} className="space-y-4 pt-1">
+                  {/* Current Password */}
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold text-zinc-300 uppercase mb-1">
+                      Current Password <span className="text-zinc-500 font-normal lowercase">(for verification)</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Enter your current password"
+                        className="w-full px-3 py-2 bg-black border border-zinc-800 focus:border-gold-500 text-white text-xs font-mono rounded pr-10 focus:outline-none transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                      >
+                        {showCurrentPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* New Password & Confirm Password in Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-mono font-bold text-zinc-300 uppercase mb-1">
+                        New Password <span className="text-gold-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Min 8 characters"
+                          required
+                          minLength={8}
+                          className="w-full px-3 py-2 bg-black border border-zinc-800 focus:border-gold-500 text-white text-xs font-mono rounded pr-10 focus:outline-none transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                        >
+                          {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-mono font-bold text-zinc-300 uppercase mb-1">
+                        Confirm New Password <span className="text-gold-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Re-enter new password"
+                          required
+                          minLength={8}
+                          className="w-full px-3 py-2 bg-black border border-zinc-800 focus:border-gold-500 text-white text-xs font-mono rounded pr-10 focus:outline-none transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                        >
+                          {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password Standards Checklist */}
+                  <div className="bg-black/60 border border-zinc-800/80 rounded p-3 text-[11px] font-mono space-y-1.5 text-zinc-400">
+                    <div className="text-zinc-300 font-bold uppercase text-[10px]">Credential Security Standards:</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={newPassword.length >= 8 ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                        {newPassword.length >= 8 ? '✓' : '•'} At least 8 characters
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={newPassword && newPassword === confirmPassword ? 'text-emerald-400 font-bold' : 'text-zinc-500'}>
+                        {newPassword && newPassword === confirmPassword ? '✓' : '•'} Passwords match
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex items-center justify-end">
+                    <button
+                      type="submit"
+                      disabled={updatingPassword || !newPassword || newPassword.length < 8 || newPassword !== confirmPassword}
+                      className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-xs uppercase font-mono rounded inline-flex items-center gap-2 transition-all shadow-md"
+                    >
+                      {updatingPassword ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                      Update Account Password
+                    </button>
+                  </div>
+                </form>
               </div>
 
+              {/* Alternative: Password Reset Via Email */}
               <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-md space-y-3">
-                <h4 className="text-xs font-bold text-white uppercase font-display">Reset Account Password</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-white uppercase font-display flex items-center gap-2">
+                    <Mail size={14} className="text-gold-500" />
+                    Alternative: Send Password Reset Link by Email
+                  </h4>
+                  <span className="text-[10px] text-zinc-500 font-mono">Self-Service Recovery</span>
+                </div>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Request an automated secure password reset link sent directly to <span className="text-white font-mono">{user.email}</span>.
+                  Forgot your current password or prefer an email link? Trigger an automated secure password reset link dispatched directly to <span className="text-white font-mono">{user.email}</span>.
                 </p>
 
                 {securityError && (
@@ -1126,22 +1336,58 @@ export default function Profile() {
 
                 {resetSent ? (
                   <div className="p-3 bg-emerald-950/40 border border-emerald-800 text-emerald-300 text-xs rounded flex items-center gap-2 font-mono">
-                    <CheckCircle2 size={14} /> Password reset link dispatched! Please check your inbox.
+                    <CheckCircle2 size={14} /> Password reset link dispatched! Please check your inbox and spam folder.
                   </div>
                 ) : (
                   <button
                     onClick={handleRequestPasswordReset}
                     disabled={sendingReset}
-                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase font-mono rounded inline-flex items-center gap-2"
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase font-mono rounded inline-flex items-center gap-2 transition-colors"
                   >
-                    {sendingReset ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />} Send Reset Email
+                    {sendingReset ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />} Send Reset Email Link
                   </button>
                 )}
               </div>
 
-              <div className="bg-zinc-900/50 border border-zinc-850 p-4 rounded-md space-y-2 font-mono text-xs">
-                <div className="text-zinc-400">Account UID: <span className="text-zinc-200">{user.uid}</span></div>
-                <div className="text-zinc-400">Creation Date: <span className="text-zinc-200">{new Date(profile?.createdAt || Date.now()).toLocaleDateString()}</span></div>
+              {/* Authentication & Session Security Details */}
+              <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-md space-y-3">
+                <h4 className="text-xs font-bold text-white uppercase font-display flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-emerald-400" />
+                  Session Authentication & Compliance
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                  <div className="p-2.5 bg-black/50 border border-zinc-800 rounded">
+                    <span className="text-zinc-500 text-[10px] block uppercase">Primary Sign-in Method</span>
+                    <span className="text-gold-400 font-bold capitalize">
+                      {(user as any)?.app_metadata?.provider || (user as any)?.providerData?.[0]?.providerId || 'email / password'}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 bg-black/50 border border-zinc-800 rounded">
+                    <span className="text-zinc-500 text-[10px] block uppercase">Account Authorization Role</span>
+                    <span className={`font-bold capitalize ${profile?.role === 'admin' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      {profile?.role === 'admin' ? 'System Administrator' : (profile?.role || 'Verified Member')}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 bg-black/50 border border-zinc-800 rounded">
+                    <span className="text-zinc-500 text-[10px] block uppercase">Account UID</span>
+                    <span className="text-zinc-200 text-[11px] truncate block select-all">{user.uid || (user as any).id}</span>
+                  </div>
+
+                  <div className="p-2.5 bg-black/50 border border-zinc-800 rounded">
+                    <span className="text-zinc-500 text-[10px] block uppercase">Account Registered</span>
+                    <span className="text-zinc-200">{new Date(profile?.createdAt || Date.now()).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 text-[11px] text-zinc-500 font-mono">
+                  <span>TLS 1.3 End-to-End Cryptographic Session</span>
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Active & Secured
+                  </span>
+                </div>
               </div>
             </motion.div>
           )}

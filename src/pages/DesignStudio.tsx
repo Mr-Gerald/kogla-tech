@@ -402,7 +402,7 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
     );
   }
 
-  const logoSrc = config.logoUrl || config.faviconUrl || '/apple-touch-icon.png';
+  const logoSrc = config.logoUrl?.trim() || '';
 
   return (
     <div className={`min-h-screen ${isScreenshotMode ? 'bg-black p-4 flex items-center justify-center' : 'bg-black text-white pt-24 pb-20'}`}>
@@ -741,11 +741,13 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             {/* 1. Top Header: Brand Logo & Cohort Badge */}
             <div className="relative z-10 flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
               <div className="flex items-center gap-2.5">
-                <img 
-                  src={logoSrc} 
-                  alt={config.companyName || 'Kogla Tech'} 
-                  className="h-8 max-w-[110px] object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800"
-                />
+                {logoSrc && (
+                  <img 
+                    src={logoSrc} 
+                    alt={config.companyName || 'Kogla Tech'} 
+                    className="h-8 max-w-[110px] object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800"
+                  />
+                )}
                 <div>
                   <div className="font-display font-black text-sm tracking-wide uppercase text-white leading-tight">
                     KOGLA TECH
@@ -914,11 +916,13 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             {/* 1. Header: Brand Logo & Identity */}
             <div className="relative z-10 flex items-center justify-between border-b border-zinc-800 pb-3">
               <div className="flex items-center gap-3">
-                <img 
-                  src={logoSrc} 
-                  alt={config.companyName || 'Kogla Tech'} 
-                  className="h-9 max-w-[130px] object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800"
-                />
+                {logoSrc && (
+                  <img 
+                    src={logoSrc} 
+                    alt={config.companyName || 'Kogla Tech'} 
+                    className="h-9 max-w-[130px] object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800"
+                  />
+                )}
                 <div>
                   <div className="font-display font-black text-base tracking-wider uppercase text-white leading-tight">
                     KOGLA TECH
@@ -1042,11 +1046,13 @@ We also engineer custom web/mobile software, AI integrations, security audits, a
             <div className="relative z-10 space-y-2">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                 <div className="flex items-center gap-2">
-                  <img 
-                    src={logoSrc} 
-                    alt={config.companyName || 'Kogla Tech'} 
-                    className="h-8 max-w-[120px] object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800"
-                  />
+                  {logoSrc && (
+                    <img 
+                      src={logoSrc} 
+                      alt={config.companyName || 'Kogla Tech'} 
+                      className="h-8 max-w-[120px] object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800"
+                    />
+                  )}
                   <div>
                     <div className="font-display font-bold text-xs tracking-wider uppercase text-white leading-tight">
                       KOGLA TECH

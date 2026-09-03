@@ -26,10 +26,12 @@ export default function Footer() {
         {/* Column 1: Brand & Security Compliance */}
         <div className="space-y-4 lg:col-span-1">
           <Link to="/" className="text-lg font-display font-bold text-white tracking-widest flex items-center gap-2 uppercase">
-            {config.logoUrl || config.faviconUrl ? (
-              <img src={config.logoUrl || config.faviconUrl} alt={config.companyName} className="h-8 border border-gold-500/50 p-1 rounded-sm bg-black/50 object-contain" />
+            {config.logoUrl ? (
+              <img src={config.logoUrl} alt={config.companyName} className="h-8 border border-gold-500/50 p-1 rounded-sm bg-black/50 object-contain" />
             ) : (
-              <img src="/apple-touch-icon.png" alt={config.companyName} className="h-8 border border-gold-500/50 p-1 rounded-sm bg-black/50 object-contain" />
+              <span className="font-display font-black text-lg tracking-wider uppercase text-white hover:text-gold-400 transition-colors">
+                {config.logoText || 'KOGLA TECH'}
+              </span>
             )}
           </Link>
           <p className="text-[11px] text-gray-400 leading-relaxed font-sans">

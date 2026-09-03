@@ -144,17 +144,24 @@ export async function saveSupabaseUserProfile(profile: UserProfile): Promise<voi
       console.warn('[Supabase DB] Error upserting profile:', error.message);
     }
 
-    // 1b. Update Supabase Auth Metadata if user is logged in
+    // 1b. Update Supabase Auth Metadata if user is logged in AND metadata changed
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user && (session.user.id === profile.uid || session.user.email?.toLowerCase().trim() === normEmail)) {
-        await supabase.auth.updateUser({
-          data: {
-            name: profile.name,
-            avatar_url: profile.avatarUrl,
-            phone: profile.phone
-          }
-        });
+        const meta = session.user.user_metadata || {};
+        const nameDiffers = profile.name && profile.name !== meta.name;
+        const avatarDiffers = profile.avatarUrl && profile.avatarUrl !== meta.avatar_url;
+        const phoneDiffers = profile.phone && profile.phone !== meta.phone;
+        
+        if (nameDiffers || avatarDiffers || phoneDiffers) {
+          await supabase.auth.updateUser({
+            data: {
+              name: profile.name || meta.name,
+              avatar_url: profile.avatarUrl || meta.avatar_url,
+              phone: profile.phone || meta.phone
+            }
+          });
+        }
       }
     } catch (_) {}
 
@@ -191,14 +198,16 @@ export async function saveSupabaseUserProfile(profile: UserProfile): Promise<voi
     }
     localStorage.setItem('kogla_supabase_users', JSON.stringify(profiles));
 
-    // 3. Background non-blocking sync to Express server
-    try {
-      fetch('/api/users/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile: updatedProfile })
-      }).catch(() => {});
-    } catch (_) {}
+    // 3. Background non-blocking sync to Express server (only if available, ignore on static CDN)
+    if (typeof window !== 'undefined' && !['www.koglatech.com', 'koglatech.com'].includes(window.location.hostname)) {
+      try {
+        fetch('/api/users/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: updatedProfile })
+        }).catch(() => {});
+      } catch (_) {}
+    }
   } catch (err) {
     console.warn('[Supabase Profiles] Error saving profile:', err);
   }

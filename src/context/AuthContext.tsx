@@ -74,7 +74,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (freshDbProfile) {
           setProfile(prev => {
             const merged = { ...(prev || {}), ...freshDbProfile };
-            saveSupabaseUserProfile(merged);
+            try {
+              const existingRaw = localStorage.getItem('kogla_supabase_users');
+              let profiles: UserProfile[] = existingRaw ? JSON.parse(existingRaw) : [];
+              const idx = profiles.findIndex(p => p.uid === merged.uid || (merged.email && p.email?.toLowerCase() === merged.email.toLowerCase()));
+              if (idx >= 0) {
+                profiles[idx] = { ...profiles[idx], ...merged };
+              } else {
+                profiles.push(merged);
+              }
+              localStorage.setItem('kogla_supabase_users', JSON.stringify(profiles));
+            } catch (_) {}
             return merged;
           });
         }
