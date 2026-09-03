@@ -715,6 +715,11 @@ app.post('/api/referrals/purge-all', (req, res) => {
   }
 });
 
+// Google Search Console verification endpoint
+app.get('/google9a8cd485a4553fe6.html', (req, res) => {
+  res.type('text/html').send('google-site-verification: google9a8cd485a4553fe6.html');
+});
+
 // Serve static assets from public folder (favicons, manifest, etc.)
 app.use(express.static(path.join(process.cwd(), 'public')));
 
