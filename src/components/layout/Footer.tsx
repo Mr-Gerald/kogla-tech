@@ -186,6 +186,11 @@ export default function Footer() {
               </Link>
             </li>
             <li>
+              <Link to="/refund-policy" className="hover:text-red-400 transition-colors text-zinc-400 flex items-center gap-1">
+                Refund Policy <span className="text-[9px] px-1 py-0.5 bg-red-950/80 border border-red-500/30 text-red-400 font-mono rounded">No Refund</span>
+              </Link>
+            </li>
+            <li>
               <Link to="/about" className="hover:text-gold-500 transition-colors">
                 Corporate Profile
               </Link>
@@ -203,12 +208,16 @@ export default function Footer() {
       {/* Disclaimers & Legal Footnotes */}
       <div className="border-t border-gray-900 bg-gray-950/40">
         <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-gray-500 font-mono">
-          <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-            <span className="hover:text-gray-300 transition-colors cursor-pointer">Security Policy</span>
+          <div className="flex flex-wrap gap-4 justify-center md:justify-start items-center">
+            <Link to="/refund-policy" className="hover:text-red-400 text-red-400/90 transition-colors font-bold">
+              Refund Policy (No-Refund)
+            </Link>
             <span>&bull;</span>
             <span className="hover:text-gray-300 transition-colors cursor-pointer">Terms of Service</span>
             <span>&bull;</span>
             <span className="hover:text-gray-300 transition-colors cursor-pointer">Privacy Protocol</span>
+            <span>&bull;</span>
+            <span className="hover:text-gray-300 transition-colors cursor-pointer">Security Policy</span>
             <span>&bull;</span>
             <span className="hover:text-gray-300 transition-colors cursor-pointer">Compliance</span>
           </div>

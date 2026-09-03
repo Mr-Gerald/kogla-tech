@@ -715,6 +715,9 @@ app.post('/api/referrals/purge-all', (req, res) => {
   }
 });
 
+// Serve static assets from public folder (favicons, manifest, etc.)
+app.use(express.static(path.join(process.cwd(), 'public')));
+
 // Vite middleware / static serving
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

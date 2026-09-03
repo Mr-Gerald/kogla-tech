@@ -587,6 +587,10 @@ export default function CourseDetails() {
                 </div>
               </div>
 
+              <div className="p-2.5 bg-red-950/30 border border-red-500/30 rounded text-[10px] font-mono text-zinc-300 text-center leading-relaxed">
+                Legal Notice: All cohort tuition is <Link to="/refund-policy" target="_blank" className="text-red-400 font-bold hover:underline">Strictly Non-Refundable</Link> once seat reservation is logged.
+              </div>
+
               <button
                 type="submit"
                 disabled={isSubmitting}

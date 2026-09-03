@@ -583,8 +583,16 @@ export default function Signup() {
                     }}
                     className="text-gold-400 hover:underline font-semibold font-mono"
                   >
-                    Kogla Tech Master Terms of Service, Anti-Liability Disclaimer & Policies
-                  </button>.
+                    Master Terms of Service
+                  </button>
+                  {' '}and the{' '}
+                  <Link 
+                    to="/refund-policy" 
+                    target="_blank" 
+                    className="text-red-400 hover:underline font-semibold font-mono inline-flex items-center"
+                  >
+                    Strict No-Refund Policy
+                  </Link>.
                 </span>
               </label>
 
@@ -694,6 +702,15 @@ export default function Signup() {
                   </h4>
                   <p>
                     To the maximum extent permitted by law, Kogla Tech Global, its founder Gerald Emechebe, and affiliates shall not be liable for incidental or consequential damages.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 p-3 bg-red-950/40 border border-red-500/30 rounded">
+                  <h4 className="text-xs font-display font-bold text-red-400 uppercase tracking-wide">
+                    5. Strict No-Refund Policy & Irrevocable Fee Settlement
+                  </h4>
+                  <p className="text-zinc-300">
+                    All tuition fees, course seat reservations, digital access packages, and engineering retainers are <b>100% Final and Strictly Non-Refundable</b> under all circumstances once processed. Reserving a cohort seat immediately reserves limited mentor capacity and provisions cloud sandbox resources. Unjustified chargebacks or disputes constitute a material breach resulting in immediate platform termination and credential invalidation.
                   </p>
                 </div>
               </div>

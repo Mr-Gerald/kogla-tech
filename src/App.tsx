@@ -31,6 +31,7 @@ import AffiliatePortal from './pages/AffiliatePortal';
 import MonetizationHub from './pages/MonetizationHub';
 import VerifyCertificate from './pages/VerifyCertificate';
 import DesignStudio from './pages/DesignStudio';
+import RefundPolicy from './pages/RefundPolicy';
 import NotFound from './pages/NotFound';
 import { AiAssistantChat } from './components/AiAssistantChat';
 
@@ -73,6 +74,9 @@ export default function App() {
                 <Route path="/study" element={<StudyRoom />} />
                 <Route path="/study/:slug" element={<StudyRoom />} />
                 <Route path="/study/:slug/room/:roomId" element={<StudyRoom />} />
+                <Route path="/refund-policy" element={<RefundPolicy />} />
+                <Route path="/refunds" element={<RefundPolicy />} />
+                <Route path="/cancellation-policy" element={<RefundPolicy />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
