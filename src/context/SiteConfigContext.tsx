@@ -123,12 +123,12 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
     // 1. Initial async load from Supabase settings / site_config table
     const loadFromSupabase = async () => {
       try {
-        const { data: configRow } = await supabase
+        const { data: configRow, error } = await supabase
           .from('site_config')
           .select('*')
           .eq('key', 'site')
-          .single();
-        if (configRow && configRow.value) {
+          .maybeSingle();
+        if (configRow && configRow.value && !error) {
           const sanitized = sanitizeSiteConfig(typeof configRow.value === 'string' ? JSON.parse(configRow.value) : configRow.value);
           setConfig(sanitized);
           localStorage.setItem('kogla_site_config', JSON.stringify(sanitized));
@@ -136,12 +136,12 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
       } catch (_) {}
 
       try {
-        const { data: imagesRow } = await supabase
+        const { data: imagesRow, error } = await supabase
           .from('site_config')
           .select('*')
           .eq('key', 'images')
-          .single();
-        if (imagesRow && imagesRow.value) {
+          .maybeSingle();
+        if (imagesRow && imagesRow.value && !error) {
           const sanitized = sanitizeImages(typeof imagesRow.value === 'string' ? JSON.parse(imagesRow.value) : imagesRow.value);
           setImages(sanitized);
           localStorage.setItem('kogla_images', JSON.stringify(sanitized));
