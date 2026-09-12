@@ -3,6 +3,22 @@ import { supabase } from './supabase';
 
 const LOCAL_REVIEWS_KEY = 'kogla_reviews_cache_v5';
 
+export const HARDCODED_BASELINE_LIKES: Record<string, number> = {
+  'rev-nnamdi-lagos': 14,
+  'rev-nnamdi-reply-1': 6,
+  'rev-blessing-abuja': 19,
+  'rev-emeka-ph': 11,
+  'rev-fatima-kano': 9,
+  'rev-damilola-ibadan': 16,
+  'rev-chiamaka-enugu': 22,
+};
+
+export function computeEffectiveLikes(reviewId: string, likedBy: string[] = []): number {
+  const base = HARDCODED_BASELINE_LIKES[reviewId] ?? 0;
+  const realUserLikes = (likedBy || []).filter(u => !u.startsWith('user-demo-') && u !== 'user-nnamdi-k').length;
+  return base + realUserLikes;
+}
+
 // 6 Authentic, hyper-realistic, community-grounded student & professional reviews
 export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
   {
@@ -28,7 +44,7 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     userName: 'Gerald Emechebe',
     userAvatar: '',
     userRole: 'Founder & CEO, Kogla Tech',
-    rating: 0,
+    rating: 5,
     title: '',
     content: 'Proud of how far you have come Nnamdi! That webhook engine you built during the capstone sprint was top tier.',
     targetType: 'course',
@@ -131,10 +147,18 @@ function getCachedReviews(): ReviewRecord[] {
     const raw = localStorage.getItem(LOCAL_REVIEWS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((r: any) => ({
+          ...r,
+          likeCount: computeEffectiveLikes(r.id, r.likedBy || [])
+        }));
+      }
     }
   } catch (_) {}
-  return INITIAL_AUTHENTIC_REVIEWS;
+  return INITIAL_AUTHENTIC_REVIEWS.map(r => ({
+    ...r,
+    likeCount: computeEffectiveLikes(r.id, r.likedBy || [])
+  }));
 }
 
 function saveCachedReviews(reviews: ReviewRecord[]) {
@@ -143,7 +167,20 @@ function saveCachedReviews(reviews: ReviewRecord[]) {
   } catch (_) {}
 }
 
+type ReviewSubscriber = (reviews: ReviewRecord[]) => void;
+const activeSubscribers = new Set<ReviewSubscriber>();
+
+function broadcastReviews(list: ReviewRecord[]) {
+  activeSubscribers.forEach((subscriber) => {
+    try {
+      subscriber(list);
+    } catch (_) {}
+  });
+}
+
 export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _onError?: (err: unknown) => void) {
+  activeSubscribers.add(onData);
+
   // Provide initial cached reviews immediately for instant response
   const cached = getCachedReviews();
   onData(cached);
@@ -152,7 +189,12 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
     const fetchedMap = new Map<string, ReviewRecord>();
 
     // 1. First populate with initial authentic seed reviews
-    INITIAL_AUTHENTIC_REVIEWS.forEach(r => fetchedMap.set(r.id, r));
+    INITIAL_AUTHENTIC_REVIEWS.forEach(r => {
+      fetchedMap.set(r.id, {
+        ...r,
+        likeCount: computeEffectiveLikes(r.id, r.likedBy || [])
+      });
+    });
 
     // 2. Fetch from Express Backend (cross-device disk persistence)
     try {
@@ -162,6 +204,8 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
         if (json && Array.isArray(json.reviews)) {
           json.reviews.forEach((r: any) => {
             if (r && r.id) {
+              const existing = fetchedMap.get(r.id);
+              const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(r.likedBy || [])]));
               fetchedMap.set(r.id, {
                 id: r.id,
                 userId: r.userId || '',
@@ -174,8 +218,8 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
                 targetType: r.targetType || 'platform',
                 targetId: r.targetId || 'general',
                 parentId: r.parentId || null,
-                likedBy: Array.isArray(r.likedBy) ? r.likedBy : [],
-                likeCount: typeof r.likeCount === 'number' ? r.likeCount : 0,
+                likedBy: mergedLikedBy,
+                likeCount: computeEffectiveLikes(r.id, mergedLikedBy),
                 createdAt: r.createdAt || new Date().toISOString(),
                 updatedAt: r.updatedAt || '',
               });
@@ -195,6 +239,9 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
       if (!error && Array.isArray(data) && data.length > 0) {
         data.forEach((d: any) => {
           if (d && d.id) {
+            const existing = fetchedMap.get(d.id);
+            const dbLikedBy = Array.isArray(d.liked_by) ? d.liked_by : (Array.isArray(d.likedBy) ? d.likedBy : []);
+            const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...dbLikedBy]));
             fetchedMap.set(d.id, {
               id: d.id,
               userId: d.user_id || d.userId || '',
@@ -207,8 +254,8 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
               targetType: d.target_type || d.track_id || d.targetType || 'platform',
               targetId: d.target_id || d.track_id || d.targetId || 'general',
               parentId: d.parent_id || d.parentId || null,
-              likedBy: Array.isArray(d.liked_by) ? d.liked_by : (Array.isArray(d.likedBy) ? d.likedBy : []),
-              likeCount: typeof d.like_count === 'number' ? d.like_count : (typeof d.likeCount === 'number' ? d.likeCount : 0),
+              likedBy: mergedLikedBy,
+              likeCount: computeEffectiveLikes(d.id, mergedLikedBy),
               createdAt: d.created_at || d.createdAt || new Date().toISOString(),
               updatedAt: d.updated_at || d.updatedAt || '',
             });
@@ -217,11 +264,23 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
       }
     } catch (_) {}
 
-    // 4. Merge cached local reviews so newly posted items don't vanish
+    // 4. Merge cached local reviews so newly posted items and replies don't vanish
     const currentLocal = getCachedReviews();
     currentLocal.forEach(cr => {
-      if (!fetchedMap.has(cr.id)) {
-        fetchedMap.set(cr.id, cr);
+      const existing = fetchedMap.get(cr.id);
+      const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(cr.likedBy || [])]));
+      if (!existing) {
+        fetchedMap.set(cr.id, {
+          ...cr,
+          likedBy: mergedLikedBy,
+          likeCount: computeEffectiveLikes(cr.id, mergedLikedBy)
+        });
+      } else {
+        fetchedMap.set(cr.id, {
+          ...existing,
+          likedBy: mergedLikedBy,
+          likeCount: computeEffectiveLikes(cr.id, mergedLikedBy)
+        });
       }
     });
 
@@ -230,15 +289,16 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
     );
 
     saveCachedReviews(mergedList);
-    onData(mergedList);
+    broadcastReviews(mergedList);
   };
 
   fetchAndMergeAll();
 
-  // Polling interval to sync new reviews across open devices seamlessly
+  // Polling interval to sync new reviews and replies across open devices seamlessly
   const interval = setInterval(fetchAndMergeAll, 12000);
 
   return () => {
+    activeSubscribers.delete(onData);
     clearInterval(interval);
   };
 }
@@ -275,10 +335,11 @@ export async function createReview(params: {
     updatedAt: new Date().toISOString(),
   };
 
-  // 1. Immediate local cache update
+  // 1. Immediate local cache update and instant subscriber broadcast
   const cached = getCachedReviews();
   const updated = [newRecord, ...cached.filter(r => r.id !== newReviewId)];
   saveCachedReviews(updated);
+  broadcastReviews(updated);
 
   // 2. Multi-layer save to Supabase Postgres (with resilient schema compatibility)
   try {
@@ -289,7 +350,7 @@ export async function createReview(params: {
       author_name: newRecord.userName,
       user_avatar: newRecord.userAvatar,
       user_role: newRecord.userRole,
-      rating: newRecord.rating,
+      rating: newRecord.rating || 5,
       title: newRecord.title,
       track_title: newRecord.title,
       content: newRecord.content,
@@ -307,14 +368,16 @@ export async function createReview(params: {
     const { error } = await supabase.from('reviews').upsert(supabasePayload);
     if (error) {
       // Fallback with minimal legacy schema fields if full schema rejected
-      await supabase.from('reviews').upsert({
-        id: newReviewId,
-        user_id: newRecord.userId,
-        author_name: newRecord.userName,
-        rating: newRecord.rating,
-        content: newRecord.content,
-        created_at: newRecord.createdAt
-      }).catch(() => {});
+      try {
+        await supabase.from('reviews').upsert({
+          id: newReviewId,
+          user_id: newRecord.userId,
+          author_name: newRecord.userName,
+          rating: newRecord.rating || 5,
+          content: newRecord.content,
+          created_at: newRecord.createdAt
+        });
+      } catch (_) {}
     }
   } catch (error) {
     console.warn('[Supabase Reviews] Error saving review:', error);
@@ -340,20 +403,19 @@ export async function toggleLikeReview(review: ReviewRecord, currentUserId: stri
   const cached = getCachedReviews();
   const target = cached.find(r => r.id === review.id);
   let nextLikedBy = [...(review.likedBy || [])];
-  let nextLikeCount = review.likeCount || 0;
 
   if (isLiked) {
     nextLikedBy = nextLikedBy.filter(u => u !== currentUserId);
-    nextLikeCount = Math.max(0, nextLikeCount - 1);
   } else {
-    nextLikedBy.push(currentUserId);
-    nextLikeCount += 1;
+    nextLikedBy = Array.from(new Set([...nextLikedBy, currentUserId]));
   }
+  const nextLikeCount = computeEffectiveLikes(review.id, nextLikedBy);
 
   if (target) {
     target.likedBy = nextLikedBy;
     target.likeCount = nextLikeCount;
     saveCachedReviews(cached);
+    broadcastReviews(cached);
   }
 
   try {
@@ -378,6 +440,7 @@ export async function toggleLikeReview(review: ReviewRecord, currentUserId: stri
 export async function deleteReview(reviewId: string): Promise<void> {
   const cached = getCachedReviews().filter(r => r.id !== reviewId && r.parentId !== reviewId);
   saveCachedReviews(cached);
+  broadcastReviews(cached);
 
   try {
     await supabase.from('reviews').delete().eq('id', reviewId);

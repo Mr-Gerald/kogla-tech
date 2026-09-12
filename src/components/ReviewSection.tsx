@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ReviewRecord } from '../types';
-import { subscribeToReviews, createReview, toggleLikeReview, deleteReview } from '../lib/reviews';
+import { subscribeToReviews, createReview, toggleLikeReview, deleteReview, computeEffectiveLikes } from '../lib/reviews';
 
 interface ReviewSectionProps {
   targetType?: string;
@@ -132,7 +132,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         userName: profile?.name || user.displayName || 'Kogla Developer',
         userAvatar: user.photoURL || profile?.avatarUrl || '',
         userRole: profile?.role === 'admin' ? 'Kogla Admin' : 'Member',
-        rating: 0,
+        rating: 5,
         title: '',
         content: replyContent.trim(),
         targetType,
@@ -162,9 +162,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     const nextLikedBy = isCurrentlyLiked
       ? (review.likedBy || []).filter((u) => u !== currentUserId)
       : [...(review.likedBy || []), currentUserId];
-    const nextLikeCount = isCurrentlyLiked
-      ? Math.max(0, (review.likeCount || 0) - 1)
-      : (review.likeCount || 0) + 1;
+    const nextLikeCount = computeEffectiveLikes(review.id, nextLikedBy);
 
     // 1. Instant optimistic UI update
     setReviews((prev) =>
@@ -598,16 +596,29 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                               <p className="text-zinc-300 font-sans text-[11px] leading-snug">
                                 {reply.content}
                               </p>
-                              {isReplyAuthorOrAdmin && (
-                                <div className="text-right">
+                              <div className="flex items-center justify-between pt-1">
+                                <button
+                                  onClick={() => handleLike(reply)}
+                                  disabled={likingIds[reply.id]}
+                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors text-[9px] cursor-pointer ${
+                                    (reply.likedBy || []).includes(user?.uid || '')
+                                      ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40 font-bold'
+                                      : 'text-zinc-500 hover:text-white hover:bg-zinc-800'
+                                  }`}
+                                  title="Like reply"
+                                >
+                                  <ThumbsUp size={10} className={(reply.likedBy || []).includes(user?.uid || '') ? 'fill-gold-400' : ''} />
+                                  <span>{reply.likeCount || 0}</span>
+                                </button>
+                                {isReplyAuthorOrAdmin && (
                                   <button
                                     onClick={() => handleDelete(reply.id)}
                                     className="text-[9px] text-zinc-500 hover:text-red-400 font-mono cursor-pointer"
                                   >
                                     Delete
                                   </button>
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
                           );
                         })}

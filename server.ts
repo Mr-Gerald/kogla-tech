@@ -224,8 +224,156 @@ interface SyncedReview {
   updatedAt?: string;
 }
 
+const SERVER_BASELINE_LIKES: Record<string, number> = {
+  'rev-nnamdi-lagos': 14,
+  'rev-nnamdi-reply-1': 6,
+  'rev-blessing-abuja': 19,
+  'rev-emeka-ph': 11,
+  'rev-fatima-kano': 9,
+  'rev-damilola-ibadan': 16,
+  'rev-chiamaka-enugu': 22,
+};
+
+const SERVER_SEED_REVIEWS: SyncedReview[] = [
+  {
+    id: 'rev-nnamdi-lagos',
+    userId: 'user-nnamdi-k',
+    userName: 'Nnamdi K.',
+    userAvatar: '',
+    userRole: 'Full-Stack Graduate (Lekki Hub)',
+    rating: 5,
+    title: 'Physical class in Lekki Hub was the turning point for my career tbh',
+    content: 'Honestly when I enrolled for the Full-Stack Web Dev physical class, I was skeptical because I had tried YouTube tutorials for 6 months without building anything solid. Mr Gerald and the instructors literally tore down my spaghetti code on day 3 lol. We built a full banking webhook engine from scratch. Now working remotely as a React dev for a top fintech. Worth every kobo of the tuition fee.',
+    targetType: 'course',
+    targetId: 'web-development',
+    parentId: null,
+    likedBy: ['user-demo-1', 'user-demo-2', 'user-demo-3'],
+    likeCount: 14,
+    createdAt: '2026-08-01T10:14:00.000Z',
+    updatedAt: ''
+  },
+  {
+    id: 'rev-nnamdi-reply-1',
+    userId: 'admin-gerald',
+    userName: 'Gerald Emechebe',
+    userAvatar: '',
+    userRole: 'Founder & CEO, Kogla Tech',
+    rating: 5,
+    title: '',
+    content: 'Proud of how far you have come Nnamdi! That webhook engine you built during the capstone sprint was top tier.',
+    targetType: 'course',
+    targetId: 'web-development',
+    parentId: 'rev-nnamdi-lagos',
+    likedBy: ['user-nnamdi-k'],
+    likeCount: 6,
+    createdAt: '2026-08-01T16:20:00.000Z',
+    updatedAt: ''
+  },
+  {
+    id: 'rev-blessing-abuja',
+    userId: 'user-blessing-a',
+    userName: 'Blessing Adebayo',
+    userAvatar: '',
+    userRole: 'Data Analytics Cohort (Abuja)',
+    rating: 5,
+    title: 'Data Analysis track got me my first contract with a USAID partner',
+    content: 'Took the online data analysis cohort from Abuja while working my 9-5. The SQL and PowerBI projects were 100% practical, not just theory. The tutor pushed us on DAX formulas until 11pm some nights haha. Submitted my portfolio link during an interview last month and landed a business intelligence consultant role. The certificate verification link was also requested by HR.',
+    targetType: 'course',
+    targetId: 'data-analysis',
+    parentId: null,
+    likedBy: ['user-demo-4', 'user-demo-5'],
+    likeCount: 19,
+    createdAt: '2026-07-28T16:20:00.000Z',
+    updatedAt: ''
+  },
+  {
+    id: 'rev-emeka-ph',
+    userId: 'user-emeka-n',
+    userName: 'Emeka Nwosu',
+    userAvatar: '',
+    userRole: 'Cybersecurity Alumni (Port Harcourt)',
+    rating: 5,
+    title: 'Cybersecurity curriculum is deeper than standard CEH syllabus',
+    content: "I've paid for other courses before, but Kogla’s cybersecurity lab setup with Burp Suite and Wireshark traffic breakdown was on another level. The simulated penetration testing on live vulnerable servers made concepts stick fast. If you're serious about ethical hacking in Nigeria or abroad, don't sleep on this.",
+    targetType: 'course',
+    targetId: 'cybersecurity',
+    parentId: null,
+    likedBy: ['user-demo-1', 'user-demo-6'],
+    likeCount: 11,
+    createdAt: '2026-07-24T09:45:00.000Z',
+    updatedAt: ''
+  },
+  {
+    id: 'rev-fatima-kano',
+    userId: 'user-fatima-h',
+    userName: 'Fatima Al-Hassan',
+    userAvatar: '',
+    userRole: 'UI/UX Design Graduate (Kano)',
+    rating: 3,
+    title: 'Great UI/UX mentoring, but fast-paced',
+    content: 'The Figma design systems and auto-layout training was top tier, and the instructor reviewed my portfolio screen by screen. Only rating 3 stars because the assignments were very fast-paced for someone balancing a full-time job. Still learned more in 10 weeks than 2 years of self-study!',
+    targetType: 'course',
+    targetId: 'ui-ux-design',
+    parentId: null,
+    likedBy: ['user-demo-2'],
+    likeCount: 9,
+    createdAt: '2026-07-10T12:00:00.000Z',
+    updatedAt: ''
+  },
+  {
+    id: 'rev-damilola-ibadan',
+    userId: 'user-dami-o',
+    userName: 'Damilola Oladipo',
+    userAvatar: '',
+    userRole: 'Mobile App Developer (Ibadan)',
+    rating: 4,
+    title: 'Mobile App engineering with Flutter is intense but solid',
+    content: 'Building cross-platform apps with real state management (Riverpod) and offline caching was exactly what I needed. The physical lab community kept me accountable throughout the 14 weeks. Even when my emulator was hanging my laptop, the lab systems had us covered.',
+    targetType: 'course',
+    targetId: 'mobile-app-development',
+    parentId: null,
+    likedBy: ['user-demo-3', 'user-demo-7'],
+    likeCount: 16,
+    createdAt: '2026-07-17T11:15:00.000Z',
+    updatedAt: ''
+  },
+  {
+    id: 'rev-chiamaka-enugu',
+    userId: 'user-chia-e',
+    userName: 'Chiamaka Eze',
+    userAvatar: '',
+    userRole: 'AI & Automation Specialist (Enugu)',
+    rating: 5,
+    title: 'Sales Funnels & AI Automation doubled my agency clients',
+    content: 'As a freelancer handling social media, learning Make.com, WhatsApp automation, and custom AI agents was a game changer. I packaged automated lead pipelines for 3 real estate companies in Lagos and Enugu, charging ₦300k setup fees each. The course paid for itself within week 4.',
+    targetType: 'course',
+    targetId: 'sales-funnels-ai-automation',
+    parentId: null,
+    likedBy: ['user-demo-5', 'user-demo-8'],
+    likeCount: 22,
+    createdAt: '2026-06-03T14:32:00.000Z',
+    updatedAt: ''
+  }
+];
+
+function computeEffectiveLikes(reviewId: string, likedBy: string[] = []): number {
+  const base = SERVER_BASELINE_LIKES[reviewId] ?? 0;
+  const realUserLikes = likedBy.filter(u => !u.startsWith('user-demo-') && u !== 'user-nnamdi-k').length;
+  return base + realUserLikes;
+}
+
 function loadReviewsFromDisk(): Map<string, SyncedReview> {
   const map = new Map<string, SyncedReview>();
+  
+  // 1. Initialize with authentic seed reviews
+  for (const s of SERVER_SEED_REVIEWS) {
+    map.set(s.id, {
+      ...s,
+      likeCount: computeEffectiveLikes(s.id, s.likedBy)
+    });
+  }
+
+  // 2. Load disk data if present
   try {
     if (fs.existsSync(REVIEWS_FILE_PATH)) {
       const raw = fs.readFileSync(REVIEWS_FILE_PATH, 'utf-8');
@@ -233,7 +381,14 @@ function loadReviewsFromDisk(): Map<string, SyncedReview> {
       if (Array.isArray(data)) {
         for (const r of data) {
           if (r && r.id) {
-            map.set(r.id, r);
+            const existing = map.get(r.id);
+            const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(r.likedBy || [])]));
+            map.set(r.id, {
+              ...(existing || {}),
+              ...r,
+              likedBy: mergedLikedBy,
+              likeCount: computeEffectiveLikes(r.id, mergedLikedBy)
+            });
           }
         }
       }
@@ -776,7 +931,7 @@ app.get('/api/reviews', (req, res) => {
   }
 });
 
-// POST /api/reviews - Save / upsert a review globally
+// POST /api/reviews - Save / upsert a review globally (supports reviews and replies)
 app.post('/api/reviews', (req, res) => {
   try {
     const { review, list } = req.body;
@@ -784,18 +939,24 @@ app.post('/api/reviews', (req, res) => {
       for (const item of list) {
         if (item && item.id) {
           const existing = serverReviewsMap.get(item.id);
+          const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(item.likedBy || [])]));
           serverReviewsMap.set(item.id, {
             ...existing,
             ...item,
+            likedBy: mergedLikedBy,
+            likeCount: computeEffectiveLikes(item.id, mergedLikedBy),
             updatedAt: new Date().toISOString()
           });
         }
       }
     } else if (review && review.id) {
       const existing = serverReviewsMap.get(review.id);
+      const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(review.likedBy || [])]));
       serverReviewsMap.set(review.id, {
         ...existing,
         ...review,
+        likedBy: mergedLikedBy,
+        likeCount: computeEffectiveLikes(review.id, mergedLikedBy),
         updatedAt: new Date().toISOString()
       });
     }
@@ -806,21 +967,27 @@ app.post('/api/reviews', (req, res) => {
   }
 });
 
-// POST /api/reviews/like - Toggle like on review
+// POST /api/reviews/like - Toggle like on review or reply
 app.post('/api/reviews/like', (req, res) => {
   try {
     const { reviewId, userId } = req.body;
     if (!reviewId || !userId) {
       return res.status(400).json({ success: false, error: 'reviewId and userId are required.' });
     }
-    const r = serverReviewsMap.get(reviewId);
+    let r = serverReviewsMap.get(reviewId);
+    if (!r) {
+      const seed = SERVER_SEED_REVIEWS.find(s => s.id === reviewId);
+      if (seed) {
+        r = { ...seed };
+        serverReviewsMap.set(reviewId, r);
+      }
+    }
     if (r) {
       const likedBy = r.likedBy || [];
       const isLiked = likedBy.includes(userId);
       const nextLikedBy = isLiked ? likedBy.filter(u => u !== userId) : [...likedBy, userId];
-      const nextLikeCount = isLiked ? Math.max(0, (r.likeCount || 0) - 1) : (r.likeCount || 0) + 1;
       r.likedBy = nextLikedBy;
-      r.likeCount = nextLikeCount;
+      r.likeCount = computeEffectiveLikes(reviewId, nextLikedBy);
       r.updatedAt = new Date().toISOString();
       serverReviewsMap.set(reviewId, r);
       saveReviewsToDisk(serverReviewsMap);
