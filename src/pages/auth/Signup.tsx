@@ -106,6 +106,9 @@ export default function Signup() {
     try {
       const res = await signInWithGoogle();
       const gUser = res?.user;
+      if (gUser) {
+        await syncSession(gUser);
+      }
       const isSystemAdmin = isSystemAdminEmail(gUser?.email);
 
       setGoogleLoading(false);

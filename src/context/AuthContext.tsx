@@ -54,7 +54,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (_) {}
 
       const isSystemAdmin = isSystemAdminEmail(currentUser.email);
-      const role = isSystemAdmin ? 'admin' : (currentUser.user_metadata?.isAmbassador ? 'affiliate' : 'user');
+      const isPurged = isAccountPurgedOrDeleted(currentUser.email) || (currentUser.id && isAccountPurgedOrDeleted(currentUser.id));
+
+      if (isPurged && !isSystemAdmin) {
+        try {
+          localStorage.removeItem('kogla_active_session');
+          await supabase.auth.signOut();
+        } catch (_) {}
+        setUser(null);
+        setProfile(null);
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
 
       let existingProfile = getSupabaseUserProfile(normalizedUser.id);
       if (!existingProfile && currentUser.email) {
@@ -69,11 +81,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      const isOAuthGoogle = currentUser.app_metadata?.provider === 'google' || 
+                            currentUser.identities?.some((id: any) => id.provider === 'google') ||
+                            !!currentUser.user_metadata?.avatar_url ||
+                            !!currentUser.user_metadata?.picture;
+      const isEmailVerified = isSystemAdmin || isOAuthGoogle || !!currentUser.email_confirmed_at || !!currentUser.confirmed_at;
+
+      if (existingProfile) {
+        let changed = false;
+        if (isSystemAdmin && existingProfile.role !== 'admin') {
+          existingProfile.role = 'admin';
+          changed = true;
+        }
+        if (isEmailVerified && !existingProfile.emailVerified) {
+          existingProfile.emailVerified = true;
+          existingProfile.emailConfirmedAt = currentUser.email_confirmed_at || currentUser.confirmed_at || existingProfile.emailConfirmedAt || new Date().toISOString();
+          changed = true;
+        }
+        const avatarCandidate = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || currentUser.photoURL || '';
+        if (!existingProfile.avatarUrl && avatarCandidate) {
+          existingProfile.avatarUrl = avatarCandidate;
+          changed = true;
+        }
+        const nameCandidate = currentUser.user_metadata?.name || currentUser.user_metadata?.full_name || '';
+        if ((!existingProfile.name || existingProfile.name === 'User' || existingProfile.name === 'Member') && nameCandidate) {
+          existingProfile.name = nameCandidate;
+          changed = true;
+        }
+        setProfile(existingProfile);
+        if (changed) {
+          saveSupabaseUserProfile(existingProfile);
+        }
+      } else {
+        // Automatically create and register verified profile for new Google OAuth or registered users
+        const cleanName = currentUser.user_metadata?.name || 
+                          currentUser.user_metadata?.full_name || 
+                          (isSystemAdmin ? 'Gerald Emechebe' : (currentUser.email ? currentUser.email.split('@')[0] : 'Member'));
+        const cleanAvatar = currentUser.user_metadata?.avatar_url || 
+                            currentUser.user_metadata?.picture || 
+                            currentUser.photoURL || '';
+        const role = isSystemAdmin ? 'admin' : (currentUser.user_metadata?.role || (currentUser.user_metadata?.isAmbassador ? 'affiliate' : 'user'));
+        
+        const newProfile: UserProfile = {
+          uid: normalizedUser.id,
+          name: cleanName,
+          email: (currentUser.email || '').toLowerCase().trim(),
+          role: role as ('user' | 'admin' | 'affiliate'),
+          avatarUrl: cleanAvatar,
+          isAmbassador: role === 'affiliate' || !!currentUser.user_metadata?.isAmbassador,
+          affiliateCode: currentUser.user_metadata?.affiliateCode || '',
+          xp: isSystemAdmin ? 1500 : 0,
+          completedRooms: isSystemAdmin ? ['web-architecture-foundations', 'cloud-infrastructure-pipelines', 'cyber-defense-protocols'] : [],
+          emailVerified: isEmailVerified,
+          emailConfirmedAt: isEmailVerified ? (currentUser.email_confirmed_at || currentUser.confirmed_at || new Date().toISOString()) : undefined,
+          isPaid: isSystemAdmin ? true : !!currentUser.user_metadata?.isPaid,
+          createdAt: currentUser.created_at || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        setProfile(newProfile);
+        await saveSupabaseUserProfile(newProfile);
+      }
+
       // Always fetch fresh profile from DB asynchronously to ensure cross-device consistency
       fetchUserProfileAsync(normalizedUser.id).then(freshDbProfile => {
         if (freshDbProfile) {
           setProfile(prev => {
-            const merged = { ...(prev || {}), ...freshDbProfile };
+            const merged: UserProfile = { ...(prev || {}), ...freshDbProfile };
             try {
               const existingRaw = localStorage.getItem('kogla_supabase_users');
               let profiles: UserProfile[] = existingRaw ? JSON.parse(existingRaw) : [];
@@ -89,55 +162,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
       }).catch(() => {});
-
-      if (!isSystemAdmin) {
-        const isPurged = isAccountPurgedOrDeleted(currentUser.email) || (currentUser.id && isAccountPurgedOrDeleted(currentUser.id));
-        if (isPurged || !existingProfile) {
-          try {
-            localStorage.removeItem('kogla_active_session');
-            await supabase.auth.signOut();
-          } catch (_) {}
-          setUser(null);
-          setProfile(null);
-          setNotifications([]);
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (existingProfile) {
-        let changed = false;
-        if (isSystemAdmin && existingProfile.role !== 'admin') {
-          existingProfile.role = 'admin';
-          changed = true;
-        }
-        if (currentUser.email_confirmed_at && !existingProfile.emailVerified) {
-          existingProfile.emailVerified = true;
-          existingProfile.emailConfirmedAt = currentUser.email_confirmed_at;
-          changed = true;
-        }
-        setProfile(existingProfile);
-        if (changed) {
-          saveSupabaseUserProfile(existingProfile);
-        }
-      } else if (isSystemAdmin) {
-        const newProfile: UserProfile = {
-          uid: normalizedUser.id,
-          name: currentUser.user_metadata?.name || (isSystemAdmin ? 'Gerald Emechebe' : 'Member'),
-          email: currentUser.email || '',
-          role: 'admin',
-          emailVerified: true,
-          emailConfirmedAt: currentUser.email_confirmed_at || new Date().toISOString(),
-          xp: 1500,
-          completedRooms: ['web-architecture-foundations', 'cloud-infrastructure-pipelines'],
-          avatarUrl: currentUser.user_metadata?.avatar_url || '',
-          isPaid: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        setProfile(newProfile);
-        saveSupabaseUserProfile(newProfile);
-      }
 
       // Load notifications from localStorage cache
       try {

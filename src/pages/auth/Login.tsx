@@ -67,6 +67,9 @@ export default function Login() {
     try {
       const res = await signInWithGoogle();
       const gUser = res?.user;
+      if (gUser) {
+        await syncSession(gUser);
+      }
       const isSystemAdmin = isSystemAdminEmail(gUser?.email);
 
       setGoogleLoading(false);
@@ -203,7 +206,7 @@ export default function Login() {
 
       if (!isSystemAdmin) {
         const isPurged = isAccountPurgedOrDeleted(trimmedEmail) || (activeUser?.id && isAccountPurgedOrDeleted(activeUser.id));
-        if (isPurged || !existingDbProfile) {
+        if (isPurged) {
           try {
             await supabase.auth.signOut();
             localStorage.removeItem('kogla_active_session');

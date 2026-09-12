@@ -82,7 +82,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       await createReview({
         userId: user.uid,
         userName: profile?.name || user.displayName || 'Kogla Developer',
-        userAvatar: user.photoURL || '',
+        userAvatar: user.photoURL || profile?.avatarUrl || '',
         userRole: profile?.role === 'admin' ? 'Kogla Admin' : 'Academy Student',
         rating: newRating,
         title: newTitle.trim(),
@@ -116,7 +116,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       await createReview({
         userId: user.uid,
         userName: profile?.name || user.displayName || 'Kogla Developer',
-        userAvatar: user.photoURL || '',
+        userAvatar: user.photoURL || profile?.avatarUrl || '',
         userRole: profile?.role === 'admin' ? 'Kogla Admin' : 'Member',
         rating: 0,
         title: '',
