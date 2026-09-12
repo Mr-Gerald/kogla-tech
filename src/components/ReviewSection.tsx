@@ -362,7 +362,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
             ) : (
               <div className="bg-zinc-900/60 border border-zinc-800 rounded p-3 text-center space-y-2">
                 <p className="text-[11px] text-zinc-400">
-                  Sign in with Google to post your feedback and engage in student discussions.
+                  Sign in or create an account to post your feedback and engage in student discussions.
                 </p>
                 <button
                   onClick={() => navigate('/auth/login')}
