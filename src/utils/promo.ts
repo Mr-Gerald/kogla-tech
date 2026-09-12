@@ -2,10 +2,19 @@
  * Centralized Promo Code & Referral Code Validation Engine
  */
 
+export const SPECIAL_PROMO_DISCOUNTS: Record<string, { percent: number; label: string }> = {
+  'KOGLA21': { percent: 20, label: 'Early Bird 20% Discount' },
+  'KOGLA20': { percent: 20, label: 'Early Bird 20% Discount' },
+  'EARLYBIRD': { percent: 20, label: 'Early Bird 20% Discount' },
+};
+
 export const SYSTEM_PROMO_CODES = [
   'AMBASSADOR',
   'KOGLA5',
   'KOGLA10',
+  'KOGLA21',
+  'KOGLA20',
+  'EARLYBIRD',
   'SPECIAL5',
   'DISCOUNT5',
   'WELCOME5',
@@ -50,11 +59,15 @@ export function validatePromoCode(
     .includes(clean);
 
   if (isSystemCode || isAffiliateCode) {
+    const special = SPECIAL_PROMO_DISCOUNTS[clean];
+    const discountPercent = special ? special.percent : (clean.includes('10') ? 10 : 5);
+    const label = special ? special.label : `${discountPercent}% discount active`;
+
     return {
       isValid: true,
-      discountPercent: 5,
+      discountPercent,
       code: clean,
-      message: `Referral / Promo code ${clean} applied (5% discount active).`
+      message: `Promo code ${clean} applied (${label}).`
     };
   }
 

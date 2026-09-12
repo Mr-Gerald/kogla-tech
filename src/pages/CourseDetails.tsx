@@ -45,6 +45,14 @@ export default function CourseDetails() {
   const [motivation, setMotivation] = useState('');
   const [promoCode, setPromoCode] = useState(getActiveReferralCode() || profile?.appliedPromoCode || profile?.referredBy || '');
   const [promoApplied, setPromoApplied] = useState(Boolean(getActiveReferralCode() || profile?.appliedPromoCode || profile?.referredBy || (profile?.discountPercent && profile.discountPercent > 0)));
+  const [promoDiscountPercent, setPromoDiscountPercent] = useState<number>(() => {
+    const active = getActiveReferralCode() || profile?.appliedPromoCode || profile?.referredBy;
+    if (active) {
+      const val = validatePromoCode(active);
+      return val.isValid ? val.discountPercent : 5;
+    }
+    return profile?.discountPercent || 5;
+  });
   const [promoError, setPromoError] = useState('');
   const [knownAffiliateCodes, setKnownAffiliateCodes] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,8 +74,11 @@ export default function CourseDetails() {
     if (active) {
       setPromoCode(active);
       setPromoApplied(true);
+      const val = validatePromoCode(active);
+      if (val.isValid) setPromoDiscountPercent(val.discountPercent);
     } else if (profile?.discountPercent && profile.discountPercent > 0) {
       setPromoApplied(true);
+      setPromoDiscountPercent(profile.discountPercent);
     }
   }, [profile]);
 
@@ -80,7 +91,7 @@ export default function CourseDetails() {
 
   const basePrice = selectedFormat === 'online' ? course.onlinePrice : course.physicalPrice;
   const isDiscountValid = promoApplied;
-  const discountAmount = isDiscountValid ? Math.round(basePrice * 0.05) : 0;
+  const discountAmount = isDiscountValid ? Math.round(basePrice * (promoDiscountPercent / 100)) : 0;
   const finalPrice = basePrice - discountAmount;
 
   const handleApplyPromo = () => {
@@ -94,6 +105,7 @@ export default function CourseDetails() {
       setManualReferralCode(val.code);
       setPromoCode(val.code);
       setPromoApplied(true);
+      setPromoDiscountPercent(val.discountPercent);
       setPromoError('');
     } else {
       setPromoApplied(false);
@@ -447,7 +459,7 @@ export default function CourseDetails() {
                       {isDiscountValid ? (
                         <>
                           <span className="line-through text-zinc-500 text-[10px] whitespace-nowrap">{formatNaira(course.onlinePrice)}</span>
-                          <span className="text-emerald-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(Math.round(course.onlinePrice * 0.95))}</span>
+                          <span className="text-emerald-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(Math.round(course.onlinePrice * ((100 - promoDiscountPercent) / 100)))}</span>
                         </>
                       ) : (
                         <span className="text-gold-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(course.onlinePrice)}</span>
@@ -475,7 +487,7 @@ export default function CourseDetails() {
                       {isDiscountValid ? (
                         <>
                           <span className="line-through text-zinc-500 text-[10px] whitespace-nowrap">{formatNaira(course.physicalPrice)}</span>
-                          <span className="text-gold-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(Math.round(course.physicalPrice * 0.95))}</span>
+                          <span className="text-gold-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(Math.round(course.physicalPrice * ((100 - promoDiscountPercent) / 100)))}</span>
                         </>
                       ) : (
                         <span className="text-gold-400 font-black text-xs sm:text-sm whitespace-nowrap">{formatNaira(course.physicalPrice)}</span>
@@ -501,7 +513,7 @@ export default function CourseDetails() {
                       setPromoCode(e.target.value.toUpperCase());
                       setPromoApplied(false);
                     }}
-                    placeholder="e.g. AMBASSADOR"
+                    placeholder="e.g. KOGLA21 or AMBASSADOR"
                     className="w-full p-2.5 bg-black border border-zinc-800 rounded focus:border-gold-500 focus:outline-none text-xs text-gold-400 font-mono uppercase"
                   />
                   <button
@@ -516,7 +528,7 @@ export default function CourseDetails() {
                 {promoApplied ? (
                   <p className="text-[11px] text-emerald-400 font-mono mt-1.5 flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800/50 p-2 rounded-sm leading-tight">
                     <Check size={12} className="shrink-0 text-emerald-400" /> 
-                    <span className="whitespace-nowrap">5% Ambassador Discount Active (-{formatNaira(discountAmount)})</span>
+                    <span className="whitespace-nowrap">{promoDiscountPercent}% Promo / Referral Discount Active (-{formatNaira(discountAmount)})</span>
                   </p>
                 ) : promoError ? (
                   <p className="text-[11px] text-amber-400 font-mono mt-1.5 flex items-center gap-1.5 bg-amber-950/40 border border-amber-800/50 p-2 rounded-sm leading-tight">
@@ -533,7 +545,7 @@ export default function CourseDetails() {
                 </div>
                 {promoApplied && discountAmount > 0 && (
                   <div className="flex items-center justify-between text-emerald-400 gap-2 text-[11px]">
-                    <span className="truncate">Creator Discount (-5%):</span>
+                    <span className="truncate">Promo Discount (-{promoDiscountPercent}%):</span>
                     <span className="whitespace-nowrap font-bold shrink-0">-{formatNaira(discountAmount)}</span>
                   </div>
                 )}
