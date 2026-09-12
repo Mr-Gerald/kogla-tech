@@ -66,25 +66,33 @@ export default function Academy() {
           11 INDUSTRY-ACCREDITED ENGINEERING & LEADERSHIP SPECIALIZATIONS WITH LIVE ONLINE COHORTS & PHYSICAL HUBS.
         </p>
 
-        {/* ACTIVE PROMO BADGE IF DETECTED */}
-        {activePromo && (
-          <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 bg-gold-500/20 border border-gold-500/50 rounded-full text-gold-300 text-xs font-mono">
-            <Tag size={13} className="text-gold-400 shrink-0" />
-            <span>Referral Promo Active: <b className="text-white font-bold">{activePromo}</b> (5% Discount Applied at Checkout)</span>
-            <button
-              type="button"
-              onClick={() => {
-                localStorage.removeItem('kogla_referral_code');
-                localStorage.removeItem('kogla_referral_timestamp');
-                setActivePromo(null);
-              }}
-              className="ml-1 px-1.5 py-0.5 bg-black/40 hover:bg-black text-gold-400 hover:text-white rounded text-[10px] uppercase font-mono flex items-center gap-1 border border-gold-500/30 transition-colors cursor-pointer"
-              title="Clear active promo code"
-            >
-              <X size={11} /> Remove
-            </button>
+        {/* ACTIVE PROMO BADGE OR SEPTEMBER 24 COHORT EARLY BIRD HIGHLIGHT */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-gradient-to-r from-gold-500/20 via-zinc-900 to-gold-500/20 border border-gold-500/50 rounded-full text-gold-300 text-xs font-mono shadow-md">
+            <Tag size={14} className="text-gold-400 shrink-0" />
+            <span>
+              🚀 Next Cohort starts <b className="text-white">SEPTEMBER 24TH</b> | Use code <b className="text-gold-400 bg-black/60 px-2 py-0.5 rounded border border-gold-500/30">KOGLA21</b> for <b className="text-white">20% OFF</b> tuition & services!
+            </span>
           </div>
-        )}
+
+          {activePromo && (
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-black/70 border border-gold-500/40 rounded-full text-gold-300 text-xs font-mono">
+              <span>Promo Active: <b className="text-white font-bold">{activePromo}</b></span>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem('kogla_referral_code');
+                  localStorage.removeItem('kogla_referral_timestamp');
+                  setActivePromo(null);
+                }}
+                className="px-1.5 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-gold-400 hover:text-white rounded text-[10px] uppercase font-mono flex items-center gap-1 transition-colors cursor-pointer"
+                title="Clear active promo code"
+              >
+                <X size={11} /> Clear
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* GAMIFIED DASHBOARD OR CERTIFICATE VERIFY BANNER */}

@@ -32,7 +32,7 @@ export interface SiteConfig {
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   companyName: 'Kogla Tech',
-  logoUrl: '',
+  logoUrl: '/kogla-logo.jpg',
   logoText: 'KOGLA TECH',
   contactEmail: 'solutions@koglatech.com',
   contactPhone: '+234 701 248 9041',
@@ -71,9 +71,9 @@ const SiteConfigContext = createContext<SiteConfigContextType | undefined>(undef
 export function sanitizeSiteConfig(raw?: Partial<SiteConfig> | null): SiteConfig {
   const merged: SiteConfig = { ...DEFAULT_SITE_CONFIG, ...(raw || {}) };
 
-  // Remove old synthetic defaults if present
-  if (merged.logoUrl === '/logo512.png' || merged.logoUrl === '/apple-touch-icon.png') {
-    merged.logoUrl = '';
+  // Remove old synthetic defaults if present, default to official logo
+  if (merged.logoUrl === '/logo512.png' || merged.logoUrl === '/apple-touch-icon.png' || !merged.logoUrl) {
+    merged.logoUrl = '/kogla-logo.jpg';
   }
   if (merged.faviconUrl === '/apple-touch-icon.png' || merged.faviconUrl === '/logo512.png' || !merged.faviconUrl) {
     merged.faviconUrl = '/favicon.svg';

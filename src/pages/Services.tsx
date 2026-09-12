@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Smartphone, Shield, Cpu, Mail, Globe, Briefcase, BarChart3, Cloud, Layers, Zap, MessageCircle, Send, X, Palette, MessageSquare, Clock, Award, Video, PieChart } from 'lucide-react';
+import { Smartphone, Shield, Cpu, Mail, Globe, Briefcase, BarChart3, Cloud, Layers, Zap, MessageCircle, Send, X, Palette, MessageSquare, Clock, Award, Video, PieChart, Sparkles } from 'lucide-react';
 import React, { useState } from 'react';
 
 export default function Services() {
@@ -83,16 +83,36 @@ export default function Services() {
     return (
         <div className="pt-32 px-6 pb-24 max-w-7xl mx-auto font-sans text-gray-100">
             
-            <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-                <span className="text-[10px] text-gold-500 font-mono font-bold tracking-widest uppercase bg-gold-500/10 border border-gold-500/20 px-3.5 py-1 rounded-full">
-                  Enterprise Solutions & Services Offerings
-                </span>
+            <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-400 text-[10px] font-mono font-bold tracking-widest uppercase rounded-full">
+                  <Zap size={12} className="text-gold-400" /> Enterprise Solutions & Services
+                </div>
                 <h1 className="text-4xl md:text-6xl font-display font-bold uppercase tracking-wider">
                   Our <span className="text-gold-500">Service Solutions</span>
                 </h1>
                 <p className="text-xs md:text-sm text-gray-400 font-sans leading-relaxed">
-                  Explore our comprehensive solution and service offerings below. Standard delivery ranges from 1-2 weeks depending on the service. <strong className="text-gold-400">Note: Higher payment guarantees faster priority delivery!</strong> Click any service to connect instantly via WhatsApp.
+                  We engineer bespoke software, web & mobile applications, AI workflows, security audits, and UI/UX design. Standard delivery ranges from 1-2 weeks. <strong className="text-gold-400">Note: Higher priority payment guarantees faster delivery!</strong>
                 </p>
+
+                {/* 20% DISCOUNT PROMO BANNER FOR SERVICES */}
+                <div className="p-4 bg-gradient-to-r from-gold-500/15 via-zinc-900 to-gold-500/10 border border-gold-500/40 rounded-sm text-left flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono font-bold text-gold-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Sparkles size={13} /> Exclusive 20% Service Discount Promo
+                    </span>
+                    <p className="text-xs text-zinc-200">
+                      Quote code <b className="text-gold-400 bg-black/60 px-2 py-0.5 rounded font-mono border border-gold-500/30">KOGLA21</b> when booking on WhatsApp or email to claim <strong className="text-white">20% OFF</strong> your total service charge!
+                    </p>
+                  </div>
+                  <a
+                    href={`https://wa.me/2347012489041?text=${encodeURIComponent(`Hello Kogla Tech, I want to request a service (Website / Mobile App / UI/UX / Graphics / AI). I am using promo code KOGLA21 to claim my 20% discount on the service charge!`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-gold-500 hover:bg-gold-400 text-black font-bold text-xs uppercase font-mono tracking-wider rounded-sm shrink-0 flex items-center gap-1.5 transition-all"
+                  >
+                    <MessageCircle size={14} /> Claim 20% Discount
+                  </a>
+                </div>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -173,15 +193,15 @@ export default function Services() {
 
                         <div className="grid sm:grid-cols-2 gap-3 pt-2">
                             <a 
-                                href={`https://wa.me/2347012489041?text=${encodeURIComponent(`Hello Kogla Tech, I want to book your ${selectedService.title} service. My requirement is: [describe project]. I understand higher payment guarantees faster priority delivery. Let's discuss!`)}`}
+                                href={`https://wa.me/2347012489041?text=${encodeURIComponent(`Hello Kogla Tech, I want to book your ${selectedService.title} service. My requirement is: [describe project]. I am applying promo code KOGLA21 for 20% off my service charge. Let's discuss!`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-widest font-display rounded-sm transition-colors flex items-center justify-center gap-2"
                             >
-                                <MessageCircle size={15} /> WhatsApp Contact
+                                <MessageCircle size={15} /> WhatsApp (20% Off)
                             </a>
                             <a 
-                                href={`mailto:solutions@koglatech.com?subject=${encodeURIComponent(`Inquiry & Priority Booking: ${selectedService.title} - Kogla Tech`)}`}
+                                href={`mailto:solutions@koglatech.com?subject=${encodeURIComponent(`[KOGLA21 20% OFF] Priority Booking: ${selectedService.title} - Kogla Tech`)}`}
                                 className="py-3 bg-gold-500 hover:bg-gold-600 text-black font-semibold text-xs uppercase tracking-widest font-display rounded-sm transition-colors flex items-center justify-center gap-2"
                             >
                                 <Mail size={15} /> Send Email

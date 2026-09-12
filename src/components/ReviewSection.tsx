@@ -135,7 +135,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     }
   };
 
-  // Handle like toggle
+  // Handle like toggle with instant optimistic update
   const handleLike = async (review: ReviewRecord) => {
     if (!user) {
       navigate('/auth/login');
@@ -143,11 +143,37 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     }
     if (likingIds[review.id]) return;
 
+    const currentUserId = user.uid;
+    const isCurrentlyLiked = (review.likedBy || []).includes(currentUserId);
+    const nextLikedBy = isCurrentlyLiked
+      ? (review.likedBy || []).filter((u) => u !== currentUserId)
+      : [...(review.likedBy || []), currentUserId];
+    const nextLikeCount = isCurrentlyLiked
+      ? Math.max(0, (review.likeCount || 0) - 1)
+      : (review.likeCount || 0) + 1;
+
+    // 1. Instant optimistic UI update
+    setReviews((prev) =>
+      prev.map((r) =>
+        r.id === review.id
+          ? { ...r, likedBy: nextLikedBy, likeCount: nextLikeCount }
+          : r
+      )
+    );
+
     setLikingIds((prev) => ({ ...prev, [review.id]: true }));
     try {
-      await toggleLikeReview(review, user.uid);
+      await toggleLikeReview(review, currentUserId);
     } catch (err) {
       console.error('Failed to toggle like:', err);
+      // Revert if failed
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.id === review.id
+            ? { ...r, likedBy: review.likedBy, likeCount: review.likeCount }
+            : r
+        )
+      );
     } finally {
       setLikingIds((prev) => ({ ...prev, [review.id]: false }));
     }

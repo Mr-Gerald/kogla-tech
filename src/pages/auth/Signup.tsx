@@ -205,6 +205,9 @@ export default function Signup() {
 
       // 2. Save master profile record to database / local cache
       const effectivePromo = (promoValidation.isValid ? promoValidation.code : cleanPromo).trim().toUpperCase();
+      const initialDiscountPercent = promoValidation.isValid 
+        ? promoValidation.discountPercent 
+        : (effectivePromo === 'KOGLA21' || effectivePromo === 'KOGLA20' || effectivePromo === 'EARLYBIRD' ? 20 : (effectivePromo ? 5 : 0));
 
       const initialProfile: UserProfile = {
         uid: activeUser.id,
@@ -217,7 +220,7 @@ export default function Signup() {
         completedRooms: [],
         referredBy: effectivePromo || null,
         appliedPromoCode: effectivePromo || undefined,
-        discountPercent: effectivePromo ? 5 : 0,
+        discountPercent: initialDiscountPercent,
         emailVerified: isSystemAdmin ? true : false,
         emailConfirmedAt: isSystemAdmin ? new Date().toISOString() : undefined,
         createdAt: new Date().toISOString(),
