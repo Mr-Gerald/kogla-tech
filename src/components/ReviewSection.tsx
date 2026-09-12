@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, ThumbsUp, MessageSquare, Trash2, LogIn, Send, CornerDownRight, CheckCircle2, UserCheck, ShieldCheck, Filter } from 'lucide-react';
+import { 
+  Star, 
+  ThumbsUp, 
+  MessageSquare, 
+  Trash2, 
+  LogIn, 
+  Send, 
+  CornerDownRight, 
+  CheckCircle2, 
+  UserCheck, 
+  ShieldCheck, 
+  Filter,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ReviewRecord } from '../types';
 import { subscribeToReviews, createReview, toggleLikeReview, deleteReview } from '../lib/reviews';
@@ -190,13 +204,22 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   };
 
   // Organize reviews into top-level and nested replies
-  const topLevelReviews = reviews.filter((r) => !r.parentId);
+  const topLevelReviews = [...reviews]
+    .filter((r) => !r.parentId)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
   const getReplies = (parentId: string) => reviews.filter((r) => r.parentId === parentId);
 
   // Filtered reviews
   const displayedReviews = filterRating 
     ? topLevelReviews.filter(r => (r.rating || 5) === filterRating)
     : topLevelReviews;
+
+  // 5-Reviews Limit Logic: Robust display of top 5 latest reviews
+  const [showAll, setShowAll] = useState(false);
+  const INITIAL_LIMIT = 5;
+  const visibleReviews = showAll ? displayedReviews : displayedReviews.slice(0, INITIAL_LIMIT);
+  const remainingCount = Math.max(0, displayedReviews.length - INITIAL_LIMIT);
 
   // Calculate average rating
   const reviewsWithRating = topLevelReviews.filter((r) => r.rating && r.rating > 0);
@@ -413,7 +436,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
           
           <div className="flex items-center justify-between pb-1 border-b border-zinc-850">
             <span className="text-[11px] font-mono text-zinc-400">
-              Showing <b>{displayedReviews.length}</b> {filterRating ? `${filterRating}-star` : ''} review{displayedReviews.length === 1 ? '' : 's'}
+              Showing <b>{visibleReviews.length}</b> of <b>{displayedReviews.length}</b> {filterRating ? `${filterRating}-star` : ''} review{displayedReviews.length === 1 ? '' : 's'}
             </span>
             {filterRating && (
               <button
@@ -439,7 +462,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
             </div>
           ) : (
             <div className="space-y-2.5">
-              {displayedReviews.map((review) => {
+              {visibleReviews.map((review) => {
                 const replies = getReplies(review.id);
                 const isLikedByMe = user ? review.likedBy?.includes(user.uid) : false;
                 const isReplying = replyingToId === review.id;
@@ -623,6 +646,29 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                   </div>
                 );
               })}
+
+              {/* SEE MORE / SHOW LESS 5-REVIEW CONTROL */}
+              {displayedReviews.length > INITIAL_LIMIT && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAll(!showAll)}
+                    className="w-full py-2.5 px-4 bg-zinc-900/90 hover:bg-zinc-850 border border-zinc-800 hover:border-gold-500/50 rounded text-xs font-mono font-bold text-gold-400 hover:text-gold-300 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                  >
+                    {showAll ? (
+                      <>
+                        <span>Show Less (Show 5 Latest)</span>
+                        <ChevronUp size={14} />
+                      </>
+                    ) : (
+                      <>
+                        <span>See More Reviews ({remainingCount} older review{remainingCount === 1 ? '' : 's'})</span>
+                        <ChevronDown size={14} />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

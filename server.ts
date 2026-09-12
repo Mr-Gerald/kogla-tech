@@ -204,6 +204,56 @@ const USERS_FILE_PATH = path.join(process.cwd(), 'server_data_users.json');
 const DELETED_USERS_FILE_PATH = path.join(process.cwd(), 'server_deleted_users.json');
 const AFFILIATES_FILE_PATH = path.join(process.cwd(), 'server_data_affiliates.json');
 const REFERRALS_FILE_PATH = path.join(process.cwd(), 'server_data_referrals.json');
+const REVIEWS_FILE_PATH = path.join(process.cwd(), 'server_data_reviews.json');
+
+interface SyncedReview {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  userRole?: string;
+  rating?: number;
+  title?: string;
+  content: string;
+  targetType?: string;
+  targetId?: string;
+  parentId?: string | null;
+  likedBy?: string[];
+  likeCount?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+function loadReviewsFromDisk(): Map<string, SyncedReview> {
+  const map = new Map<string, SyncedReview>();
+  try {
+    if (fs.existsSync(REVIEWS_FILE_PATH)) {
+      const raw = fs.readFileSync(REVIEWS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        for (const r of data) {
+          if (r && r.id) {
+            map.set(r.id, r);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Server] Error loading reviews from disk:', err);
+  }
+  return map;
+}
+
+function saveReviewsToDisk(map: Map<string, SyncedReview>) {
+  try {
+    const list = Array.from(map.values());
+    fs.writeFileSync(REVIEWS_FILE_PATH, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[Server] Error saving reviews to disk:', err);
+  }
+}
+
+const serverReviewsMap = loadReviewsFromDisk();
 
 function loadAffiliatesFromDisk(): Map<string, SyncedAffiliate> {
   const map = new Map<string, SyncedAffiliate>();
@@ -710,6 +760,92 @@ app.post('/api/referrals/purge-all', (req, res) => {
     }
     saveReferralsToDisk(serverReferralsMap);
     res.json({ success: true, message: 'Test referrals cleared.' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/reviews - Return all persisted reviews
+app.get('/api/reviews', (req, res) => {
+  try {
+    const diskMap = loadReviewsFromDisk();
+    const list = Array.from(diskMap.values());
+    res.json({ success: true, reviews: list });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message, reviews: [] });
+  }
+});
+
+// POST /api/reviews - Save / upsert a review globally
+app.post('/api/reviews', (req, res) => {
+  try {
+    const { review, list } = req.body;
+    if (list && Array.isArray(list)) {
+      for (const item of list) {
+        if (item && item.id) {
+          const existing = serverReviewsMap.get(item.id);
+          serverReviewsMap.set(item.id, {
+            ...existing,
+            ...item,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+    } else if (review && review.id) {
+      const existing = serverReviewsMap.get(review.id);
+      serverReviewsMap.set(review.id, {
+        ...existing,
+        ...review,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    saveReviewsToDisk(serverReviewsMap);
+    res.json({ success: true, reviews: Array.from(serverReviewsMap.values()) });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/reviews/like - Toggle like on review
+app.post('/api/reviews/like', (req, res) => {
+  try {
+    const { reviewId, userId } = req.body;
+    if (!reviewId || !userId) {
+      return res.status(400).json({ success: false, error: 'reviewId and userId are required.' });
+    }
+    const r = serverReviewsMap.get(reviewId);
+    if (r) {
+      const likedBy = r.likedBy || [];
+      const isLiked = likedBy.includes(userId);
+      const nextLikedBy = isLiked ? likedBy.filter(u => u !== userId) : [...likedBy, userId];
+      const nextLikeCount = isLiked ? Math.max(0, (r.likeCount || 0) - 1) : (r.likeCount || 0) + 1;
+      r.likedBy = nextLikedBy;
+      r.likeCount = nextLikeCount;
+      r.updatedAt = new Date().toISOString();
+      serverReviewsMap.set(reviewId, r);
+      saveReviewsToDisk(serverReviewsMap);
+    }
+    res.json({ success: true, reviews: Array.from(serverReviewsMap.values()) });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/reviews/delete - Delete a review
+app.post('/api/reviews/delete', (req, res) => {
+  try {
+    const { id } = req.body;
+    if (id) {
+      serverReviewsMap.delete(id);
+      // Also delete any child replies
+      for (const [rid, r] of serverReviewsMap.entries()) {
+        if (r.parentId === id) {
+          serverReviewsMap.delete(rid);
+        }
+      }
+      saveReviewsToDisk(serverReviewsMap);
+    }
+    res.json({ success: true, reviews: Array.from(serverReviewsMap.values()) });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
