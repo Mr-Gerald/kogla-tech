@@ -1,7 +1,8 @@
 import { ReviewRecord } from '../types';
 import { supabase } from './supabase';
+import { isSystemAdminEmail } from './authUtils';
 
-const LOCAL_REVIEWS_KEY = 'kogla_reviews_cache_v5';
+const LOCAL_REVIEWS_KEY = 'kogla_reviews_cache_v6';
 
 export const HARDCODED_BASELINE_LIKES: Record<string, number> = {
   'rev-nnamdi-lagos': 14,
@@ -13,10 +14,16 @@ export const HARDCODED_BASELINE_LIKES: Record<string, number> = {
   'rev-chiamaka-enugu': 22,
 };
 
-export function computeEffectiveLikes(reviewId: string, likedBy: string[] = []): number {
+export function computeEffectiveLikes(
+  reviewId: string,
+  likedBy: string[] = [],
+  adminBonusLikes: number = 0
+): number {
   const base = HARDCODED_BASELINE_LIKES[reviewId] ?? 0;
-  const realUserLikes = (likedBy || []).filter(u => !u.startsWith('user-demo-') && u !== 'user-nnamdi-k').length;
-  return base + realUserLikes;
+  const realUserLikes = (likedBy || []).filter(
+    u => !u.startsWith('user-demo-') && u !== 'user-nnamdi-k' && !isSystemAdminEmail(u)
+  ).length;
+  return base + realUserLikes + (adminBonusLikes || 0);
 }
 
 // 6 Authentic, hyper-realistic, community-grounded student & professional reviews
@@ -34,7 +41,8 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     targetId: 'web-development',
     parentId: null,
     likedBy: ['user-demo-1', 'user-demo-2', 'user-demo-3'],
-    likeCount: 14,
+    adminBonusLikes: 2,
+    likeCount: 16,
     createdAt: '2026-08-01T10:14:00.000Z',
     updatedAt: ''
   },
@@ -51,7 +59,8 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     targetId: 'web-development',
     parentId: 'rev-nnamdi-lagos',
     likedBy: ['user-nnamdi-k'],
-    likeCount: 6,
+    adminBonusLikes: 1,
+    likeCount: 7,
     createdAt: '2026-08-01T16:20:00.000Z',
     updatedAt: ''
   },
@@ -68,7 +77,8 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     targetId: 'data-analysis',
     parentId: null,
     likedBy: ['user-demo-4', 'user-demo-5'],
-    likeCount: 19,
+    adminBonusLikes: 2,
+    likeCount: 21,
     createdAt: '2026-07-28T16:20:00.000Z',
     updatedAt: ''
   },
@@ -80,11 +90,12 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     userRole: 'Cybersecurity Alumni (Port Harcourt)',
     rating: 5,
     title: 'Cybersecurity curriculum is deeper than standard CEH syllabus',
-    content: 'I\'ve paid for other courses before, but Kogla’s cybersecurity lab setup with Burp Suite and Wireshark traffic breakdown was on another level. The simulated penetration testing on live vulnerable servers made concepts stick fast. If you\'re serious about ethical hacking in Nigeria or abroad, don\'t sleep on this.',
+    content: "I've paid for other courses before, but Kogla’s cybersecurity lab setup with Burp Suite and Wireshark traffic breakdown was on another level. The simulated penetration testing on live vulnerable servers made concepts stick fast. If you're serious about ethical hacking in Nigeria or abroad, don't sleep on this.",
     targetType: 'course',
     targetId: 'cybersecurity',
     parentId: null,
     likedBy: ['user-demo-1', 'user-demo-6'],
+    adminBonusLikes: 0,
     likeCount: 11,
     createdAt: '2026-07-24T09:45:00.000Z',
     updatedAt: ''
@@ -102,6 +113,7 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     targetId: 'ui-ux-design',
     parentId: null,
     likedBy: ['user-demo-2'],
+    adminBonusLikes: 0,
     likeCount: 9,
     createdAt: '2026-07-10T12:00:00.000Z',
     updatedAt: ''
@@ -119,6 +131,7 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     targetId: 'mobile-app-development',
     parentId: null,
     likedBy: ['user-demo-3', 'user-demo-7'],
+    adminBonusLikes: 0,
     likeCount: 16,
     createdAt: '2026-07-17T11:15:00.000Z',
     updatedAt: ''
@@ -136,34 +149,104 @@ export const INITIAL_AUTHENTIC_REVIEWS: ReviewRecord[] = [
     targetId: 'sales-funnels-ai-automation',
     parentId: null,
     likedBy: ['user-demo-5', 'user-demo-8'],
+    adminBonusLikes: 0,
     likeCount: 22,
     createdAt: '2026-06-03T14:32:00.000Z',
     updatedAt: ''
   }
 ];
 
+/**
+ * Universal Sanitizer: Ensures critical relationships and titles are NEVER corrupted or lost.
+ * In particular: Gerald Emechebe's reply to Nnamdi K. ALWAYS remains a nested reply with parentId: 'rev-nnamdi-lagos'
+ * and role: 'Founder & CEO, Kogla Tech'.
+ */
+export function sanitizeReviewRecord(r: ReviewRecord): ReviewRecord {
+  if (!r) return r;
+
+  // Specific invariant for Gerald Emechebe's reply to Nnamdi K.
+  if (
+    r.id === 'rev-nnamdi-reply-1' ||
+    r.userId === 'admin-gerald' ||
+    r.userName === 'Gerald Emechebe' ||
+    (typeof r.content === 'string' && r.content.includes('Proud of how far you have come Nnamdi'))
+  ) {
+    return {
+      ...r,
+      id: 'rev-nnamdi-reply-1',
+      userId: 'admin-gerald',
+      userName: 'Gerald Emechebe',
+      userRole: 'Founder & CEO, Kogla Tech',
+      parentId: 'rev-nnamdi-lagos',
+      targetType: 'course',
+      targetId: 'web-development',
+      title: '',
+    };
+  }
+
+  // Preserve initial authentic seeds
+  const seedMatch = INITIAL_AUTHENTIC_REVIEWS.find(s => s.id === r.id);
+  if (seedMatch) {
+    return {
+      ...r,
+      userRole: r.userRole && r.userRole !== 'Student' ? r.userRole : seedMatch.userRole,
+      parentId: seedMatch.parentId,
+      targetType: r.targetType || seedMatch.targetType,
+      targetId: r.targetId || seedMatch.targetId,
+    };
+  }
+
+  return {
+    ...r,
+    userRole: r.userRole || (r.userId?.startsWith('admin') ? 'Kogla Admin' : 'Student'),
+    parentId: r.parentId && r.parentId !== 'null' && r.parentId !== '' ? r.parentId : null,
+  };
+}
+
 function getCachedReviews(): ReviewRecord[] {
   try {
+    // Purge outdated stale cache keys from previous versions to eliminate corrupted state
+    const staleKeys = [
+      'kogla_reviews_cache_v5',
+      'kogla_reviews_cache_v4',
+      'kogla_reviews_cache_v3',
+      'kogla_reviews_cache_v2',
+      'kogla_reviews_cache_v1',
+      'kogla_reviews_cache'
+    ];
+    staleKeys.forEach(k => {
+      try { localStorage.removeItem(k); } catch (_) {}
+    });
+
     const raw = localStorage.getItem(LOCAL_REVIEWS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((r: any) => ({
-          ...r,
-          likeCount: computeEffectiveLikes(r.id, r.likedBy || [])
-        }));
+        return parsed.map((r: any) => {
+          const adminBonusLikes = typeof r.adminBonusLikes === 'number'
+            ? r.adminBonusLikes
+            : Math.max(0, (r.likeCount || 0) - (HARDCODED_BASELINE_LIKES[r.id] ?? 0));
+          return sanitizeReviewRecord({
+            ...r,
+            adminBonusLikes,
+            likeCount: typeof r.likeCount === 'number'
+              ? Math.max(r.likeCount, computeEffectiveLikes(r.id, r.likedBy || [], adminBonusLikes))
+              : computeEffectiveLikes(r.id, r.likedBy || [], adminBonusLikes)
+          });
+        });
       }
     }
   } catch (_) {}
-  return INITIAL_AUTHENTIC_REVIEWS.map(r => ({
+  return INITIAL_AUTHENTIC_REVIEWS.map(r => sanitizeReviewRecord({
     ...r,
-    likeCount: computeEffectiveLikes(r.id, r.likedBy || [])
+    likeCount: computeEffectiveLikes(r.id, r.likedBy || [], r.adminBonusLikes || 0)
   }));
 }
 
 function saveCachedReviews(reviews: ReviewRecord[]) {
   try {
-    localStorage.setItem(LOCAL_REVIEWS_KEY, JSON.stringify(reviews));
+    const sanitized = reviews.map(sanitizeReviewRecord);
+    localStorage.setItem(LOCAL_REVIEWS_KEY, JSON.stringify(sanitized));
   } catch (_) {}
 }
 
@@ -192,7 +275,7 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
     INITIAL_AUTHENTIC_REVIEWS.forEach(r => {
       fetchedMap.set(r.id, {
         ...r,
-        likeCount: computeEffectiveLikes(r.id, r.likedBy || [])
+        likeCount: computeEffectiveLikes(r.id, r.likedBy || [], r.adminBonusLikes || 0)
       });
     });
 
@@ -206,22 +289,32 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
             if (r && r.id) {
               const existing = fetchedMap.get(r.id);
               const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(r.likedBy || [])]));
+              const adminBonusLikes = Math.max(
+                typeof r.adminBonusLikes === 'number' ? r.adminBonusLikes : 0,
+                existing?.adminBonusLikes || 0
+              );
+              const effectiveLikes = Math.max(
+                typeof r.likeCount === 'number' ? r.likeCount : 0,
+                existing?.likeCount || 0,
+                computeEffectiveLikes(r.id, mergedLikedBy, adminBonusLikes)
+              );
               fetchedMap.set(r.id, {
                 id: r.id,
-                userId: r.userId || '',
-                userName: r.userName || 'Anonymous',
-                userAvatar: r.userAvatar || '',
-                userRole: r.userRole || 'Student',
-                rating: typeof r.rating === 'number' ? r.rating : 5,
-                title: r.title || '',
-                content: r.content || '',
-                targetType: r.targetType || 'platform',
-                targetId: r.targetId || 'general',
-                parentId: r.parentId || null,
+                userId: r.userId || existing?.userId || '',
+                userName: r.userName || existing?.userName || 'Anonymous',
+                userAvatar: r.userAvatar || existing?.userAvatar || '',
+                userRole: r.userRole || existing?.userRole || 'Student',
+                rating: typeof r.rating === 'number' ? r.rating : (existing?.rating || 5),
+                title: r.title || existing?.title || '',
+                content: r.content || existing?.content || '',
+                targetType: r.targetType || existing?.targetType || 'platform',
+                targetId: r.targetId || existing?.targetId || 'general',
+                parentId: r.parentId || existing?.parentId || null,
                 likedBy: mergedLikedBy,
-                likeCount: computeEffectiveLikes(r.id, mergedLikedBy),
-                createdAt: r.createdAt || new Date().toISOString(),
-                updatedAt: r.updatedAt || '',
+                likeCount: effectiveLikes,
+                adminBonusLikes,
+                createdAt: r.createdAt || existing?.createdAt || new Date().toISOString(),
+                updatedAt: r.updatedAt || existing?.updatedAt || '',
               });
             }
           });
@@ -229,7 +322,7 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
       }
     } catch (_) {}
 
-    // 3. Fetch from Supabase PostgreSQL Database
+    // 3. Fetch from Supabase PostgreSQL Database (cross-device cloud persistence)
     try {
       const { data, error } = await supabase
         .from('reviews')
@@ -239,25 +332,48 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
       if (!error && Array.isArray(data) && data.length > 0) {
         data.forEach((d: any) => {
           if (d && d.id) {
+            let meta: any = {};
+            if (d.author_email) {
+              try {
+                if (typeof d.author_email === 'string' && d.author_email.startsWith('{')) {
+                  meta = JSON.parse(d.author_email);
+                }
+              } catch (_) {}
+            }
+
             const existing = fetchedMap.get(d.id);
-            const dbLikedBy = Array.isArray(d.liked_by) ? d.liked_by : (Array.isArray(d.likedBy) ? d.likedBy : []);
+            const dbLikedBy = Array.isArray(meta.likedBy)
+              ? meta.likedBy
+              : (Array.isArray(d.liked_by) ? d.liked_by : (Array.isArray(d.likedBy) ? d.likedBy : []));
             const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...dbLikedBy]));
+            const adminBonusLikes = Math.max(
+              typeof meta.adminBonusLikes === 'number' ? meta.adminBonusLikes : 0,
+              existing?.adminBonusLikes || 0
+            );
+            const computedLikes = computeEffectiveLikes(d.id, mergedLikedBy, adminBonusLikes);
+            const effectiveLikeCount = Math.max(
+              typeof meta.likeCount === 'number' ? meta.likeCount : 0,
+              existing?.likeCount || 0,
+              computedLikes
+            );
+
             fetchedMap.set(d.id, {
               id: d.id,
-              userId: d.user_id || d.userId || '',
-              userName: d.user_name || d.author_name || d.userName || 'Anonymous',
-              userAvatar: d.user_avatar || d.userAvatar || '',
-              userRole: d.user_role || d.userRole || 'Student',
-              rating: typeof d.rating === 'number' ? d.rating : 5,
-              title: d.title || d.track_title || '',
-              content: d.content || '',
-              targetType: d.target_type || d.track_id || d.targetType || 'platform',
-              targetId: d.target_id || d.track_id || d.targetId || 'general',
-              parentId: d.parent_id || d.parentId || null,
+              userId: d.user_id || meta.userId || existing?.userId || '',
+              userName: d.author_name || meta.userName || existing?.userName || 'Anonymous',
+              userAvatar: meta.userAvatar || d.user_avatar || existing?.userAvatar || '',
+              userRole: meta.userRole || d.user_role || existing?.userRole || 'Student',
+              rating: typeof d.rating === 'number' ? d.rating : (existing?.rating || 5),
+              title: d.track_title || meta.title || existing?.title || '',
+              content: d.content || existing?.content || '',
+              targetType: meta.targetType || d.track_id || existing?.targetType || 'course',
+              targetId: d.track_id || meta.targetId || existing?.targetId || 'general',
+              parentId: meta.parentId || d.parent_id || existing?.parentId || null,
               likedBy: mergedLikedBy,
-              likeCount: computeEffectiveLikes(d.id, mergedLikedBy),
-              createdAt: d.created_at || d.createdAt || new Date().toISOString(),
-              updatedAt: d.updated_at || d.updatedAt || '',
+              likeCount: effectiveLikeCount,
+              adminBonusLikes,
+              createdAt: d.created_at || existing?.createdAt || new Date().toISOString(),
+              updatedAt: meta.updatedAt || d.updated_at || existing?.updatedAt || '',
             });
           }
         });
@@ -269,33 +385,39 @@ export function subscribeToReviews(onData: (reviews: ReviewRecord[]) => void, _o
     currentLocal.forEach(cr => {
       const existing = fetchedMap.get(cr.id);
       const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(cr.likedBy || [])]));
+      const adminBonusLikes = Math.max(cr.adminBonusLikes || 0, existing?.adminBonusLikes || 0);
+      const effectiveLikeCount = Math.max(
+        cr.likeCount || 0,
+        existing?.likeCount || 0,
+        computeEffectiveLikes(cr.id, mergedLikedBy, adminBonusLikes)
+      );
       if (!existing) {
         fetchedMap.set(cr.id, {
           ...cr,
           likedBy: mergedLikedBy,
-          likeCount: computeEffectiveLikes(cr.id, mergedLikedBy)
+          adminBonusLikes,
+          likeCount: effectiveLikeCount
         });
       } else {
         fetchedMap.set(cr.id, {
           ...existing,
           likedBy: mergedLikedBy,
-          likeCount: computeEffectiveLikes(cr.id, mergedLikedBy)
+          adminBonusLikes,
+          likeCount: effectiveLikeCount
         });
       }
     });
 
-    const mergedList = Array.from(fetchedMap.values()).sort(
-      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-    );
+    const mergedList = Array.from(fetchedMap.values())
+      .map(sanitizeReviewRecord)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
     saveCachedReviews(mergedList);
-    broadcastReviews(mergedList);
+    onData(mergedList);
   };
 
   fetchAndMergeAll();
-
-  // Polling interval to sync new reviews and replies across open devices seamlessly
-  const interval = setInterval(fetchAndMergeAll, 12000);
+  const interval = setInterval(fetchAndMergeAll, 10000);
 
   return () => {
     activeSubscribers.delete(onData);
@@ -317,7 +439,7 @@ export async function createReview(params: {
 }): Promise<string> {
   const newReviewId = `rev-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   
-  const newRecord: ReviewRecord = {
+  const rawRecord: ReviewRecord = {
     id: newReviewId,
     userId: params.userId,
     userName: params.userName,
@@ -326,14 +448,17 @@ export async function createReview(params: {
     rating: params.rating !== undefined ? params.rating : 5,
     title: params.title || '',
     content: params.content.trim(),
-    targetType: params.targetType || 'platform',
+    targetType: params.targetType || 'course',
     targetId: params.targetId || 'general',
     parentId: params.parentId || null,
     likedBy: [],
     likeCount: 0,
+    adminBonusLikes: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+
+  const newRecord = sanitizeReviewRecord(rawRecord);
 
   // 1. Immediate local cache update and instant subscriber broadcast
   const cached = getCachedReviews();
@@ -341,44 +466,33 @@ export async function createReview(params: {
   saveCachedReviews(updated);
   broadcastReviews(updated);
 
-  // 2. Multi-layer save to Supabase Postgres (with resilient schema compatibility)
+  // 2. Persist to Supabase Database (with robust JSON metadata inside author_email)
   try {
-    const supabasePayload: any = {
-      id: newReviewId,
-      user_id: newRecord.userId,
-      user_name: newRecord.userName,
-      author_name: newRecord.userName,
-      user_avatar: newRecord.userAvatar,
-      user_role: newRecord.userRole,
-      rating: newRecord.rating || 5,
+    const meta = {
+      userAvatar: newRecord.userAvatar,
+      userRole: newRecord.userRole,
+      likedBy: newRecord.likedBy,
+      likeCount: newRecord.likeCount,
+      adminBonusLikes: 0,
+      parentId: newRecord.parentId,
+      targetType: newRecord.targetType,
+      targetId: newRecord.targetId,
       title: newRecord.title,
-      track_title: newRecord.title,
-      content: newRecord.content,
-      target_type: newRecord.targetType,
-      target_id: newRecord.targetId,
-      track_id: newRecord.targetId,
-      parent_id: newRecord.parentId,
-      liked_by: newRecord.likedBy,
-      like_count: newRecord.likeCount,
-      is_approved: true,
-      created_at: newRecord.createdAt,
-      updated_at: newRecord.updatedAt
+      updatedAt: newRecord.updatedAt
     };
 
-    const { error } = await supabase.from('reviews').upsert(supabasePayload);
-    if (error) {
-      // Fallback with minimal legacy schema fields if full schema rejected
-      try {
-        await supabase.from('reviews').upsert({
-          id: newReviewId,
-          user_id: newRecord.userId,
-          author_name: newRecord.userName,
-          rating: newRecord.rating || 5,
-          content: newRecord.content,
-          created_at: newRecord.createdAt
-        });
-      } catch (_) {}
-    }
+    await supabase.from('reviews').upsert({
+      id: newReviewId,
+      user_id: newRecord.userId,
+      author_name: newRecord.userName,
+      author_email: JSON.stringify(meta),
+      rating: newRecord.rating || 5,
+      track_id: newRecord.targetId || 'general',
+      track_title: newRecord.title || '',
+      content: newRecord.content,
+      is_approved: true,
+      created_at: newRecord.createdAt
+    });
   } catch (error) {
     console.warn('[Supabase Reviews] Error saving review:', error);
   }
@@ -395,46 +509,106 @@ export async function createReview(params: {
   return newReviewId;
 }
 
-export async function toggleLikeReview(review: ReviewRecord, currentUserId: string): Promise<void> {
-  if (!currentUserId) return;
-  const isLiked = (review.likedBy || []).includes(currentUserId);
+export async function toggleLikeReview(
+  rawReview: ReviewRecord,
+  currentUserId: string,
+  isAdmin: boolean = false
+): Promise<{ nextLikeCount: number; nextLikedBy: string[]; isLikedByMe: boolean }> {
+  const review = sanitizeReviewRecord(rawReview);
 
-  // Local cache update
+  if (!currentUserId) {
+    return {
+      nextLikeCount: review.likeCount || 0,
+      nextLikedBy: review.likedBy || [],
+      isLikedByMe: false
+    };
+  }
+
+  let nextLikedBy = [...(review.likedBy || [])];
+  let nextAdminBonusLikes = review.adminBonusLikes || 0;
+  let isLikedByMe = false;
+
+  if (isAdmin) {
+    // Admin power: each like click increments the like count without locking the admin into a permanent liked state.
+    // The shaded tick is NOT shown for admin, allowing repeated boosts (20 -> 21 -> 22...).
+    nextAdminBonusLikes += 1;
+    nextLikedBy = nextLikedBy.filter(u => u !== currentUserId && !isSystemAdminEmail(u));
+    isLikedByMe = false;
+  } else {
+    // Normal user: standard single-like policy with shaded tick persistence.
+    const isCurrentlyLiked = nextLikedBy.includes(currentUserId);
+    if (isCurrentlyLiked) {
+      // Toggle off / unlike
+      nextLikedBy = nextLikedBy.filter(u => u !== currentUserId);
+      isLikedByMe = false;
+    } else {
+      // Like once
+      nextLikedBy = Array.from(new Set([...nextLikedBy, currentUserId]));
+      isLikedByMe = true;
+    }
+  }
+
+  const nextLikeCount = computeEffectiveLikes(review.id, nextLikedBy, nextAdminBonusLikes);
+
+  // 1. Update local cache immediately
   const cached = getCachedReviews();
   const target = cached.find(r => r.id === review.id);
-  let nextLikedBy = [...(review.likedBy || [])];
-
-  if (isLiked) {
-    nextLikedBy = nextLikedBy.filter(u => u !== currentUserId);
-  } else {
-    nextLikedBy = Array.from(new Set([...nextLikedBy, currentUserId]));
-  }
-  const nextLikeCount = computeEffectiveLikes(review.id, nextLikedBy);
-
   if (target) {
     target.likedBy = nextLikedBy;
     target.likeCount = nextLikeCount;
-    saveCachedReviews(cached);
-    broadcastReviews(cached);
+    target.adminBonusLikes = nextAdminBonusLikes;
+    target.updatedAt = new Date().toISOString();
   }
+  saveCachedReviews(cached);
+  broadcastReviews(cached);
 
+  // 2. Persist to Supabase Database with JSON metadata in author_email
   try {
-    await supabase.from('reviews').update({
-      liked_by: nextLikedBy,
-      like_count: nextLikeCount,
-      updated_at: new Date().toISOString()
-    }).eq('id', review.id);
+    const meta = {
+      userAvatar: review.userAvatar || '',
+      userRole: review.userRole,
+      likedBy: nextLikedBy,
+      likeCount: nextLikeCount,
+      adminBonusLikes: nextAdminBonusLikes,
+      parentId: review.parentId,
+      targetType: review.targetType || 'course',
+      targetId: review.targetId || 'general',
+      title: review.title || '',
+      updatedAt: new Date().toISOString()
+    };
+
+    await supabase.from('reviews').upsert({
+      id: review.id,
+      user_id: review.userId,
+      author_name: review.userName,
+      author_email: JSON.stringify(meta),
+      rating: typeof review.rating === 'number' ? review.rating : 5,
+      track_id: review.targetId || 'general',
+      track_title: review.title || '',
+      content: review.content,
+      is_approved: true
+    });
   } catch (error) {
-    console.warn('[Supabase Reviews] Error updating like:', error);
+    console.warn('[Supabase Reviews] Error saving like to Supabase:', error);
   }
 
+  // 3. Persist to Server Disk API (for server backup & multi-client sync)
   try {
     await fetch('/api/reviews/like', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reviewId: review.id, userId: currentUserId })
+      body: JSON.stringify({
+        reviewId: review.id,
+        userId: currentUserId,
+        isAdmin,
+        nextLikeCount,
+        adminBonusLikes: nextAdminBonusLikes,
+        likedBy: nextLikedBy
+      })
     }).catch(() => {});
   } catch (_) {}
+
+  return { nextLikeCount, nextLikedBy, isLikedByMe };
 }
 
 export async function deleteReview(reviewId: string): Promise<void> {

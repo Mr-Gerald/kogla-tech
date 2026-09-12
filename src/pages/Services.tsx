@@ -85,13 +85,13 @@ export default function Services() {
             
             <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-400 text-[10px] font-mono font-bold tracking-widest uppercase rounded-full">
-                  <Zap size={12} className="text-gold-400" /> Enterprise Solutions & Services
+                  <Zap size={12} className="text-gold-400" /> Enterprise Solutions & Client Services
                 </div>
                 <h1 className="text-4xl md:text-6xl font-display font-bold uppercase tracking-wider">
                   Our <span className="text-gold-500">Service Solutions</span>
                 </h1>
                 <p className="text-xs md:text-sm text-gray-400 font-sans leading-relaxed">
-                  We engineer bespoke software, web & mobile applications, AI workflows, security audits, and UI/UX design. Standard delivery ranges from 1-2 weeks. <strong className="text-gold-400">Note: Higher priority payment guarantees faster delivery!</strong>
+                  We build all kinds of custom websites, high-performance mobile apps (iOS & Android), and bespoke digital designs. From scalable cloud infrastructure and enterprise platforms to UI/UX and visual branding, we deliver turnkey solutions tailored to your business needs. Standard delivery ranges from 1-2 weeks. <strong className="text-gold-400">Note: Higher priority payment guarantees faster delivery!</strong>
                 </p>
 
                 {/* 20% DISCOUNT PROMO BANNER FOR SERVICES */}

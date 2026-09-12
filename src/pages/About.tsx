@@ -19,8 +19,8 @@ export default function About() {
   const pillars = [
     {
       icon: <Cpu size={20} className="text-gold-500" />,
-      title: "Enterprise Solutions Engineering",
-      desc: "Our Solutions division engineers resilient cloud architectures, bespoke ERP adapters, and high-performance web and mobile platforms designed to perform flawlessly under maximum transactional volume."
+      title: "Enterprise Solutions & Client Services",
+      desc: "Full-cycle digital service execution: scalable cloud infrastructure, custom web platforms, and mobile applications. We design and build all kinds of websites, iOS & Android apps, UI/UX systems, and brand designs engineered for business growth."
     },
     {
       icon: <BookOpen size={20} className="text-gold-500" />,

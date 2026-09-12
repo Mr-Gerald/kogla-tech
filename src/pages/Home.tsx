@@ -605,9 +605,9 @@ export default function Home() {
               <div className="p-3 bg-gold-400/5 border border-gold-400/10 rounded-sm w-fit group-hover:bg-gold-500/10 transition-colors">
                 <Building size={20} className="text-gold-500" />
               </div>
-              <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Bespoke Solutions Engineering</h3>
+              <h3 className="text-sm font-display font-bold text-white uppercase tracking-wide">Enterprise Solutions & Client Services</h3>
               <p className="text-xs text-gray-400 leading-relaxed font-sans">
-                Outsource your high-stakes operational engineering. From deep zero-trust cloud network provisioning to custom low-level database adapters and high-transaction client-facing web runtimes, our solutions perform flawlessly under maximum transactional volumes.
+                Scalable cloud infrastructure, plus custom web and mobile enterprise platforms. We design and build all kinds of websites, high-performance mobile apps (iOS & Android), and bespoke design systems tailored to elevate your business.
               </p>
             </div>
 

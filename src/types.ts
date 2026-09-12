@@ -77,6 +77,7 @@ export interface ReviewRecord {
   parentId?: string | null;
   likedBy: string[];
   likeCount: number;
+  adminBonusLikes?: number;
   createdAt: string;
   updatedAt?: string;
 }

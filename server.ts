@@ -220,6 +220,7 @@ interface SyncedReview {
   parentId?: string | null;
   likedBy?: string[];
   likeCount?: number;
+  adminBonusLikes?: number;
   createdAt: string;
   updatedAt?: string;
 }
@@ -356,10 +357,47 @@ const SERVER_SEED_REVIEWS: SyncedReview[] = [
   }
 ];
 
-function computeEffectiveLikes(reviewId: string, likedBy: string[] = []): number {
+function computeEffectiveLikes(reviewId: string, likedBy: string[] = [], adminBonusLikes: number = 0): number {
   const base = SERVER_BASELINE_LIKES[reviewId] ?? 0;
-  const realUserLikes = likedBy.filter(u => !u.startsWith('user-demo-') && u !== 'user-nnamdi-k').length;
-  return base + realUserLikes;
+  const realUserLikes = (likedBy || []).filter(u => !u.startsWith('user-demo-') && u !== 'user-nnamdi-k').length;
+  return base + realUserLikes + (adminBonusLikes || 0);
+}
+
+function sanitizeServerReview(r: SyncedReview): SyncedReview {
+  if (!r) return r;
+  if (
+    r.id === 'rev-nnamdi-reply-1' ||
+    r.userId === 'admin-gerald' ||
+    r.userName === 'Gerald Emechebe' ||
+    (typeof r.content === 'string' && r.content.includes('Proud of how far you have come Nnamdi'))
+  ) {
+    return {
+      ...r,
+      id: 'rev-nnamdi-reply-1',
+      userId: 'admin-gerald',
+      userName: 'Gerald Emechebe',
+      userRole: 'Founder & CEO, Kogla Tech',
+      parentId: 'rev-nnamdi-lagos',
+      targetType: 'course',
+      targetId: 'web-development',
+      title: '',
+    };
+  }
+  const seed = SERVER_SEED_REVIEWS.find(s => s.id === r.id);
+  if (seed) {
+    return {
+      ...r,
+      userRole: r.userRole && r.userRole !== 'Student' ? r.userRole : seed.userRole,
+      parentId: seed.parentId,
+      targetType: r.targetType || seed.targetType,
+      targetId: r.targetId || seed.targetId
+    };
+  }
+  return {
+    ...r,
+    userRole: r.userRole || (r.userId?.startsWith('admin') ? 'Kogla Admin' : 'Student'),
+    parentId: r.parentId && r.parentId !== 'null' && r.parentId !== '' ? r.parentId : null,
+  };
 }
 
 function loadReviewsFromDisk(): Map<string, SyncedReview> {
@@ -367,10 +405,12 @@ function loadReviewsFromDisk(): Map<string, SyncedReview> {
   
   // 1. Initialize with authentic seed reviews
   for (const s of SERVER_SEED_REVIEWS) {
-    map.set(s.id, {
+    const adminBonusLikes = s.adminBonusLikes || 0;
+    map.set(s.id, sanitizeServerReview({
       ...s,
-      likeCount: computeEffectiveLikes(s.id, s.likedBy)
-    });
+      adminBonusLikes,
+      likeCount: computeEffectiveLikes(s.id, s.likedBy, adminBonusLikes)
+    }));
   }
 
   // 2. Load disk data if present
@@ -383,12 +423,18 @@ function loadReviewsFromDisk(): Map<string, SyncedReview> {
           if (r && r.id) {
             const existing = map.get(r.id);
             const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(r.likedBy || [])]));
-            map.set(r.id, {
+            const adminBonusLikes = typeof r.adminBonusLikes === 'number'
+              ? r.adminBonusLikes
+              : Math.max(existing?.adminBonusLikes || 0, (r.likeCount || 0) - (SERVER_BASELINE_LIKES[r.id] ?? 0));
+            map.set(r.id, sanitizeServerReview({
               ...(existing || {}),
               ...r,
               likedBy: mergedLikedBy,
-              likeCount: computeEffectiveLikes(r.id, mergedLikedBy)
-            });
+              adminBonusLikes,
+              likeCount: typeof r.likeCount === 'number'
+                ? Math.max(r.likeCount, computeEffectiveLikes(r.id, mergedLikedBy, adminBonusLikes))
+                : computeEffectiveLikes(r.id, mergedLikedBy, adminBonusLikes)
+            }));
           }
         }
       }
@@ -401,7 +447,7 @@ function loadReviewsFromDisk(): Map<string, SyncedReview> {
 
 function saveReviewsToDisk(map: Map<string, SyncedReview>) {
   try {
-    const list = Array.from(map.values());
+    const list = Array.from(map.values()).map(sanitizeServerReview);
     fs.writeFileSync(REVIEWS_FILE_PATH, JSON.stringify(list, null, 2), 'utf-8');
   } catch (err) {
     console.warn('[Server] Error saving reviews to disk:', err);
@@ -940,25 +986,37 @@ app.post('/api/reviews', (req, res) => {
         if (item && item.id) {
           const existing = serverReviewsMap.get(item.id);
           const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(item.likedBy || [])]));
-          serverReviewsMap.set(item.id, {
+          const adminBonusLikes = typeof item.adminBonusLikes === 'number'
+            ? item.adminBonusLikes
+            : (existing?.adminBonusLikes || 0);
+          serverReviewsMap.set(item.id, sanitizeServerReview({
             ...existing,
             ...item,
             likedBy: mergedLikedBy,
-            likeCount: computeEffectiveLikes(item.id, mergedLikedBy),
+            adminBonusLikes,
+            likeCount: typeof item.likeCount === 'number'
+              ? item.likeCount
+              : computeEffectiveLikes(item.id, mergedLikedBy, adminBonusLikes),
             updatedAt: new Date().toISOString()
-          });
+          }));
         }
       }
     } else if (review && review.id) {
       const existing = serverReviewsMap.get(review.id);
       const mergedLikedBy = Array.from(new Set([...(existing?.likedBy || []), ...(review.likedBy || [])]));
-      serverReviewsMap.set(review.id, {
+      const adminBonusLikes = typeof review.adminBonusLikes === 'number'
+        ? review.adminBonusLikes
+        : (existing?.adminBonusLikes || 0);
+      serverReviewsMap.set(review.id, sanitizeServerReview({
         ...existing,
         ...review,
         likedBy: mergedLikedBy,
-        likeCount: computeEffectiveLikes(review.id, mergedLikedBy),
+        adminBonusLikes,
+        likeCount: typeof review.likeCount === 'number'
+          ? review.likeCount
+          : computeEffectiveLikes(review.id, mergedLikedBy, adminBonusLikes),
         updatedAt: new Date().toISOString()
-      });
+      }));
     }
     saveReviewsToDisk(serverReviewsMap);
     res.json({ success: true, reviews: Array.from(serverReviewsMap.values()) });
@@ -970,9 +1028,9 @@ app.post('/api/reviews', (req, res) => {
 // POST /api/reviews/like - Toggle like on review or reply
 app.post('/api/reviews/like', (req, res) => {
   try {
-    const { reviewId, userId } = req.body;
-    if (!reviewId || !userId) {
-      return res.status(400).json({ success: false, error: 'reviewId and userId are required.' });
+    const { reviewId, userId, isAdmin, nextLikeCount, adminBonusLikes, likedBy } = req.body;
+    if (!reviewId) {
+      return res.status(400).json({ success: false, error: 'reviewId is required.' });
     }
     let r = serverReviewsMap.get(reviewId);
     if (!r) {
@@ -983,13 +1041,29 @@ app.post('/api/reviews/like', (req, res) => {
       }
     }
     if (r) {
-      const likedBy = r.likedBy || [];
-      const isLiked = likedBy.includes(userId);
-      const nextLikedBy = isLiked ? likedBy.filter(u => u !== userId) : [...likedBy, userId];
-      r.likedBy = nextLikedBy;
-      r.likeCount = computeEffectiveLikes(reviewId, nextLikedBy);
+      if (typeof adminBonusLikes === 'number') {
+        r.adminBonusLikes = adminBonusLikes;
+      }
+      if (isAdmin) {
+        // Admin boost: increment adminBonusLikes, do not retain admin in likedBy
+        r.adminBonusLikes = (r.adminBonusLikes || 0) + 1;
+        if (userId) {
+          r.likedBy = (r.likedBy || []).filter((u: string) => u !== userId);
+        }
+      } else if (userId && !Array.isArray(likedBy)) {
+        const isLiked = (r.likedBy || []).includes(userId);
+        r.likedBy = isLiked ? r.likedBy.filter((u: string) => u !== userId) : [...(r.likedBy || []), userId];
+      }
+      if (Array.isArray(likedBy)) {
+        r.likedBy = likedBy;
+      }
+      if (typeof nextLikeCount === 'number') {
+        r.likeCount = nextLikeCount;
+      } else {
+        r.likeCount = computeEffectiveLikes(reviewId, r.likedBy, r.adminBonusLikes);
+      }
       r.updatedAt = new Date().toISOString();
-      serverReviewsMap.set(reviewId, r);
+      serverReviewsMap.set(reviewId, sanitizeServerReview(r));
       saveReviewsToDisk(serverReviewsMap);
     }
     res.json({ success: true, reviews: Array.from(serverReviewsMap.values()) });

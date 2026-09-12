@@ -17,8 +17,16 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { isSystemAdminEmail } from '../lib/authUtils';
 import { ReviewRecord } from '../types';
-import { subscribeToReviews, createReview, toggleLikeReview, deleteReview, computeEffectiveLikes } from '../lib/reviews';
+import { 
+  subscribeToReviews, 
+  createReview, 
+  toggleLikeReview, 
+  deleteReview, 
+  computeEffectiveLikes,
+  sanitizeReviewRecord
+} from '../lib/reviews';
 
 interface ReviewSectionProps {
   targetType?: string;
@@ -58,9 +66,20 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   useEffect(() => {
     setLoading(true);
     const unsubscribe = subscribeToReviews((allReviews) => {
-      const filtered = allReviews.filter((r) => {
+      const sanitized = allReviews.map(sanitizeReviewRecord);
+      const filtered = sanitized.filter((r) => {
         if (!targetType || targetType === 'platform') {
           return true;
+        }
+        if (r.parentId) {
+          const parent = sanitized.find((p) => p.id === r.parentId);
+          if (parent) {
+            const normTarget = (targetId || 'web-development').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const pTarget = (parent.targetId || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            if (pTarget === normTarget || (normTarget !== '' && pTarget.includes(normTarget))) {
+              return true;
+            }
+          }
         }
         if (targetType === 'course') {
           const normTarget = (targetId || 'web-development').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -91,13 +110,14 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     }
     if (!newContent.trim()) return;
 
+    const isAdmin = profile?.role === 'admin' || isSystemAdminEmail(user.email);
     setIsSubmitting(true);
     try {
       await createReview({
         userId: user.uid,
         userName: profile?.name || user.displayName || 'Kogla Developer',
         userAvatar: user.photoURL || profile?.avatarUrl || '',
-        userRole: profile?.role === 'admin' ? 'Kogla Admin' : 'Academy Student',
+        userRole: isAdmin ? 'Founder & CEO, Kogla Tech' : (profile?.title || 'Academy Student'),
         rating: newRating,
         title: newTitle.trim(),
         content: newContent.trim(),
@@ -125,13 +145,14 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     }
     if (!replyContent.trim()) return;
 
+    const isAdmin = profile?.role === 'admin' || isSystemAdminEmail(user.email);
     setIsSubmittingReply(true);
     try {
       await createReview({
         userId: user.uid,
-        userName: profile?.name || user.displayName || 'Kogla Developer',
+        userName: profile?.name || user.displayName || (isAdmin ? 'Gerald Emechebe' : 'Kogla Developer'),
         userAvatar: user.photoURL || profile?.avatarUrl || '',
-        userRole: profile?.role === 'admin' ? 'Kogla Admin' : 'Member',
+        userRole: isAdmin ? 'Founder & CEO, Kogla Tech' : (profile?.title || 'Member'),
         rating: 5,
         title: '',
         content: replyContent.trim(),
@@ -150,39 +171,54 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   };
 
   // Handle like toggle with instant optimistic update
-  const handleLike = async (review: ReviewRecord) => {
+  const handleLike = async (rawReview: ReviewRecord) => {
     if (!user) {
       navigate('/auth/login');
       return;
     }
+    const review = sanitizeReviewRecord(rawReview);
     if (likingIds[review.id]) return;
 
     const currentUserId = user.uid;
-    const isCurrentlyLiked = (review.likedBy || []).includes(currentUserId);
-    const nextLikedBy = isCurrentlyLiked
-      ? (review.likedBy || []).filter((u) => u !== currentUserId)
-      : [...(review.likedBy || []), currentUserId];
-    const nextLikeCount = computeEffectiveLikes(review.id, nextLikedBy);
+    const isAdminUser = profile?.role === 'admin' || isSystemAdminEmail(user?.email);
+
+    let nextLikedBy = [...(review.likedBy || [])];
+    let nextAdminBonus = review.adminBonusLikes || 0;
+    let nextLikeCount = review.likeCount || 0;
+
+    if (isAdminUser) {
+      // Admin boost: each click increments like count without locking into a shaded state
+      nextAdminBonus += 1;
+      nextLikedBy = nextLikedBy.filter((u) => u !== currentUserId && !isSystemAdminEmail(u));
+      nextLikeCount = computeEffectiveLikes(review.id, nextLikedBy, nextAdminBonus);
+    } else {
+      // Normal user: standard single-like policy
+      const isCurrentlyLiked = nextLikedBy.includes(currentUserId);
+      nextLikedBy = isCurrentlyLiked
+        ? nextLikedBy.filter((u) => u !== currentUserId)
+        : [...nextLikedBy, currentUserId];
+      nextLikeCount = computeEffectiveLikes(review.id, nextLikedBy, nextAdminBonus);
+    }
 
     // 1. Instant optimistic UI update
     setReviews((prev) =>
       prev.map((r) =>
         r.id === review.id
-          ? { ...r, likedBy: nextLikedBy, likeCount: nextLikeCount }
+          ? { ...r, likedBy: nextLikedBy, likeCount: nextLikeCount, adminBonusLikes: nextAdminBonus }
           : r
       )
     );
 
     setLikingIds((prev) => ({ ...prev, [review.id]: true }));
     try {
-      await toggleLikeReview(review, currentUserId);
+      await toggleLikeReview(review, currentUserId, isAdminUser);
     } catch (err) {
       console.error('Failed to toggle like:', err);
       // Revert if failed
       setReviews((prev) =>
         prev.map((r) =>
           r.id === review.id
-            ? { ...r, likedBy: review.likedBy, likeCount: review.likeCount }
+            ? { ...r, likedBy: review.likedBy, likeCount: review.likeCount, adminBonusLikes: review.adminBonusLikes }
             : r
         )
       );
@@ -202,11 +238,12 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   };
 
   // Organize reviews into top-level and nested replies
-  const topLevelReviews = [...reviews]
-    .filter((r) => !r.parentId)
+  const sanitizedReviews = reviews.map(sanitizeReviewRecord);
+  const topLevelReviews = sanitizedReviews
+    .filter((r) => !r.parentId || r.parentId === 'null' || r.parentId === '')
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
-  const getReplies = (parentId: string) => reviews.filter((r) => r.parentId === parentId);
+  const getReplies = (parentId: string) => sanitizedReviews.filter((r) => r.parentId === parentId);
 
   // Filtered reviews
   const displayedReviews = filterRating 
@@ -462,9 +499,10 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
             <div className="space-y-2.5">
               {visibleReviews.map((review) => {
                 const replies = getReplies(review.id);
-                const isLikedByMe = user ? review.likedBy?.includes(user.uid) : false;
+                const isAdminUser = profile?.role === 'admin' || isSystemAdminEmail(user?.email);
+                const isLikedByMe = !isAdminUser && user ? (review.likedBy || []).includes(user.uid) : false;
                 const isReplying = replyingToId === review.id;
-                const isAuthorOrAdmin = user && (user.uid === review.userId || profile?.role === 'admin');
+                const isAuthorOrAdmin = user && (user.uid === review.userId || isAdminUser);
 
                 return (
                   <div
@@ -491,7 +529,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                               {review.userName}
                             </span>
                             <span className="text-[8px] font-mono px-1.5 py-0.2 bg-zinc-900 text-gold-400 border border-gold-500/30 rounded uppercase font-semibold">
-                              {review.userRole || 'Student'}
+                              {review.userRole || (review.userName === 'Gerald Emechebe' || review.userId === 'admin-gerald' ? 'Founder & CEO, Kogla Tech' : 'Student')}
                             </span>
                           </div>
                           <span className="text-[9px] text-zinc-500 font-mono block mt-0.5">
@@ -535,6 +573,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                         <button
                           onClick={() => handleLike(review)}
                           disabled={likingIds[review.id]}
+                          title={isAdminUser ? 'Boost like count (Admin account)' : (isLikedByMe ? 'Unlike review' : 'Like review')}
                           className={`flex items-center gap-1 px-2 py-0.5 rounded transition-colors text-[10px] cursor-pointer ${
                             isLikedByMe
                               ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40 font-bold'
@@ -574,7 +613,8 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                     {replies.length > 0 && (
                       <div className="pl-3 border-l-2 border-gold-500/30 space-y-2 mt-2 pt-1">
                         {replies.map((reply) => {
-                          const isReplyAuthorOrAdmin = user && (user.uid === reply.userId || profile?.role === 'admin');
+                          const isReplyAuthorOrAdmin = user && (user.uid === reply.userId || isAdminUser);
+                          const isReplyLikedByMe = !isAdminUser && user ? (reply.likedBy || []).includes(user.uid) : false;
                           return (
                             <div key={reply.id} className="bg-zinc-900/50 p-2 rounded text-[11px] space-y-1">
                               <div className="flex items-center justify-between">
@@ -583,7 +623,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                                     {reply.userName}
                                   </span>
                                   <span className="text-[8px] font-mono px-1 py-0.2 bg-black text-gold-400 border border-gold-500/20 rounded uppercase">
-                                    {reply.userRole}
+                                    {reply.userRole || (reply.userName === 'Gerald Emechebe' || reply.userId === 'admin-gerald' ? 'Founder & CEO, Kogla Tech' : 'Member')}
                                   </span>
                                 </div>
                                 <span className="text-[8px] text-zinc-500 font-mono">
@@ -601,13 +641,13 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                                   onClick={() => handleLike(reply)}
                                   disabled={likingIds[reply.id]}
                                   className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors text-[9px] cursor-pointer ${
-                                    (reply.likedBy || []).includes(user?.uid || '')
+                                    isReplyLikedByMe
                                       ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40 font-bold'
                                       : 'text-zinc-500 hover:text-white hover:bg-zinc-800'
                                   }`}
-                                  title="Like reply"
+                                  title={isAdminUser ? 'Boost like count (Admin account)' : (isReplyLikedByMe ? 'Unlike reply' : 'Like reply')}
                                 >
-                                  <ThumbsUp size={10} className={(reply.likedBy || []).includes(user?.uid || '') ? 'fill-gold-400' : ''} />
+                                  <ThumbsUp size={10} className={isReplyLikedByMe ? 'fill-gold-400' : ''} />
                                   <span>{reply.likeCount || 0}</span>
                                 </button>
                                 {isReplyAuthorOrAdmin && (
