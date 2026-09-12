@@ -11,7 +11,8 @@ import {
   Globe, 
   Award,
   Layers,
-  BookOpen
+  BookOpen,
+  Instagram
 } from 'lucide-react';
 import { useSiteConfig } from '../../context/SiteConfigContext';
 
@@ -136,6 +137,11 @@ export default function Footer() {
             <Globe size={11} className="text-gold-500" /> Join Community
           </h4>
           <ul className="space-y-1.5 font-mono text-[10px] text-gray-405">
+            <li>
+              <a href={config.instagramLink || 'https://instagram.com/koglatech.ng'} target="_blank" rel="noreferrer" className="hover:text-gold-500 transition-colors flex items-center gap-1 text-gold-400 font-semibold">
+                <Instagram size={10} className="text-pink-500" /> Instagram: @{config.instagramHandle || 'koglatech.ng'} <ArrowUpRight size={10} />
+              </a>
+            </li>
             <li>
               <a href={config.communityLink} target="_blank" rel="noreferrer" className="hover:text-gold-500 transition-colors flex items-center gap-1 text-gold-500 font-bold">
                 WhatsApp Community <ArrowUpRight size={10} />

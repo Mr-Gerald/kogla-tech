@@ -12,6 +12,8 @@ export interface SiteConfig {
   communityLink: string;
   whatsappLink: string;
   telegramLink: string;
+  instagramHandle?: string;
+  instagramLink?: string;
   heroHeadline: string;
   heroSubheadline: string;
   aboutHeadline: string;
@@ -40,6 +42,8 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   communityLink: 'https://chat.whatsapp.com/KoglaTechCommunity',
   whatsappLink: 'https://wa.me/2347012489041',
   telegramLink: 'https://t.me/kogla_tech',
+  instagramHandle: 'koglatech.ng',
+  instagramLink: 'https://instagram.com/koglatech.ng',
   heroHeadline: 'Empowering the Next Generation of African Developers',
   heroSubheadline: 'Expert software engineering, workflow automation, and immersive academic training hubs crafted for global competitiveness.',
   aboutHeadline: 'Engineered for High-Stakes Operations',
@@ -87,6 +91,14 @@ export function sanitizeSiteConfig(raw?: Partial<SiteConfig> | null): SiteConfig
   // Strict Email Enforcement
   if (merged.contactEmail === 'solutions@kogla-tech.com' || !merged.contactEmail) {
     merged.contactEmail = 'solutions@koglatech.com';
+  }
+
+  // Instagram Handle & Link
+  if (!merged.instagramHandle) {
+    merged.instagramHandle = 'koglatech.ng';
+  }
+  if (!merged.instagramLink) {
+    merged.instagramLink = 'https://instagram.com/koglatech.ng';
   }
 
   return merged;

@@ -9,13 +9,17 @@ import {
   Send, 
   CheckCircle, 
   PhoneCall, 
-  Lock,
-  Globe,
-  CheckCircle2
+  Lock, 
+  Globe, 
+  CheckCircle2,
+  Instagram,
+  ArrowUpRight
 } from 'lucide-react';
 import { addInquiry } from '../utils/storage';
+import { useSiteConfig } from '../context/SiteConfigContext';
 
 export default function Contact() {
+  const { config } = useSiteConfig();
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -213,6 +217,46 @@ export default function Contact() {
                     <p className="text-[10px] text-gray-500 leading-relaxed font-mono">{ch.desc}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Official Social & Community Channels */}
+            <div className="p-6 bg-gray-950 border border-gold-500/20 rounded-sm space-y-3">
+              <h4 className="text-xs font-display font-bold uppercase tracking-widest text-gold-500 flex items-center gap-1.5">
+                <Instagram size={13} className="text-pink-500" /> Official Social Channels
+              </h4>
+              <div className="space-y-2.5 font-mono text-xs">
+                <a 
+                  href={config.instagramLink || 'https://instagram.com/koglatech.ng'} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="p-3 bg-black border border-gray-900 hover:border-gold-500 flex items-center justify-between transition-colors rounded-sm text-gray-300 hover:text-white"
+                >
+                  <div className="flex items-center gap-2">
+                    <Instagram size={14} className="text-pink-500" />
+                    <div>
+                      <span className="text-[9px] text-gray-500 block uppercase">Instagram Handle</span>
+                      <span className="text-xs text-gold-400 font-bold">@{config.instagramHandle || 'koglatech.ng'}</span>
+                    </div>
+                  </div>
+                  <ArrowUpRight size={12} className="text-gray-500" />
+                </a>
+
+                <a 
+                  href={config.communityLink} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="p-3 bg-black border border-gray-900 hover:border-gold-500 flex items-center justify-between transition-colors rounded-sm text-gray-300 hover:text-white"
+                >
+                  <div className="flex items-center gap-2">
+                    <Globe size={14} className="text-emerald-500" />
+                    <div>
+                      <span className="text-[9px] text-gray-500 block uppercase">WhatsApp Community</span>
+                      <span className="text-xs text-white font-medium">Kogla Tech Community</span>
+                    </div>
+                  </div>
+                  <ArrowUpRight size={12} className="text-gray-500" />
+                </a>
               </div>
             </div>
 

@@ -160,7 +160,7 @@ export async function generateAmbassadorAgreementPdf(data: AmbassadorAgreementDa
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.8);
-  doc.text(`Party 1 (The Academy): Kogla Tech Global • Email: solutions@koglatech.com • Phone: +234 701 248 9041`, 16, y + 11.5);
+  doc.text(`Party 1 (The Academy): Kogla Tech Global • Instagram: @koglatech.ng • Email: solutions@koglatech.com • Phone: +234 701 248 9041`, 16, y + 11.5);
   doc.text(`Active Cohort Target: ${cohortName} • Official Start Date: ${cohortStart} (Target Graduation: ${cohortEnd})`, 16, y + 16);
   doc.text(`Party 2 (The Ambassador): ${name}${data.instagramHandle ? ` (${data.instagramHandle})` : ''}${data.email ? ` • ${data.email}` : ''}`, 16, y + 21);
 

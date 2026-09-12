@@ -4208,6 +4208,39 @@ Kogla Tech Global Admissions & Partnerships`;
                     </span>
                   </div>
                 </div>
+
+                <div className="grid md:grid-cols-2 gap-4 pt-2 border-t border-gray-900">
+                  <div>
+                    <label className="block text-[10px] text-pink-400 uppercase tracking-wider mb-1 font-mono font-bold">
+                      Official Instagram Handle
+                    </label>
+                    <input 
+                      type="text"
+                      placeholder="koglatech.ng"
+                      value={siteForm.instagramHandle || ''}
+                      onChange={(e) => setSiteForm({ ...siteForm, instagramHandle: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-pink-500/40 text-xs text-white rounded-sm focus:outline-none focus:border-pink-500 font-mono"
+                    />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Official handle (e.g. koglatech.ng).
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-pink-400 uppercase tracking-wider mb-1 font-mono font-bold">
+                      Instagram Profile URL
+                    </label>
+                    <input 
+                      type="text"
+                      placeholder="https://instagram.com/koglatech.ng"
+                      value={siteForm.instagramLink || ''}
+                      onChange={(e) => setSiteForm({ ...siteForm, instagramLink: e.target.value })}
+                      className="w-full p-2.5 bg-gray-950 border border-pink-500/40 text-xs text-white rounded-sm focus:outline-none focus:border-pink-500 font-mono"
+                    />
+                    <span className="text-[9px] text-gray-500 font-mono block mt-1">
+                      Direct profile link for Instagram.
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* GROUP 2.5: Cohort Scheduling & Admissions Status Engine */}
