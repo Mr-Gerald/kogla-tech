@@ -213,9 +213,13 @@ export default function Footer() {
               Refund Policy (No-Refund)
             </Link>
             <span>&bull;</span>
-            <span className="hover:text-gray-300 transition-colors cursor-pointer">Terms of Service</span>
+            <Link to="/terms" className="hover:text-gold-400 transition-colors">
+              Terms of Service
+            </Link>
             <span>&bull;</span>
-            <span className="hover:text-gray-300 transition-colors cursor-pointer">Privacy Protocol</span>
+            <Link to="/privacy" className="hover:text-gold-400 transition-colors">
+              Privacy Policy
+            </Link>
             <span>&bull;</span>
             <span className="hover:text-gray-300 transition-colors cursor-pointer">Security Policy</span>
             <span>&bull;</span>

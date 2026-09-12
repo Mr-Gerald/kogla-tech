@@ -32,6 +32,8 @@ import MonetizationHub from './pages/MonetizationHub';
 import VerifyCertificate from './pages/VerifyCertificate';
 import DesignStudio from './pages/DesignStudio';
 import RefundPolicy from './pages/RefundPolicy';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import NotFound from './pages/NotFound';
 import { AiAssistantChat } from './components/AiAssistantChat';
 
@@ -77,6 +79,10 @@ export default function App() {
                 <Route path="/refund-policy" element={<RefundPolicy />} />
                 <Route path="/refunds" element={<RefundPolicy />} />
                 <Route path="/cancellation-policy" element={<RefundPolicy />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/privacy-policy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/terms-of-service" element={<Terms />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
